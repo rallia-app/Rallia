@@ -90,9 +90,40 @@ export interface MatchOrganizerOption {
   court_count: number;
   price_cents: number | null;
   court_confirmed: boolean;
-  /** 'bookable' = a court is open now; 'usually_free' = recurring availability. */
-  tier: 'bookable' | 'usually_free';
+  /**
+   * 'bookable' = a court is open now; 'usually_free' = recurring availability;
+   * 'custom' = a participant proposed this slot by hand (the degradation floor,
+   * so a pair with no overlap or no known facility can still reach a game).
+   */
+  tier: 'bookable' | 'usually_free' | 'custom';
   distance_km: number | null;
+  /**
+   * Why there is no confirmed court. 'not_published_yet' = past that facility's
+   * feed horizon, so one may still open; 'booked' = the feed covers this hour and
+   * nothing is free; 'untracked' = facility not covered, or closed that hour.
+   * Absent on cards snapshotted before migration 20260812270000.
+   */
+  court_state?: 'confirmed' | 'not_published_yet' | 'booked' | 'untracked' | null;
+  /**
+   * How many of the card's participants are recurring-free at this slot. NULL on
+   * a custom option: the engine never vetted it, so the card must not claim
+   * anyone is free.
+   */
+  free_count?: number | null;
+  /** Stable (slot, place) identity, used to re-anchor votes on regenerate. */
+  option_key?: string;
+  /**
+   * How many of the card's players favourite this facility for the sport. Equal
+   * to the participant count means it is a SHARED favourite, the strongest
+   * signal a slot will actually happen.
+   */
+  fav_count?: number | null;
+  /** Free-text place on a custom option with no facility. */
+  place_name?: string | null;
+  /** Who proposed a custom option. */
+  proposed_by?: string | null;
+  /** A voted engine option that vanished on refresh; kept, but no longer real. */
+  stale?: boolean;
 }
 
 /** metadata for a 'match_organizer' card (chat Match Organizer). */
@@ -103,7 +134,18 @@ export interface MatchOrganizerMetadata {
   format: 'singles' | 'doubles';
   /** Players who must each thumbs-up an option for it to become mutual. */
   participant_ids: string[];
-  organizer_id: string;
+  /** Null on system-posted cards (posted_by='system'). */
+  organizer_id: string | null;
+  /** 'system' = auto-posted (round chats); absent/'player' = posted via the sheet. */
+  posted_by?: 'system' | 'player';
+  /** Bracket pairing behind an auto-posted card. Drives card regeneration. */
+  tournament_match_id?: string | null;
+  /** When the options snapshot was last generated (regeneration staleness). */
+  options_generated_at?: string | null;
+  /** Suppresses the new_message notification fan-out (system cards). */
+  silent?: boolean;
+  /** True when no option was free for every participant — options is empty. */
+  no_overlap?: boolean;
   options: MatchOrganizerOption[];
   /** Set once a game is created from this card (flips the card to a final state). */
   created_match_id?: string | null;
@@ -335,6 +377,19 @@ export interface ConversationPreview {
   last_message_content: string | null;
   last_message_at: string | null;
   last_message_sender_name: string | null;
+  /**
+   * Message type of the preview line ('user', 'match_organizer', ...). Lets the
+   * conversation list localize structured-card previews per viewer instead of
+   * echoing `content`, which a server-posted card can only write in one locale.
+   */
+  last_message_type?: string | null;
+  /** Trimmed metadata for preview localization (never the full options array). */
+  last_message_meta?: {
+    kind?: string;
+    no_overlap?: boolean;
+    system_note?: string;
+    actor_name?: string;
+  } | null;
   unread_count: number;
   participant_count: number;
   // For direct messages, show the other participant

@@ -12,7 +12,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Button } from '@rallia/shared-components';
+import { Text, Button, EmptyState } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import { usePlayerSearch, useRecentDoublesPartners } from '@rallia/shared-hooks';
@@ -171,16 +171,15 @@ export function TournamentPartnerPickerActionSheet({
             <ActivityIndicator color={colors.primary} />
           </View>
         ) : rows.length === 0 ? (
-          <View style={styles.stateContainer}>
-            <Ionicons name="search-outline" size={36} color={colors.textMuted} />
-            <Text size="sm" color={colors.textMuted} style={styles.emptyText}>
-              {t(
-                isSearchQuery
-                  ? 'tournamentDetail.partner.noResults'
-                  : 'tournamentDetail.partner.empty'
-              )}
-            </Text>
-          </View>
+          <EmptyState
+            variant="sheet"
+            icon={<Ionicons name="search-outline" size={36} color={colors.primary} />}
+            title={t(
+              isSearchQuery
+                ? 'tournamentDetail.partner.noResults'
+                : 'tournamentDetail.partner.empty'
+            )}
+          />
         ) : (
           <FlatList
             data={rows}
@@ -257,10 +256,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: spacingPixels[8],
     gap: spacingPixels[2],
-  },
-  emptyText: {
-    textAlign: 'center',
-    paddingHorizontal: spacingPixels[6],
   },
 });
 

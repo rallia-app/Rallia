@@ -21,6 +21,7 @@ type InvitationType =
   | 'group'
   | 'community'
   | 'tournament'
+  | 'league'
   | 'flyer'
   | 'poster'
   | 'social';
@@ -32,7 +33,7 @@ function isChannelType(type: InvitationType): boolean {
 
 type Props = {
   params: Promise<{ code: string; locale: string }>;
-  searchParams: Promise<{ type?: string; id?: string; share?: string }>;
+  searchParams: Promise<{ type?: string; id?: string; share?: string; session?: string }>;
 };
 
 async function getInviter(code: string) {
@@ -110,12 +111,72 @@ function tournamentLocation(tournament: TournamentDetails): string {
   return [venue, city].filter(Boolean).join(', ');
 }
 
+interface LeagueDetails {
+  name: string;
+  description: string | null;
+  venue_name: string | null;
+  facility: { name: string; city: string | null } | null;
+}
+
+async function getLeagueDetails(leagueId: string): Promise<LeagueDetails | null> {
+  // The web Database type deliberately omits the mobile-only league tables.
+  const supabase =
+    createServiceRoleClient() as unknown as import('@supabase/supabase-js').SupabaseClient;
+  const { data } = await supabase
+    .from('leagues')
+    .select('name, description, venue_name, facility:facility_id (name, city)')
+    .eq('id', leagueId)
+    .single();
+  return data as unknown as LeagueDetails | null;
+}
+
+interface LeagueSessionDetails {
+  scheduled_at: string;
+  timezone: string;
+}
+
+async function getLeagueSessionDetails(sessionId: string): Promise<LeagueSessionDetails | null> {
+  const supabase =
+    createServiceRoleClient() as unknown as import('@supabase/supabase-js').SupabaseClient;
+  const { data } = await supabase
+    .from('sessions')
+    .select('scheduled_at, timezone')
+    .eq('id', sessionId)
+    .single();
+  return data as unknown as LeagueSessionDetails | null;
+}
+
+function leagueLocation(league: LeagueDetails): string {
+  const venue = league.venue_name ?? league.facility?.name ?? null;
+  const city = league.facility?.city ?? null;
+  return [venue, city].filter(Boolean).join(', ');
+}
+
+function formatSessionDate(session: LeagueSessionDetails, locale: string): string {
+  return new Date(session.scheduled_at).toLocaleString(locale, {
+    timeZone: session.timezone,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 function parseInvitationType(type?: string): InvitationType {
   if (
     type &&
-    ['match', 'group', 'community', 'tournament', 'referral', 'flyer', 'poster', 'social'].includes(
-      type
-    )
+    [
+      'match',
+      'group',
+      'community',
+      'tournament',
+      'league',
+      'referral',
+      'flyer',
+      'poster',
+      'social',
+    ].includes(type)
   ) {
     return type as InvitationType;
   }
@@ -209,6 +270,22 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     } else {
       title = inviter?.first_name ? t('invitedBy', { name: inviter.first_name }) : t('title');
     }
+  } else if (invitationType === 'league' && query.id) {
+    const league = await getLeagueDetails(query.id);
+    if (league) {
+      title = inviter?.first_name
+        ? t('leagueInviteTitle', { name: inviter.first_name, league: league.name })
+        : t('leagueInviteTitleGeneric', { league: league.name });
+      const session = query.session ? await getLeagueSessionDetails(query.session) : null;
+      const parts = [
+        session ? t('leagueSessionLine', { date: formatSessionDate(session, locale) }) : null,
+        leagueLocation(league) || null,
+      ].filter(Boolean);
+      if (parts.length > 0) description = parts.join(' · ');
+      else if (league.description) description = league.description;
+    } else {
+      title = inviter?.first_name ? t('invitedBy', { name: inviter.first_name }) : t('title');
+    }
   } else if (invitationType === 'group' && query.id) {
     const group = await getGroupDetails(query.id);
     title = group?.name ? t('groupInviteTitle', { group: group.name }) : t('title');
@@ -268,6 +345,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
     const qsParams = new URLSearchParams();
     if (invitationType !== 'referral') qsParams.set('type', invitationType);
     if (targetId) qsParams.set('id', targetId);
+    if (invitationType === 'league' && query.session) qsParams.set('session', query.session);
     inviteUrl += `?${qsParams.toString()}`;
   }
 
@@ -307,6 +385,22 @@ export default async function InvitePage({ params, searchParams }: Props) {
       const parts = [`📅 ${dateRange}`];
       if (location) parts.push(`📍 ${location}`);
       contextDescription = parts.join(' · ');
+    }
+  } else if (invitationType === 'league' && targetId) {
+    const league = await getLeagueDetails(targetId);
+    if (league) {
+      contextHeading = inviter?.first_name
+        ? t('leagueInviteHeading', { name: inviter.first_name, league: league.name })
+        : t('leagueInviteHeadingGeneric', { league: league.name });
+      const session = query.session ? await getLeagueSessionDetails(query.session) : null;
+      const location = leagueLocation(league);
+      const parts = [
+        session
+          ? `📅 ${t('leagueSessionLine', { date: formatSessionDate(session, locale) })}`
+          : null,
+        location ? `📍 ${location}` : null,
+      ].filter(Boolean);
+      contextDescription = parts.length > 0 ? parts.join(' · ') : league.description || null;
     }
   } else if (invitationType === 'group' && targetId) {
     const group = await getGroupDetails(targetId);

@@ -97,6 +97,40 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 import { neutral } from '@rallia/design-system';
+import { useFonts } from 'expo-font';
+import {
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+} from '@expo-google-fonts/poppins';
+import {
+  BarlowSemiCondensed_600SemiBold,
+  BarlowSemiCondensed_700Bold,
+} from '@expo-google-fonts/barlow-semi-condensed';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+
+// Theme v2 faces — the names here are what shared-components' Text resolves
+// (Poppins = display, Barlow Semi Condensed = stat numerals, Inter = body).
+const APP_FONTS = {
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+  BarlowSemiCondensed_600SemiBold,
+  BarlowSemiCondensed_700Bold,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+};
 
 // Keep the native splash visible until the app is ready, then cross-fade it out.
 SplashScreen.preventAutoHideAsync();
@@ -287,6 +321,18 @@ function SplashGate({ children }: PropsWithChildren) {
   const isCheckingUpdate = useOTAUpdate();
   const hasHiddenSplashRef = useRef(false);
   const [timedOut, setTimedOut] = useState(false);
+  // Bundled with the app, so this resolves in one frame; the 5s safety
+  // timeout below still applies if loading ever fails.
+  const [fontsLoaded, fontError] = useFonts(APP_FONTS);
+
+  // A failed load is silent otherwise: text falls back to the system face and
+  // headings just look unstyled. Report it so builds missing the font assets
+  // are diagnosable instead of mysterious.
+  useEffect(() => {
+    if (fontError) {
+      Logger.error('Font loading failed — text will fall back to the system face', fontError);
+    }
+  }, [fontError]);
 
   // Safety net — if any provider hangs, hide splash after 5s anyway.
   useEffect(() => {
@@ -295,6 +341,7 @@ function SplashGate({ children }: PropsWithChildren) {
   }, []);
 
   const isAppReady = useMemo(() => {
+    if (!fontsLoaded) return false;
     if (isCheckingUpdate) return false;
     if (!isLocaleReady) return false;
     if (authLoading) return false;
@@ -306,6 +353,7 @@ function SplashGate({ children }: PropsWithChildren) {
     if (sportLoading) return false;
     return true;
   }, [
+    fontsLoaded,
     isCheckingUpdate,
     isLocaleReady,
     authLoading,
@@ -893,7 +941,13 @@ function ThemedRoot({ children }: PropsWithChildren) {
  */
 function ConsentGate({ children }: PropsWithChildren) {
   const { user } = useAuth();
-  const gate = usePolicyConsentGate(user?.id);
+  const { profile } = useProfile();
+  // Brand-new accounts consent inside the onboarding wizard's consent step —
+  // gating them here double-prompts and ejects the wizard sheet mid-signup.
+  // The blocking gate only covers policy bumps for already-onboarded users
+  // (passing null short-circuits the hook to 'ok', same as guests).
+  const isOnboarded = !!profile?.onboarding_completed;
+  const gate = usePolicyConsentGate(isOnboarded ? user?.id : null);
 
   useEffect(() => {
     if (gate.status === 'required') {

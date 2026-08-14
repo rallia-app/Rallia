@@ -6,6 +6,10 @@
  * (the recipient + both founders) and posts the cohort-appropriate
  * outreach message into it, sent from Mathis.
  *
+ * With --direct it uses a 1-on-1 conversation between the recipient and the
+ * sender instead. Use --campaign to namespace idempotency per campaign;
+ * without it, anyone already messaged by any earlier wave is skipped.
+ *
  * SAFE BY DEFAULT:
  *   - Dry run unless you pass --execute (no writes otherwise).
  *   - Refuses to run against the prod project ref unless you ALSO pass --allow-prod.
@@ -39,7 +43,7 @@ import { createClient } from '@supabase/supabase-js';
 const FOUNDER_EMAILS = ['lefrancmathis@gmail.com', 'jdl.sonkin@gmail.com'];
 const SENDER_EMAIL = 'lefrancmathis@gmail.com'; // message author
 const FOUNDER_LABEL = 'Jean & Mathis'; // used in the conversation title
-const CAMPAIGN = 'user_interview_outreach';
+const DEFAULT_CAMPAIGN = 'user_interview_outreach';
 const PROD_REF = 'ncewkeoohdkpbcovbppd';
 const VALID_SEGMENTS = new Set([
   'new', 'active', 'one_session', 'drifted',
@@ -49,6 +53,8 @@ const VALID_SEGMENTS = new Set([
   'active_warm',
   // Active-window (14-60d signup) waves — differentiated by games played
   'aw_never', 'aw_tried', 'aw_regular',
+  // Notification-mute research (1-on-1, --direct). Split by how broadly they muted.
+  'nearby_muted', 'all_muted',
 ]);
 const CALENDLY = 'https://calendly.com/apprallia/15min';
 
@@ -198,6 +204,38 @@ const MESSAGES = {
       `Would you have 15 min this week? ${CALENDLY}`,
     ],
   },
+
+  // --- Notification-mute research. Sent 1-on-1 from Mathis (--direct), so the
+  // voice is singular, not the usual "Jean and Mathis". This opener only asks
+  // the question. It deliberately makes no promise about never asking them to
+  // re-enable, because the planned follow-up does exactly that once the volume
+  // fix ships (see build-notif-mute-followup.mjs).
+  // `nearby_muted` = muted a handful of types including nearby games.
+  nearby_muted: {
+    fr: [
+      'Salut {{name}}!',
+      "C'est Mathis, un des deux derrière Rallia. J'ai remarqué que t'avais fermé les notifications pour les nouvelles parties proches de chez toi.",
+      "Aucun jugement, je veux juste comprendre ce qui t'a poussé là: y'en avait trop, ou les parties fittaient juste pas? Ce que tu me dis s'en va direct dans ma liste de choses à arranger.",
+    ],
+    en: [
+      'Hey {{name}}!',
+      'Mathis here, one of the two behind Rallia. I noticed you turned off the notifications for new games near you a while back.',
+      'No judgment at all, I just want to understand what pushed you there: were there too many, or were the games not the right fit? Whatever you tell me goes straight into what I fix next.',
+    ],
+  },
+  // `all_muted` = swept most notification types off, not a nearby-specific choice.
+  all_muted: {
+    fr: [
+      'Salut {{name}}!',
+      "C'est Mathis, un des deux derrière Rallia. J'ai remarqué que t'avais fermé pas mal toutes tes notifications.",
+      "Aucun jugement, je veux juste comprendre ce qui t'a poussé là: y'en avait trop, mauvais moment, ou juste pas utile? Ce que tu me dis s'en va direct dans ma liste de choses à arranger.",
+    ],
+    en: [
+      'Hey {{name}}!',
+      'Mathis here, one of the two behind Rallia. I noticed you turned off pretty much all your notifications a while back.',
+      'No judgment at all, I just want to understand what pushed you there: too many, wrong timing, or just not useful? Whatever you tell me goes straight into what I fix next.',
+    ],
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -213,12 +251,16 @@ function parseArgs(argv) {
     recipients: [],
     limit: Infinity,
     allowMissingName: false,
+    direct: false,
+    campaign: DEFAULT_CAMPAIGN,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--execute') opts.execute = true;
     else if (a === '--allow-prod') opts.allowProd = true;
     else if (a === '--allow-missing-name') opts.allowMissingName = true;
+    else if (a === '--direct') opts.direct = true;
+    else if (a === '--campaign') opts.campaign = argv[++i];
     else if (a === '--title') opts.title = argv[++i];
     else if (a === '--sender') opts.sender = argv[++i];
     else if (a === '--csv') opts.csv = argv[++i];
@@ -319,12 +361,39 @@ async function findExistingGroup(supabase, recipientId, founderIds) {
   return null;
 }
 
-async function hasCampaignMessage(supabase, conversationId) {
+// Find an existing 1-on-1 conversation between exactly {recipient, sender}.
+// Same JS-side filtering rationale as findExistingGroup above.
+async function findExistingDirect(supabase, recipientId, senderId) {
+  const want = new Set([recipientId, senderId]);
+  const { data: rows, error } = await supabase
+    .from('conversation_participant')
+    .select('conversation_id, conversation:conversation!inner(conversation_type, match_id)')
+    .eq('player_id', recipientId)
+    .limit(200);
+  if (error) throw error;
+  const candidateIds = [...new Set(
+    (rows || [])
+      .filter(r => r.conversation?.conversation_type === 'direct' && !r.conversation?.match_id)
+      .map(r => r.conversation_id)
+  )];
+  for (const cid of candidateIds) {
+    const { data: parts, error: pErr } = await supabase
+      .from('conversation_participant')
+      .select('player_id')
+      .eq('conversation_id', cid);
+    if (pErr) throw pErr;
+    const have = new Set((parts || []).map(p => p.player_id));
+    if (have.size === want.size && [...want].every(id => have.has(id))) return cid;
+  }
+  return null;
+}
+
+async function hasCampaignMessage(supabase, conversationId, campaign) {
   const { data, error } = await supabase
     .from('message')
     .select('id')
     .eq('conversation_id', conversationId)
-    .contains('metadata', { campaign: CAMPAIGN })
+    .contains('metadata', { campaign })
     .limit(1);
   if (error) throw error;
   return (data || []).length > 0;
@@ -333,7 +402,7 @@ async function hasCampaignMessage(supabase, conversationId) {
 // Fallback idempotency check: does this player have a campaign message in ANY
 // conversation they're part of? Catches cases where findExistingGroup returns null
 // (e.g. the conversation was somehow not found) but a message was already sent.
-async function hasAnyCampaignMessageForPlayer(supabase, playerId) {
+async function hasAnyCampaignMessageForPlayer(supabase, playerId, campaign) {
   const { data: convRows, error: cErr } = await supabase
     .from('conversation_participant')
     .select('conversation_id')
@@ -345,16 +414,23 @@ async function hasAnyCampaignMessageForPlayer(supabase, playerId) {
     .from('message')
     .select('id')
     .in('conversation_id', ids)
-    .contains('metadata', { campaign: CAMPAIGN })
+    .contains('metadata', { campaign })
     .limit(1);
   if (mErr) throw mErr;
   return (msgs || []).length > 0;
 }
 
-async function createGroupConversation(supabase, senderId, participantIds, title) {
+// `type` is 'group' or 'direct'. Direct threads carry no title: the client
+// renders them from the other participant's name.
+async function createConversation(supabase, senderId, participantIds, title, type = 'group') {
   const { data: conv, error } = await supabase
     .from('conversation')
-    .insert({ conversation_type: 'group', title: title || null, created_by: senderId, picture_url: null })
+    .insert({
+      conversation_type: type,
+      title: type === 'direct' ? null : title || null,
+      created_by: senderId,
+      picture_url: null,
+    })
     .select()
     .single();
   if (error) throw error;
@@ -367,7 +443,7 @@ async function createGroupConversation(supabase, senderId, participantIds, title
   return conv.id;
 }
 
-async function postMessage(supabase, conversationId, senderId, content, segment) {
+async function postMessage(supabase, conversationId, senderId, content, segment, campaign) {
   const { data, error } = await supabase
     .from('message')
     .insert({
@@ -376,7 +452,7 @@ async function postMessage(supabase, conversationId, senderId, content, segment)
       content,
       status: 'sent',
       message_type: 'user',
-      metadata: { campaign: CAMPAIGN, segment },
+      metadata: { campaign, segment },
     })
     .select('id')
     .single();
@@ -439,29 +515,36 @@ async function main() {
   const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
   const mode = opts.execute ? 'EXECUTE (writing)' : 'DRY RUN (no writes)';
+  const threadDesc = opts.direct
+    ? '1-on-1 with sender'
+    : `group, title ${opts.title ? `"${opts.title}"` : `"<first name>, ${FOUNDER_LABEL}"`}`;
   console.log('============================================================');
-  console.log(` Rallia interview outreach  |  ${mode}`);
+  console.log(` Rallia outreach  |  ${mode}`);
   console.log(` Project ref: ${ref}${isProd ? '  *** PROD ***' : '  (staging)'}`);
-  console.log(` Recipients: ${recipients.length}  |  Title: ${opts.title ? `"${opts.title}"` : `"<first name>, ${FOUNDER_LABEL}"`}`);
+  console.log(` Campaign: ${opts.campaign}`);
+  console.log(` Recipients: ${recipients.length}  |  Thread: ${threadDesc}`);
   console.log('============================================================\n');
 
-  // Resolve founders
+  // Resolve founders. 1-on-1 threads only ever contain the recipient and the
+  // sender, so a missing co-founder account is irrelevant there.
   const founders = {};
   for (const email of FOUNDER_EMAILS) {
     const p = await resolveProfileByEmail(supabase, email);
-    if (!p) {
+    if (!p && !opts.direct) {
       console.error(`Founder account not found on this project: ${email}. Aborting.`);
       process.exit(1);
     }
-    founders[email] = p;
+    if (p) founders[email] = p;
   }
   const sender = founders[opts.sender] || (await resolveProfileByEmail(supabase, opts.sender));
   if (!sender) {
     console.error(`Sender account not found: ${opts.sender}. Aborting.`);
     process.exit(1);
   }
-  const founderIds = FOUNDER_EMAILS.map(e => founders[e].id);
-  console.log(`Founders: ${FOUNDER_EMAILS.map(e => `${founders[e].first_name} <${e}>`).join(', ')}`);
+  const founderIds = FOUNDER_EMAILS.filter(e => founders[e]).map(e => founders[e].id);
+  if (!opts.direct) {
+    console.log(`Founders: ${FOUNDER_EMAILS.map(e => `${founders[e].first_name} <${e}>`).join(', ')}`);
+  }
   console.log(`Sender:   ${sender.first_name} <${sender.email}>\n`);
 
   const summary = { created: 0, reused: 0, alreadySent: 0, notFound: 0, skippedNoName: 0, skippedNoPlayer: 0, errors: 0 };
@@ -498,20 +581,23 @@ async function main() {
       }
       const content = buildContent(r.segment, lang, firstName);
       const title = opts.title || buildTitle(firstName);
-      const participantIds = [profile.id, ...founderIds];
+      // 1-on-1 mode pairs the recipient with the sender only; group mode adds both founders.
+      const participantIds = opts.direct ? [profile.id, sender.id] : [profile.id, ...founderIds];
 
       // Idempotency: check for any prior campaign message for this player first
-      // (catches cases where findExistingGroup misses the conversation).
-      if (await hasAnyCampaignMessageForPlayer(supabase, profile.id)) {
+      // (catches cases where the conversation lookup misses the thread).
+      if (await hasAnyCampaignMessageForPlayer(supabase, profile.id, opts.campaign)) {
         console.log(`SKIP  ${r.email}  -> campaign message already exists`);
         summary.alreadySent++;
         continue;
       }
 
-      let convId = await findExistingGroup(supabase, profile.id, founderIds);
+      let convId = opts.direct
+        ? await findExistingDirect(supabase, profile.id, sender.id)
+        : await findExistingGroup(supabase, profile.id, founderIds);
       let convAction = convId ? 'reuse' : 'create';
 
-      if (convId && (await hasCampaignMessage(supabase, convId))) {
+      if (convId && (await hasCampaignMessage(supabase, convId, opts.campaign))) {
         console.log(`SKIP  ${r.email}  -> campaign message already exists in conversation ${convId}`);
         summary.alreadySent++;
         continue;
@@ -520,19 +606,21 @@ async function main() {
       const previewFirst = content.split('\n')[0];
       const status = profile.account_status && profile.account_status !== 'active' ? ` [account:${profile.account_status}]` : '';
       console.log(`${opts.execute ? 'SEND' : 'PLAN'}  ${r.email}  seg=${r.segment} lang=${lang} conv=${convAction}${convId ? `(${convId})` : ''}${status}`);
-      console.log(`      title: "${title}"`);
+      if (!opts.direct) console.log(`      title: "${title}"`);
       console.log(`      "${previewFirst}"  (${content.length} chars, ${content.split('\n').length} lines)`);
 
       if (!opts.execute) continue;
 
       if (!convId) {
-        convId = await createGroupConversation(supabase, sender.id, participantIds, title);
+        convId = await createConversation(
+          supabase, sender.id, participantIds, title, opts.direct ? 'direct' : 'group'
+        );
         summary.created++;
         console.log(`      created conversation ${convId} with ${participantIds.length} participants`);
       } else {
         summary.reused++;
       }
-      const msgId = await postMessage(supabase, convId, sender.id, content, r.segment);
+      const msgId = await postMessage(supabase, convId, sender.id, content, r.segment, opts.campaign);
       console.log(`      posted message ${msgId}`);
     } catch (err) {
       summary.errors++;

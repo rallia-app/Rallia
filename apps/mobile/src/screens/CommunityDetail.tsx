@@ -1292,7 +1292,7 @@ export default function CommunityDetailScreen() {
         )}
 
         {/* Tab Bar */}
-        <View style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+        <View style={[styles.tabContainer, { backgroundColor: colors.segmentTrack }]}>
           {TAB_KEYS.map(tabKey => (
             <TouchableOpacity
               key={tabKey}
@@ -1300,7 +1300,7 @@ export default function CommunityDetailScreen() {
                 styles.tab,
                 activeTab === tabKey && [
                   styles.activeTab,
-                  { backgroundColor: colors.cardBackground },
+                  { backgroundColor: colors.segmentActive },
                 ],
               ]}
               onPress={() => {

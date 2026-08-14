@@ -42,6 +42,8 @@ export interface ThemeColors {
   progressInactive: string;
   inputBackground: string;
   divider: string;
+  segmentTrack: string;
+  segmentActive: string;
   skeletonBackground: string;
   skeletonHighlight: string;
   skeletonTintedBackground: string;

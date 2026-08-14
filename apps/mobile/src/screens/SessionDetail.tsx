@@ -8,7 +8,7 @@
  *       specs/17-leagues-tournaments/leagues.md §Sessions
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -62,7 +62,7 @@ import type {
 } from '@rallia/shared-services';
 import type { Enums } from '@rallia/shared-types';
 
-import { SheetDateField } from '#/features/leagues/components/SheetDateField';
+import { SheetDateField } from '#/components/SheetDateField';
 import { ConfirmationModal } from '#/components/ConfirmationModal';
 
 import { useTranslation, useScrollBottomInset, type TranslationKey } from '../hooks';
@@ -98,7 +98,7 @@ export const SessionDetail: React.FC = () => {
   const userId = authSession?.user?.id;
   const route = useRoute<Route>();
   const navigation = useNavigation<NavigationProp>();
-  const { sessionId, leagueId } = route.params;
+  const { sessionId, leagueId, inviteToken } = route.params;
   const isDark = theme === 'dark';
   const tc = isDark ? darkTheme : lightTheme;
 
@@ -142,6 +142,64 @@ export const SessionDetail: React.FC = () => {
     void refetchMine();
     void refetchMatches();
   }, [refetch, refetchPresence, refetchMine, refetchMatches]);
+
+  // A session share link opened by a non-member of a private league: RLS hides
+  // the session, but the token still gets them somewhere useful — the league
+  // page, where the preview RPC renders and the CTA redeems the token.
+  const fetchSettled = !isLoading && (isError || sess !== undefined);
+  useEffect(() => {
+    if (!inviteToken || !fetchSettled || sess) return;
+    navigation.replace('LeagueDetail', { leagueId, inviteToken });
+  }, [inviteToken, fetchSettled, sess, navigation, leagueId]);
+
+  // Share mirrors the league mint conditions: the organizer always has a link;
+  // anyone else only where a player link exists (public, joinable, active).
+  const canShareSession =
+    !!league &&
+    !!sess &&
+    (isOrganizer ||
+      (league.visibility === 'public' &&
+        league.join_mode !== 'invite_only' &&
+        league.status === 'active'));
+
+  const handleShareSession = useCallback(() => {
+    if (!league || !sess) return;
+    lightHaptic();
+    void SheetManager.show('league-invite', {
+      payload: {
+        leagueId: league.id,
+        leagueName: league.name,
+        sessionId: sess.id,
+        sessionLabel:
+          sess.name ||
+          new Date(sess.scheduled_at).toLocaleString(locale, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          }),
+      },
+    });
+  }, [league, sess, locale]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: canShareSession
+        ? () => (
+            <TouchableOpacity
+              onPress={handleShareSession}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('sessionDetail.shareCta')}
+              testID="session-share"
+            >
+              <Ionicons name="share-outline" size={22} color={colors.text} />
+            </TouchableOpacity>
+          )
+        : undefined,
+    });
+  }, [navigation, canShareSession, handleShareSession, colors.text, t]);
 
   const nameOf = useCallback(
     (id: string): string => {
@@ -460,6 +518,26 @@ export const SessionDetail: React.FC = () => {
       });
     },
     [league, sessionId, seasonId, invalidate]
+  );
+
+  // Substitution: the first player of team A is the one offered up, since a
+  // singles row has one player per side and the picker names who leaves.
+  const openSwapPlayer = useCallback(
+    (m: SessionMatch) => {
+      if (!sess) return;
+      const userOut = m.team_a_user_ids[0];
+      if (!userOut) return;
+      lightHaptic();
+      void SheetManager.show('session-swap-player', {
+        payload: {
+          sessionId,
+          userOut,
+          userOutName: nameOf(userOut),
+          sessionVersion: sess.version,
+        },
+      });
+    },
+    [sess, sessionId, nameOf]
   );
 
   // Open (get-or-create) the per-pairing chat and drop the caller in, so they
@@ -911,6 +989,18 @@ export const SessionDetail: React.FC = () => {
                     </View>
                     {canOverride(m) ? (
                       <View style={styles.matchActions}>
+                        {/* Substitute before anyone plays: the late cancellation
+                            the review asked about, without re-pairing the night. */}
+                        {!isScored(m) && !m.match_id ? (
+                          <TouchableOpacity
+                            onPress={() => openSwapPlayer(m)}
+                            style={styles.lockButton}
+                            accessibilityLabel={t('sessionDetail.swap.action')}
+                            testID="cta-swap-player"
+                          >
+                            <Ionicons name="swap-horizontal" size={18} color={colors.primary} />
+                          </TouchableOpacity>
+                        ) : null}
                         <TouchableOpacity
                           onPress={() => openScoreEntry(m)}
                           style={styles.lockButton}
@@ -1024,6 +1114,13 @@ export const SessionDetail: React.FC = () => {
                       : t('sessionDetail.sheet.generate')}
                 </Text>
               </TouchableOpacity>
+            )}
+            {/* Regenerate read as dangerous because nothing said what it spares.
+                It re-pairs the unlocked rows only, and refuses once a score is in. */}
+            {isOrganizer && sess.status === 'published' && hasSheet && (
+              <Text size="xs" color={colors.textMuted} style={styles.sheetHint}>
+                {t('sessionDetail.sheet.regenerateHint')}
+              </Text>
             )}
           </View>
         )}
@@ -1296,6 +1393,7 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[2],
   },
   sheetButton: { marginTop: spacingPixels[3] },
+  sheetHint: { marginTop: spacingPixels[2], textAlign: 'center' },
   fullButton: {
     flexDirection: 'row',
     alignItems: 'center',

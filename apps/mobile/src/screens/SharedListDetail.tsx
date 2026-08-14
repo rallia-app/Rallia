@@ -18,8 +18,8 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
-import { Text, Skeleton, Button } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { EmptyState, Text, Skeleton } from '@rallia/shared-components';
+import { COLORS, spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   useSharedContacts,
   useDeleteSharedContact,
@@ -176,39 +176,16 @@ const SharedListDetail: React.FC = () => {
 
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="person-add-outline" size={64} color={colors.textMuted} />
-        <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          {t('sharedLists.emptyState.noContacts')}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {t('sharedLists.emptyState.addContacts')}
-        </Text>
-
-        <View style={styles.emptyButtons}>
-          <Button
-            variant="primary"
-            size="md"
-            rounded
-            fullWidth
-            onPress={handleImportFromPhoneBook}
-            leftIcon={<Ionicons name="phone-portrait-outline" size={20} color="#fff" />}
-            isDark={isDark}
-          >
-            {t('sharedLists.importFromPhone')}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="md"
-            rounded
-            fullWidth
-            onPress={handleAddManually}
-            leftIcon={<Ionicons name="add-outline" size={20} color={colors.text} />}
-            isDark={isDark}
-          >
-            {t('sharedLists.addManually')}
-          </Button>
-        </View>
+        <EmptyState
+          icon={<Ionicons name="person-add-outline" size={64} color={colors.primary} />}
+          title={t('sharedLists.emptyState.noContacts')}
+          description={t('sharedLists.emptyState.addContacts')}
+          ctaLabel={t('sharedLists.importFromPhone')}
+          onCtaPress={handleImportFromPhoneBook}
+          ctaLeftIcon={<Ionicons name="phone-portrait-outline" size={20} color={COLORS.white} />}
+          secondaryCtaLabel={t('sharedLists.addManually')}
+          onSecondaryCtaPress={handleAddManually}
+        />
       </View>
     );
   };
@@ -415,24 +392,7 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacingPixels[8],
-  },
-  emptyTitle: {
-    marginTop: spacingPixels[4],
-    textAlign: 'center',
-  },
-  emptyDescription: {
-    marginTop: spacingPixels[2],
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  emptyButtons: {
-    marginTop: spacingPixels[6],
-    gap: spacingPixels[3],
-    width: '100%',
-    maxWidth: 280,
   },
 });
 

@@ -931,7 +931,7 @@ describe('listLinkableMatchesForSlot', () => {
     expect(out[0].id).toBe('m-arr');
   });
 
-  it('drops matches with no result, an unverified result, or null embed', async () => {
+  it('keeps scoreless and unconfirmed games as non-linkable states, linkable first', async () => {
     arrange([
       row({
         id: 'm-null',
@@ -946,7 +946,39 @@ describe('listLinkableMatchesForSlot', () => {
       row({ id: 'm-ok', participants: [{ player_id: 'u1' }, { player_id: 'u2' }] }),
     ]);
     const out = await listLinkableMatchesForSlot(params);
-    expect(out.map(m => m.id)).toEqual(['m-ok']);
+    expect(out.map(m => [m.id, m.state])).toEqual([
+      ['m-ok', 'ready'],
+      ['m-null', 'awaiting_score'],
+      ['m-unv', 'awaiting_confirmation'],
+    ]);
+  });
+
+  it('leaves a scoreless candidate without result fields', async () => {
+    arrange([
+      row({
+        id: 'm-null',
+        nullResult: true,
+        participants: [{ player_id: 'u1' }, { player_id: 'u2' }],
+      }),
+    ]);
+    const [only] = await listLinkableMatchesForSlot(params);
+    expect(only).toMatchObject({
+      state: 'awaiting_score',
+      match_result_id: null,
+      winning_team: null,
+      team1_score: null,
+      team2_score: null,
+      verified_at: null,
+      sets: [],
+    });
+  });
+
+  it('only asks for games whose date has passed', async () => {
+    const { matchChain } = arrange([
+      row({ id: 'm-1', participants: [{ player_id: 'u1' }, { player_id: 'u2' }] }),
+    ]);
+    await listLinkableMatchesForSlot(params);
+    expect(matchChain.calls.lte).toHaveBeenCalledWith('match_date', expect.any(String));
   });
 
   it('drops matches whose joined participants are not exactly the two bracket players', async () => {
@@ -1006,11 +1038,9 @@ describe('listLinkableMatchesForSlot', () => {
   });
 
   it('skips the linked-check fetch entirely when no candidates are eligible', async () => {
-    // No second from() call should happen.
+    // Wrong opponent → no candidate at all, so no second from() call.
     const matchChain = chain({
-      data: [
-        row({ id: 'x', verified: false, participants: [{ player_id: 'u1' }, { player_id: 'u2' }] }),
-      ],
+      data: [row({ id: 'x', participants: [{ player_id: 'u1' }, { player_id: 'u9' }] })],
       error: null,
     });
     mockFrom.mockReturnValueOnce(matchChain.p);

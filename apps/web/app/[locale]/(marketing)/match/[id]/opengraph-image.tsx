@@ -164,7 +164,7 @@ export default async function Image({
           right: 0,
           height: 5,
           display: 'flex',
-          background: 'linear-gradient(90deg, #5eead4, #fbbf24, #ed6a6d)',
+          background: 'linear-gradient(90deg, #6bdcc9, #f5b535, #f2554b)',
         }}
       />
 

@@ -4,15 +4,18 @@
  * Wraps the L&T Postgres RPCs for leagues and seasons (V6 slice).
  */
 
-import type { Tables, Enums } from '@rallia/shared-types';
+import type { Tables, Enums, Json } from '@rallia/shared-types';
+import type { UtmParams } from '@rallia/shared-utils';
 
 import {
   getProfilesByIds,
   TournamentPaymentError,
   type PlayerProfile,
   type LinkableMatch,
+  type LinkableMatchState,
   type RegistrationPaymentIntent,
 } from '../tournaments/tournamentService';
+import { generateInvitationLink } from '../invitation/invitationLinkService';
 import { supabase } from '../supabase';
 
 export type League = Tables<'leagues'>;
@@ -105,6 +108,8 @@ export interface CreateLeagueInput {
   maxRating?: number;
   minReputation?: number;
   logoUrl?: string;
+  /** Merged over the sport defaults server-side, then validated. */
+  rulesOverride?: Record<string, unknown>;
 }
 
 export interface LeagueMemberWithProfile extends LeagueMember {
@@ -193,6 +198,7 @@ export async function createLeague(input: CreateLeagueInput): Promise<League> {
     p_max_rating: input.maxRating ?? null,
     p_min_reputation: input.minReputation ?? null,
     p_logo_url: input.logoUrl ?? null,
+    p_rules_override: (input.rulesOverride ?? null) as Json,
   });
   if (error) throw new Error(error.message);
   return data as League;
@@ -824,6 +830,43 @@ export async function createLeagueSession(input: {
   return data as Session;
 }
 
+/**
+ * Creates a whole run of sessions at once, spaced `repeatEveryDays` apart. The
+ * occurrences are ordinary drafts: each is published, edited or cancelled on
+ * its own afterwards. The server refuses a run that would outlive its season.
+ */
+export async function createLeagueSessionSeries(input: {
+  seasonId: string;
+  name: string;
+  firstAt: string;
+  repeatEveryDays: number;
+  occurrences: number;
+  timezone?: string;
+  durationMinutes?: number;
+  facilityId?: string;
+  venueName?: string;
+  capacity?: number;
+  rounds?: number;
+  pairingMode?: Enums<'pairing_mode'>;
+}): Promise<Session[]> {
+  const { data, error } = await supabase.rpc('session_create_series', {
+    p_season_id: input.seasonId,
+    p_name: input.name,
+    p_first_at: input.firstAt,
+    p_repeat_every_days: input.repeatEveryDays,
+    p_occurrences: input.occurrences,
+    p_timezone: input.timezone ?? null,
+    p_duration_minutes: input.durationMinutes ?? 90,
+    p_facility_id: input.facilityId ?? null,
+    p_venue_name: input.venueName ?? null,
+    p_capacity: input.capacity ?? null,
+    p_rounds: input.rounds ?? 1,
+    p_pairing_mode: input.pairingMode ?? 'by_rank',
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Session[];
+}
+
 export async function publishSession(
   sessionId: string,
   versionWas: number,
@@ -931,6 +974,106 @@ export async function regenerateSessionSheet(
   });
   if (error) throw new Error(error.message);
   return data as Session;
+}
+
+/**
+ * Organizer substitution on a published sheet: `userOut` leaves their pairing
+ * and `userIn` takes the slot. If `userIn` was already paired, the two trade;
+ * if they were on a bye, they simply come in. Refused once either pairing
+ * carries a result.
+ */
+export async function swapSessionPlayer(
+  sessionId: string,
+  userOut: string,
+  userIn: string,
+  versionWas: number
+): Promise<Session> {
+  const { data, error } = await supabase.rpc('session_swap_player', {
+    p_session_id: sessionId,
+    p_user_out: userOut,
+    p_user_in: userIn,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as Session;
+}
+
+export type LeagueInviteLink = Tables<'league_invite_links'>;
+
+export interface LeagueInvitePreview {
+  league: League;
+  activeCount: number;
+}
+
+/**
+ * The caller's active invite link, minted on first call. Organizers get the
+ * league's shared organizer link (skeleton key); anyone else gets their own
+ * player link, which only exists on a public, non-invite-only, active league
+ * (SHARING_NOT_AVAILABLE otherwise).
+ */
+export async function getOrCreateLeagueInvite(leagueId: string): Promise<LeagueInviteLink> {
+  const { data, error } = await supabase.rpc('league_invite_get_or_create', {
+    p_league_id: leagueId,
+  });
+  if (error) throw new Error(error.message);
+  return data as LeagueInviteLink;
+}
+
+/**
+ * Revokes the active organizer link and mints a fresh one. Player links are
+ * deliberately left alone — they redeem through the normal join rules.
+ */
+export async function resetLeagueInvite(leagueId: string): Promise<LeagueInviteLink> {
+  const { data, error } = await supabase.rpc('league_invite_reset', {
+    p_league_id: leagueId,
+  });
+  if (error) throw new Error(error.message);
+  return data as LeagueInviteLink;
+}
+
+/**
+ * Token preview: resolves a valid invite token to its league — bypassing RLS
+ * so invitees can see private leagues before joining — plus the active member
+ * count. Throws INVITE_INVALID for unknown / revoked / expired tokens.
+ */
+export async function getLeagueByInviteToken(token: string): Promise<LeagueInvitePreview> {
+  const { data, error } = await supabase.rpc('league_get_by_invite_token', { p_token: token });
+  if (error) throw new Error(error.message);
+  const payload = data as unknown as { league: League; active_count: number };
+  return { league: payload.league, activeCount: payload.active_count };
+}
+
+/**
+ * Joins the caller via an invite token. An organizer link bypasses join_mode
+ * and the rating/reputation gates (never capacity); a player link goes through
+ * the normal league_join rules — an approval league lands the caller pending.
+ * Idempotent for already-active members.
+ */
+export async function joinLeagueViaInvite(token: string): Promise<LeagueMember> {
+  const { data, error } = await supabase.rpc('league_join_via_invite', { p_token: token });
+  if (error) throw new Error(error.message);
+  return data as LeagueMember;
+}
+
+/**
+ * Shareable league invite URL on the unified /invite format — the sender's
+ * referral code rides along for signup attribution. `sessionId` points the
+ * recipient at a specific session once they're in.
+ */
+export function getLeagueShareLink(
+  token: string,
+  leagueId: string,
+  referralCode: string,
+  options?: { sessionId?: string; utm?: UtmParams }
+): string {
+  return generateInvitationLink({
+    type: 'league',
+    referralCode,
+    targetId: leagueId,
+    shareToken: token,
+    sessionId: options?.sessionId,
+    utm: options?.utm,
+  });
 }
 
 export async function setSessionMatchLock(
@@ -1081,10 +1224,14 @@ export async function reinstateLeagueMember(
 // ---------------------------------------------------------------------------
 
 /**
- * List the caller's verified matches that could be linked to a session pairing:
- * every member of the pairing is a joined participant (2 for singles, 4 for
- * doubles), same sport + format, has a verified result, and isn't already linked
- * to another session pairing or a tournament bracket slot.
+ * List the caller's games that could be linked to a session pairing: every
+ * member of the pairing is a joined participant (2 for singles, 4 for doubles),
+ * same sport + format, and not already linked to another session pairing or a
+ * tournament bracket slot.
+ *
+ * Games still missing a score, or with a score the opponent has not confirmed,
+ * are returned too (see `state`) so the picker can show them as not-yet-linkable
+ * with the step that unblocks them. Only 'ready' rows may be attached.
  */
 export async function listLinkableMatchesForSessionSlot(params: {
   sessionMatchId: string;
@@ -1093,15 +1240,24 @@ export async function listLinkableMatchesForSessionSlot(params: {
   sportId: string;
   entryFormat: Enums<'entry_format'>;
 }): Promise<LinkableMatch[]> {
+  // Scoreless games are candidates too, so the result join can't be inner —
+  // which means upcoming games would otherwise crowd out played ones. Only
+  // games whose date has passed can have been played.
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+    today.getDate()
+  ).padStart(2, '0')}`;
+
   const { data, error } = await supabase
     .from('match')
     .select(
       `id, match_date, start_time, end_time, format,
-       match_result!inner ( id, is_verified, verified_at, winning_team, team1_score, team2_score,
+       match_result ( id, is_verified, verified_at, winning_team, team1_score, team2_score,
          match_set ( set_number, team1_score, team2_score ) ),
        match_participant!inner ( player_id, status, team_number )`
     )
     .eq('sport_id', params.sportId)
+    .lte('match_date', todayIso)
     .order('match_date', { ascending: false })
     .limit(50);
   if (error) throw new Error(error.message);
@@ -1134,8 +1290,12 @@ export async function listLinkableMatchesForSessionSlot(params: {
 
   for (const row of rows) {
     const mr = Array.isArray(row.match_result) ? row.match_result[0] : row.match_result;
-    if (!mr || !mr.is_verified) continue;
     if ((row.format ?? 'singles') !== (isDoubles ? 'doubles' : 'singles')) continue;
+    const state: LinkableMatchState = !mr
+      ? 'awaiting_score'
+      : mr.is_verified
+        ? 'ready'
+        : 'awaiting_confirmation';
 
     const joined = row.match_participant.filter(p => p.status === 'joined');
     const joinedUsers = joined.map(p => p.player_id);
@@ -1152,21 +1312,22 @@ export async function listLinkableMatchesForSessionSlot(params: {
       team2_user_ids = t2 ? [t2] : [];
     }
 
-    const sets = (mr.match_set ?? [])
+    const sets = (mr?.match_set ?? [])
       .slice()
       .sort((a, b) => a.set_number - b.set_number)
       .map(s => ({ team1: s.team1_score, team2: s.team2_score }));
 
     eligible.push({
+      state,
       id: row.id,
       match_date: row.match_date,
       start_time: row.start_time,
       end_time: row.end_time,
-      match_result_id: mr.id,
-      winning_team: (mr.winning_team as 1 | 2 | null) ?? null,
-      team1_score: mr.team1_score,
-      team2_score: mr.team2_score,
-      verified_at: mr.verified_at,
+      match_result_id: mr?.id ?? null,
+      winning_team: (mr?.winning_team as 1 | 2 | null) ?? null,
+      team1_score: mr?.team1_score ?? null,
+      team2_score: mr?.team2_score ?? null,
+      verified_at: mr?.verified_at ?? null,
       team1_user_ids,
       team2_user_ids,
       sets,
@@ -1189,7 +1350,10 @@ export async function listLinkableMatchesForSessionSlot(params: {
   for (const r of sLinked.data ?? []) if (r.match_id) taken.add(r.match_id);
   for (const r of tLinked.data ?? []) if (r.match_id) taken.add(r.match_id);
 
-  return eligible.filter(m => !taken.has(m.id));
+  // Linkable games first; the rest keep the date ordering from the query.
+  return eligible
+    .filter(m => !taken.has(m.id))
+    .sort((a, b) => Number(b.state === 'ready') - Number(a.state === 'ready'));
 }
 
 /**

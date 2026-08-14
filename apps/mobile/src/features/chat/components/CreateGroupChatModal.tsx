@@ -25,7 +25,7 @@ import ActionSheet, {
   ScrollView,
 } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton } from '@rallia/shared-components';
+import { Text, Skeleton, EmptyState } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { useGetOrCreateDirectConversation, usePlayerSearch } from '@rallia/shared-hooks';
 import {
@@ -425,14 +425,15 @@ export function CreateGroupChatActionSheet({ payload }: SheetProps<'create-group
         {isLoadingPlayers ? (
           renderPlayerSkeleton()
         ) : players.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={48} color={colors.textMuted} />
-            <Text style={{ color: colors.textMuted, marginTop: 12, textAlign: 'center' }}>
-              {searchQuery
+          <EmptyState
+            variant="sheet"
+            icon={<Ionicons name="people-outline" size={36} color={colors.primary} />}
+            title={
+              searchQuery
                 ? t('chat.noPlayersFoundMatching', { query: searchQuery })
-                : t('chat.noPlayersAvailable')}
-            </Text>
-          </View>
+                : t('chat.noPlayersAvailable')
+            }
+          />
         ) : (
           <FlatList
             data={players}
@@ -771,12 +772,6 @@ const styles = StyleSheet.create({
   footerLoader: {
     paddingVertical: spacingPixels[4],
     alignItems: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[8],
   },
   listContent: {
     paddingBottom: spacingPixels[4],

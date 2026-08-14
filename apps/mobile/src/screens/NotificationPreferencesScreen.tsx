@@ -46,6 +46,8 @@ import type { TranslationKey } from '@rallia/shared-translations';
 
 import * as Analytics from '#/services/analytics';
 import { useAuth, useTranslation, useScrollBottomInset } from '#/hooks';
+import { useActionsSheet } from '#/context';
+import SignInPrompt from '#/components/SignInPrompt';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -68,6 +70,10 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   'match_check_in_available',
   'match_new_available',
   'match_spot_opened',
+  'court_booking_nudge',
+  'match_last_minute_spots',
+  'match_unfilled_recovery',
+  'play_rhythm_nudge',
   'nearby_match_available',
   'player_kicked',
   'player_left',
@@ -106,9 +112,12 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   'tournament_updated',
   'tournament_cancelled',
   'tournament_completed',
+  'tournament_pool_eliminated',
+  'tournament_action_required',
   'league_invitation',
   'league_member_request',
   'league_member_approved',
+  'league_member_rejected',
   'session_published',
   'session_confirm_reminder',
   'session_cancelled',
@@ -138,6 +147,10 @@ const NOTIFICATION_DS_COLORS: Partial<Record<ExtendedNotificationTypeEnum, strin
   match_check_in_available: status.success.light,
   match_new_available: primary[500],
   match_spot_opened: status.success.light,
+  court_booking_nudge: accent[600],
+  match_last_minute_spots: secondary[500],
+  match_unfilled_recovery: primary[500],
+  play_rhythm_nudge: accent[400],
   nearby_match_available: status.info.DEFAULT,
   player_kicked: secondary[500],
   player_left: accent[600],
@@ -175,9 +188,12 @@ const NOTIFICATION_DS_COLORS: Partial<Record<ExtendedNotificationTypeEnum, strin
   tournament_updated: status.info.DEFAULT,
   tournament_cancelled: secondary[500],
   tournament_completed: status.success.light,
+  tournament_pool_eliminated: status.info.DEFAULT,
+  tournament_action_required: accent[600],
   league_invitation: primary[500],
   league_member_request: primary[500],
   league_member_approved: status.success.light,
+  league_member_rejected: status.error.light,
   session_published: status.info.DEFAULT,
   session_confirm_reminder: accent[600],
   // Cancellations share the tournament_cancelled colour: same kind of bad news.
@@ -457,6 +473,7 @@ function useColors() {
 
 const NotificationPreferencesScreen: React.FC = () => {
   const { session, isAuthenticated, loading: isLoadingAuth } = useAuth();
+  const { openSheet } = useActionsSheet();
   const { theme } = useTheme();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
@@ -543,17 +560,14 @@ const NotificationPreferencesScreen: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        edges={['bottom']}
-      >
-        <View style={styles.emptyContainer}>
-          <Ionicons name="lock-closed-outline" size={64} color={colors.iconMuted} />
-          <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-            {t('notifications.signInRequired')}
-          </Text>
-        </View>
-      </SafeAreaView>
+      <SignInPrompt
+        variant="notifications"
+        icon="lock-closed"
+        title={t('notifications.signInRequired')}
+        description={t('notifications.signInPrompt')}
+        buttonText={t('auth.signIn')}
+        onSignIn={openSheet}
+      />
     );
   }
 
@@ -628,16 +642,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[8],
-  },
-  emptyTitle: {
-    marginTop: spacingPixels[4],
-    textAlign: 'center',
   },
   scrollView: {
     flex: 1,

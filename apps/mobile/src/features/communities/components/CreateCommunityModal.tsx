@@ -403,9 +403,7 @@ export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
           />
         </View>
 
-        <View
-          style={[styles.visibilityToggle, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
-        >
+        <View style={[styles.visibilityToggle, { backgroundColor: colors.segmentTrack }]}>
           <View style={styles.visibilityLeft}>
             <View
               style={[
@@ -442,9 +440,7 @@ export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
             <Text weight="medium" size="sm" style={{ color: colors.text, marginBottom: 8 }}>
               {t('community.minRatingOptional')}
             </Text>
-            <View
-              style={[styles.visibilityToggle, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
-            >
+            <View style={[styles.visibilityToggle, { backgroundColor: colors.segmentTrack }]}>
               <View style={styles.visibilityLeft}>
                 <View
                   style={[
@@ -538,7 +534,7 @@ export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
                 <View
                   style={[
                     styles.visibilityToggle,
-                    { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', marginTop: 12 },
+                    { backgroundColor: colors.segmentTrack, marginTop: 12 },
                   ]}
                 >
                   <View style={styles.visibilityLeft}>
@@ -754,7 +750,7 @@ export const CreateCommunityForm: React.FC<CreateCommunityFormProps> = ({
           </Text>
         </View>
 
-        <View style={[styles.infoBox, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+        <View style={[styles.infoBox, { backgroundColor: colors.inputBackground }]}>
           <Ionicons name="information-circle" size={20} color={colors.primary} />
           <Text size="sm" style={{ color: colors.textSecondary, flex: 1, marginLeft: 8 }}>
             {t('community.createInfo')}

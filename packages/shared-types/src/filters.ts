@@ -48,7 +48,8 @@ export type MatchTierFilter = 'all' | 'mostWanted' | 'covetedPlayers' | 'courtBo
 export type SpecificDateFilter = string | null;
 
 /** Spots available filter */
-export type SpotsAvailableFilter = 'all' | '1' | '2' | '3';
+/** 'any' means at least one free spot, i.e. hide full games. */
+export type SpotsAvailableFilter = 'all' | 'any' | '1' | '2' | '3';
 
 /** Specific time filter — HH:MM format or null */
 export type SpecificTimeFilter = string | null;

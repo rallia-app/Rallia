@@ -26,10 +26,12 @@ import {
   useTournamentRegistrations,
   useProfilesByIds,
   useTournamentBracketPreview,
+  useTournamentPoolPreview,
   useSetTournamentSeeds,
   useGenerateTournamentBracket,
+  useGenerateTournamentPools,
 } from '@rallia/shared-hooks';
-import type { PreviewBracketMatch } from '@rallia/shared-services';
+import type { PreviewBracketMatch, PreviewPoolSlot } from '@rallia/shared-services';
 
 import { useThemeStyles, useTranslation, useScrollBottomInset } from '../hooks';
 import { ConfirmationModal } from '../components/ConfirmationModal';
@@ -143,10 +145,32 @@ export default function TournamentBracketSetup() {
     initializedRef.current = true;
   }, [registered]);
 
+  const isPool = tournament?.bracket_type === 'pool_knockout';
   const canPreview = tournament?.status === 'registration_closed' && registered.length >= 2;
-  const { data: preview = [] } = useTournamentBracketPreview(params.tournamentId, !!canPreview);
+  const { data: preview = [] } = useTournamentBracketPreview(
+    params.tournamentId,
+    !!canPreview && !isPool
+  );
+  const { data: poolPreview = [] } = useTournamentPoolPreview(
+    params.tournamentId,
+    !!canPreview && !!isPool
+  );
   const setSeeds = useSetTournamentSeeds();
   const generate = useGenerateTournamentBracket();
+  const generatePools = useGenerateTournamentPools();
+
+  // Pool preview grouped for rendering: seed order inside each pool.
+  const poolGroups = useMemo(() => {
+    const byPool = new Map<number, PreviewPoolSlot[]>();
+    for (const s of poolPreview) {
+      const arr = byPool.get(s.pool_number) ?? [];
+      arr.push(s);
+      byPool.set(s.pool_number, arr);
+    }
+    return [...byPool.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([pool, slots]) => ({ pool, slots: slots.sort((a, b) => a.slot - b.slot) }));
+  }, [poolPreview]);
 
   // Debounced persistence of the local order so the preview re-renders.
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -221,7 +245,7 @@ export default function TournamentBracketSetup() {
           versionWas: tournament.version,
         });
       }
-      await generate.mutateAsync({
+      await (isPool ? generatePools : generate).mutateAsync({
         tournamentId: params.tournamentId,
         versionWas: tournament.version,
       });
@@ -239,7 +263,7 @@ export default function TournamentBracketSetup() {
     }
   }, [tournament, order, params.tournamentId, setSeeds, generate, navigation, toast, t]);
 
-  const publishing = setSeeds.isPending || generate.isPending;
+  const publishing = setSeeds.isPending || generate.isPending || generatePools.isPending;
 
   if (!tournament) {
     return (
@@ -378,51 +402,88 @@ export default function TournamentBracketSetup() {
             </Text>
           )}
         </View>
-        <View style={styles.matchList}>
-          {round1.map((m, idx) => {
-            const seed1 = seedByRegId.get(m.player1_registration_id);
-            const seed2 = seedByRegId.get(m.player2_registration_id);
-            return (
+        {isPool && (
+          <View style={styles.matchList}>
+            {poolGroups.map(({ pool, slots }) => (
               <View
-                key={`${m.round_number}-${m.match_position}`}
+                key={pool}
                 style={[
                   styles.matchCard,
                   { backgroundColor: colors.card, borderColor: colors.border },
                 ]}
               >
-                <PreviewSide
-                  isBye={m.player1_is_bye}
-                  seed={seed1}
-                  name={
-                    m.player1_is_bye
-                      ? t('tournamentDetail.bracket.bye')
-                      : (nameByRegId.get(m.player1_registration_id) ?? '—')
-                  }
-                  colors={colors}
-                  accent={accent}
-                />
-                <View style={styles.vsRow}>
-                  <View style={[styles.vsLine, { backgroundColor: colors.border }]} />
-                  <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.vsLabel}>
-                    {t('bracketSetup.vs')}
-                  </Text>
-                  <View style={[styles.vsLine, { backgroundColor: colors.border }]} />
-                </View>
-                <PreviewSide
-                  isBye={m.player2_is_bye}
-                  seed={seed2}
-                  name={
-                    m.player2_is_bye
-                      ? t('tournamentDetail.bracket.bye')
-                      : (nameByRegId.get(m.player2_registration_id) ?? '—')
-                  }
-                  colors={colors}
-                  accent={accent}
-                />
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {t('bracketSetup.poolTitle').replace(
+                    '{letter}',
+                    'ABCDEFGHIJ'[pool - 1] ?? String(pool)
+                  )}
+                </Text>
+                {slots.map(s => (
+                  <View key={s.registration_id} style={styles.poolSlotRow}>
+                    <Text size="xs" weight="semibold" color={accent}>
+                      {seedByRegId.get(s.registration_id) ?? '—'}
+                    </Text>
+                    <Text size="sm" color={colors.text} numberOfLines={1}>
+                      {nameByRegId.get(s.registration_id) ?? '—'}
+                    </Text>
+                  </View>
+                ))}
               </View>
-            );
-          })}
-        </View>
+            ))}
+          </View>
+        )}
+        {!isPool && (
+          <View style={styles.matchList}>
+            {round1.map((m, idx) => {
+              const seed1 = seedByRegId.get(m.player1_registration_id);
+              const seed2 = seedByRegId.get(m.player2_registration_id);
+              return (
+                <View
+                  key={`${m.round_number}-${m.match_position}`}
+                  style={[
+                    styles.matchCard,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                >
+                  <PreviewSide
+                    isBye={m.player1_is_bye}
+                    seed={seed1}
+                    name={
+                      m.player1_is_bye
+                        ? t('tournamentDetail.bracket.bye')
+                        : (nameByRegId.get(m.player1_registration_id) ?? '—')
+                    }
+                    colors={colors}
+                    accent={accent}
+                  />
+                  <View style={styles.vsRow}>
+                    <View style={[styles.vsLine, { backgroundColor: colors.border }]} />
+                    <Text
+                      size="xs"
+                      weight="semibold"
+                      color={colors.textMuted}
+                      style={styles.vsLabel}
+                    >
+                      {t('bracketSetup.vs')}
+                    </Text>
+                    <View style={[styles.vsLine, { backgroundColor: colors.border }]} />
+                  </View>
+                  <PreviewSide
+                    isBye={m.player2_is_bye}
+                    seed={seed2}
+                    name={
+                      m.player2_is_bye
+                        ? t('tournamentDetail.bracket.bye')
+                        : (nameByRegId.get(m.player2_registration_id) ?? '—')
+                    }
+                    colors={colors}
+                    accent={accent}
+                  />
+                </View>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
 
       {/* Publish */}
@@ -543,6 +604,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[3.5],
   },
   previewSide: { flexDirection: 'row', alignItems: 'center', gap: spacingPixels[2.5] },
+  poolSlotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2.5],
+    paddingTop: spacingPixels[2],
+  },
   seedChip: {
     width: 24,
     height: 24,

@@ -517,6 +517,35 @@ export async function checkPostalCodeCoverage(
 }
 
 /**
+ * Count distinct courts with a future bookable slot within `maxDistanceKm` of
+ * the given point, for the given sports. Server-side aggregate: counting this
+ * client-side would mean pulling every nearby facility's inline slots.
+ *
+ * @param maxDistanceKm - Radius in km; omit for unbounded
+ */
+export async function countAvailableCourtsNearby(params: {
+  sportIds: string[];
+  latitude: number;
+  longitude: number;
+  maxDistanceKm?: number;
+}): Promise<number> {
+  const { sportIds, latitude, longitude, maxDistanceKm } = params;
+
+  const { data, error } = await supabase.rpc('count_available_courts_nearby', {
+    p_sport_ids: sportIds,
+    p_latitude: latitude,
+    p_longitude: longitude,
+    p_max_distance_km: maxDistanceKm ?? undefined,
+  });
+
+  if (error) {
+    throw new Error(`Failed to count available courts nearby: ${error.message}`);
+  }
+
+  return data ?? 0;
+}
+
+/**
  * Facility service object for grouped exports
  */
 export const facilityService = {
@@ -525,6 +554,7 @@ export const facilityService = {
   searchFacilitiesNearby,
   getMapFacilities,
   checkPostalCodeCoverage,
+  countAvailableCourtsNearby,
 };
 
 export default facilityService;

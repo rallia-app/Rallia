@@ -20,6 +20,24 @@
 -- ============================================
 
 BEGIN;
+
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create call only and
+-- dropped straight after: the fixture-picking queries filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
 DO $$
 DECLARE
   v_sport uuid;
@@ -48,9 +66,11 @@ BEGIN
 
   -- Private + approval mode: the strictest case the link must bypass.
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org, 'role','authenticated')::text, true);
+  PERFORM pg_temp.staff_on(v_org);
   v_t := tournament_create('Invite Cup', v_sport, 4::smallint,
           now() + interval '7 days', now() + interval '8 days',
           NULL, 'private'::tournament_visibility, 'approval'::tournament_registration_mode);
+  PERFORM pg_temp.staff_off(v_org);
   v_t := tournament_open_registration(v_t.id, v_t.version);
 
   -- 1. get_or_create is idempotent and mints a 32-char token

@@ -58,6 +58,18 @@ export function onboardingAbandoned(props: {
   capture('onboarding_abandoned', props);
 }
 
+export function phoneCodeSent(props: { source: 'onboarding' | 'settings' }): void {
+  capture('phone_code_sent', props);
+}
+
+export function phoneVerified(props: { source: 'onboarding' | 'settings' }): void {
+  capture('phone_verified', props);
+}
+
+export function phoneCaptureSkipped(props: { source: 'onboarding'; had_number: boolean }): void {
+  capture('phone_capture_skipped', props);
+}
+
 // ---- Core Loop ----
 
 export function matchCreated(props: {
@@ -226,8 +238,33 @@ export function matchDeclined(props: {
   capture('match_declined', props);
 }
 
-export function matchCreationStarted(): void {
-  capture('match_creation_started');
+export type MatchCreationSource =
+  | 'plus_menu'
+  | 'empty_feed'
+  | 'feed_footer'
+  | 'home_nearby_empty'
+  | 'post_feedback'
+  | 'direct';
+
+export function matchCreationStarted(props?: { source?: MatchCreationSource }): void {
+  capture('match_creation_started', props);
+}
+
+/** Fired when a "create your own game" CTA is pressed on a browse surface. */
+export function createGameCtaPressed(props: {
+  placement: 'empty_state' | 'feed_footer' | 'feed_header' | 'home_nearby_empty';
+  has_active_filters: boolean;
+}): void {
+  capture('create_game_cta_pressed', props);
+}
+
+/** Fired when the post-feedback "what's next" prompt is answered. */
+export function postFeedbackPromptAction(props: {
+  action: 'create' | 'join' | 'dismiss';
+  match_id: string;
+  sport_id: string;
+}): void {
+  capture('post_feedback_prompt_action', props);
 }
 
 export type MatchCreationSuccessAction =
@@ -568,6 +605,44 @@ export function notificationPermissionResult(props: {
   source: 'pre_onboarding';
 }): void {
   capture('notification_permission_result', props);
+}
+
+/**
+ * Why a device ended up without a stored Expo push token.
+ *
+ * - `not_physical_device` — simulator/emulator, dev only, never fires in prod
+ * - `permission_denied`   — OS notification permission refused (or previously
+ *                           refused, so the prompt returns denied immediately)
+ * - `token_fetch_failed`  — Expo's token endpoint failed after retries
+ * - `missing_player_row`  — the token write matched no player row, because
+ *                           onboarding had not created it yet
+ * - `write_failed`        — the database write itself errored
+ */
+export type PushTokenFailureReason =
+  | 'not_physical_device'
+  | 'permission_denied'
+  | 'token_fetch_failed'
+  | 'missing_player_row'
+  | 'write_failed';
+
+/**
+ * Emitted on every completed registration attempt. Paired with
+ * `push_token_registered` these give a measurable success rate — the previous
+ * Logger.warn paths reached only Sentry breadcrumbs, so silent token loss was
+ * invisible in product analytics.
+ */
+export function pushTokenRegistrationFailed(props: {
+  reason: PushTokenFailureReason;
+  /** Attempt index within this session, 0 for the first try. */
+  attempt: number;
+  /** Present for token_fetch_failed and write_failed. */
+  message?: string;
+}): void {
+  capture('push_token_registration_failed', props);
+}
+
+export function pushTokenRegistered(props: { attempt: number }): void {
+  capture('push_token_registered', props);
 }
 
 /**
@@ -1066,6 +1141,23 @@ export function tournamentInviteRedeemed(props: {
   capture('lt.tournament.invite_redeemed', props);
 }
 
+export function leagueShared(props: {
+  leagueId: string;
+  medium: 'link' | 'native' | 'qr';
+  /** Present when the share was initiated from a session's share action. */
+  sessionId?: string;
+}): void {
+  capture('lt.league.shared', props);
+}
+
+export function leagueInviteRedeemed(props: {
+  leagueId: string;
+  result: 'joined' | 'error';
+  errorCode?: string;
+}): void {
+  capture('lt.league.invite_redeemed', props);
+}
+
 // ---- Chat Match Organizer ----
 // Funnel: opened → card_posted → vote_cast (×N) → match_created. The card lives
 // in small DM/group chats and tournament round chats; opened/card_posted carry
@@ -1106,7 +1198,7 @@ export function matchOrganizerVoteCast(props: {
   format: 'singles' | 'doubles';
   participant_count: number;
   option_index: number;
-  option_tier: 'bookable' | 'usually_free';
+  option_tier: 'bookable' | 'usually_free' | 'custom';
   /** True when the tap removed an existing vote rather than adding one. */
   removed: boolean;
 }): void {
@@ -1120,7 +1212,7 @@ export function matchOrganizerMatchCreated(props: {
   format: 'singles' | 'doubles';
   participant_count: number;
   option_index: number;
-  option_tier: 'bookable' | 'usually_free';
+  option_tier: 'bookable' | 'usually_free' | 'custom';
   /** Court price of the agreed slot in cents (null when not court-confirmed). */
   price_cents: number | null;
 }): void {

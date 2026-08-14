@@ -12,7 +12,7 @@
  * screen.
  */
 
-import React, { useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { Alert, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import Animated, {
@@ -22,7 +22,7 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { MatchCard, Text } from '@rallia/shared-components';
+import { MatchCard, Text, EmptyState } from '@rallia/shared-components';
 import { useAuth } from '@rallia/shared-hooks';
 import { base, primary, spacingPixels, radiusPixels } from '@rallia/design-system';
 import type { MatchWithDetails } from '@rallia/shared-types';
@@ -52,6 +52,13 @@ interface SuggestionsStepProps {
   /** Real public matches with open spots that fit the player's setup. */
   opportunities: MatchWithDetails[];
   isLoading: boolean;
+  /**
+   * Whether this step is the wizard's CURRENT step. The wizard mounts every
+   * step at once (horizontal slider), so mount alone must never trigger
+   * behavior — the auto-skip below fired on wizard open and closed the whole
+   * sheet before this guard existed.
+   */
+  isActive: boolean;
   onComplete: () => void;
   onRefresh?: () => void;
   colors: ThemeColors;
@@ -69,6 +76,7 @@ interface SuggestionsStepProps {
 export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
   opportunities,
   isLoading,
+  isActive,
   onComplete,
   onRefresh,
   colors,
@@ -95,6 +103,18 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
     source: 'onboarding',
     notifyError: handleJoinError,
   });
+
+  // When the fetch settles with nothing joinable, complete onboarding instead
+  // of stranding the player on an empty step. The wizard already skips this
+  // step when the prefetch settled empty before advancing; this covers the
+  // race where the player advanced while the query was still in flight.
+  const autoSkippedRef = useRef(false);
+  useEffect(() => {
+    if (!isActive || isLoading || opportunities.length > 0 || autoSkippedRef.current) return;
+    autoSkippedRef.current = true;
+    Analytics.onboardingStepCompleted({ step_name: 'suggestions_skipped_empty', step_index: -1 });
+    onComplete();
+  }, [isActive, isLoading, opportunities.length, onComplete]);
 
   // Cap the preview at MAX_CARDS — the caller already fetches up to 20, but the
   // post-onboarding moment only needs a short, joinable shortlist.
@@ -181,27 +201,14 @@ export const SuggestionsStep: React.FC<SuggestionsStepProps> = ({
             </Text>
           </View>
         ) : previewOpportunities.length === 0 ? (
-          <View style={styles.centeredState}>
-            <Ionicons name="search-outline" size={48} color={colors.textMuted} />
-            <Text size="base" weight="semibold" color={colors.text} style={styles.stateText}>
-              {t('onboarding.suggestions.emptyTitle')}
-            </Text>
-            <Text size="sm" color={colors.textMuted}>
-              {t('onboarding.suggestions.emptySubtitle')}
-            </Text>
-            {onRefresh && (
-              <TouchableOpacity
-                style={[styles.refreshButton, { borderColor: colors.buttonActive }]}
-                onPress={onRefresh}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="refresh-outline" size={18} color={colors.buttonActive} />
-                <Text size="sm" weight="semibold" color={colors.buttonActive}>
-                  {t('common.refresh')}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <EmptyState
+            variant="sheet"
+            icon={<Ionicons name="search-outline" size={36} color={colors.buttonActive} />}
+            title={t('onboarding.suggestions.emptyTitle')}
+            description={t('onboarding.suggestions.emptySubtitle')}
+            ctaLabel={onRefresh ? t('common.refresh') : undefined}
+            onCtaPress={onRefresh}
+          />
         ) : (
           <View style={styles.cardsContainer}>
             {previewOpportunities.map(match => (
@@ -366,18 +373,6 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[3],
     textAlign: 'center',
   },
-  refreshButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[5],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    gap: spacingPixels[2],
-  },
-
   // Join CTA
   cardFooter: {
     flexDirection: 'row',

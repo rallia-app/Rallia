@@ -49,10 +49,12 @@ BEGIN
     o_org := o_players[1];
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', o_org::text)::text, true);
+    PERFORM pg_temp.staff_on(o_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => p_name, p_sport_id => v_sport, p_max_participants => p_max::smallint,
         p_start_date => now() + interval '7 days', p_end_date => now() + interval '8 days',
         p_visibility => 'public', p_registration_mode => p_mode, p_entry_format => p_format);
+    PERFORM pg_temp.staff_off(o_org);
     o_tid := v_t.id;
 
     UPDATE tournaments
@@ -111,6 +113,24 @@ END $$;
 
 CREATE OR REPLACE FUNCTION pg_temp.as_player(p_player uuid) RETURNS void LANGUAGE sql AS $$
     SELECT set_config('request.jwt.claims', json_build_object('sub', p_player::text)::text, true);
+$$;
+
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
 $$;
 
 -- ==========================================================================
@@ -351,7 +371,7 @@ END $$;
 DO $$
 DECLARE
     v_org uuid; v_players uuid[]; v_tid uuid; v_reg uuid; v_v int; v_ok boolean; v_st text;
-    v_free_reg uuid;
+    v_free_reg uuid; v_pool_reg uuid; v_kept uuid; i integer;
 BEGIN
     -- 4a. tournament_withdraw refuses a paid entry (must use the refund path).
     SELECT o_org, o_players, o_tid INTO v_org, v_players, v_tid FROM pg_temp.mk_paid_draft('Sec 4a');
@@ -420,6 +440,44 @@ BEGIN
                     JOIN lt_registration_payment p ON p.id = r.payment_id
                    WHERE p.tournament_registration_id = v_reg),
         '4e: a normal completed paid registration must be paid out';
+
+    -- 4f. a player forfeited MID-POOLS is the opposite of 4d: they had their
+    --     window, so the entry is not refunded and settles to the organizer.
+    --     Both exits write 'disqualified', so this is the regression guard for
+    --     anyone widening the refund leg back to the bare status.
+    SELECT o_org, o_players, o_tid INTO v_org, v_players, v_tid FROM pg_temp.mk_paid_draft('Sec 4f');
+    UPDATE tournaments SET bracket_type = 'pool_knockout', pool_size = 3, qualifiers_per_pool = 1
+     WHERE id = v_tid;
+    PERFORM pg_temp.open_paid(v_org, v_tid);
+    FOR i IN 2..7 LOOP
+        v_reg := pg_temp.reserve(v_tid, v_players[i]);
+        PERFORM pg_temp.mark_paid(v_reg);
+        IF i = 2 THEN v_pool_reg := v_reg; ELSIF i = 3 THEN v_kept := v_reg; END IF;
+    END LOOP;
+    PERFORM pg_temp.as_player(v_org);
+    SELECT version INTO v_v FROM tournaments WHERE id = v_tid;
+    PERFORM tournament_close_registration(v_tid, v_v);
+    SELECT version INTO v_v FROM tournaments WHERE id = v_tid;
+    PERFORM tournament_generate_pools(v_tid, v_v);
+
+    SELECT version INTO v_v FROM tournament_registrations WHERE id = v_pool_reg;
+    PERFORM tournament_forfeit_registration(v_pool_reg, v_v, 'abandon');
+    ASSERT NOT EXISTS (SELECT 1 FROM lt_cancel_refund_candidates() c
+                        JOIN lt_registration_payment p ON p.id = c.payment_id
+                       WHERE p.tournament_registration_id = v_pool_reg),
+        '4f: a mid-pool forfeit must NOT be refunded';
+
+    UPDATE tournaments SET status = 'completed',
+           start_date = now() - interval '72 hours', end_date = now() - interval '48 hours'
+     WHERE id = v_tid;
+    ASSERT EXISTS (SELECT 1 FROM lt_release_candidates() r
+                    JOIN lt_registration_payment p ON p.id = r.payment_id
+                   WHERE p.tournament_registration_id = v_pool_reg),
+        '4f: a forfeited entry must settle to the organizer, not sit unsettled';
+    ASSERT EXISTS (SELECT 1 FROM lt_release_candidates() r
+                    JOIN lt_registration_payment p ON p.id = r.payment_id
+                   WHERE p.tournament_registration_id = v_kept),
+        '4f: the players who stayed must still be paid out';
 
     RAISE NOTICE 'PASS 4: paid exits protected; normal payouts intact';
 END $$;

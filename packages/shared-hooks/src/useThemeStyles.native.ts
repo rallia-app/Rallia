@@ -67,6 +67,10 @@ export interface ThemeColors {
   inputBackground: string;
   divider: string;
 
+  // Segmented controls (pill tab bars): recessed track + elevated active pill
+  segmentTrack: string;
+  segmentActive: string;
+
   // Skeleton shimmer palette — `skeleton*` for neutral surfaces (colors.card),
   // `skeletonTinted*` for primary-tinted card surfaces (MatchCard-style).
   skeletonBackground: string;
@@ -106,13 +110,15 @@ export function useThemeStyles() {
       cardBackground: themeColors.card,
       cardForeground: themeColors.cardForeground,
 
-      // Text hierarchy
+      // Text hierarchy (neutral in both modes; accent text is opt-in, not the default)
       text: themeColors.foreground,
-      textSecondary: isDark ? primary[300] : neutral[600],
+      textSecondary: isDark ? neutral[300] : neutral[600],
       textMuted: themeColors.mutedForeground,
 
-      // Interactive
-      primary: isDark ? primary[500] : primary[600],
+      // Interactive. Buttons keep white text in both modes, so dark-mode
+      // fills sit one step deeper (500) than the bright 400 used for
+      // links, rings, and text accents.
+      primary: isDark ? primary[400] : primary[600],
       primaryForeground: BASE_WHITE,
       buttonActive: isDark ? primary[500] : primary[600],
       buttonInactive: themeColors.muted,
@@ -121,10 +127,10 @@ export function useThemeStyles() {
 
       // Borders
       border: themeColors.border,
-      borderFocus: isDark ? primary[500] : primary[600],
+      borderFocus: isDark ? primary[400] : primary[600],
       input: themeColors.input,
       inputBorder: isDark ? neutral[700] : neutral[200],
-      inputBorderFocused: isDark ? primary[500] : primary[600],
+      inputBorderFocused: isDark ? primary[400] : primary[600],
 
       // Status
       error: status.error.DEFAULT,
@@ -132,8 +138,8 @@ export function useThemeStyles() {
       warning: status.warning.DEFAULT,
       info: status.info.DEFAULT,
 
-      // Header (app-specific)
-      headerBackground: isDark ? neutral[900] : primary[100],
+      // Header (app-specific) — sits on the tinted neutral ground, no teal wash
+      headerBackground: isDark ? neutral[900] : neutral[100],
       headerForeground: isDark ? neutral[50] : neutral[900],
 
       // Icon colors
@@ -141,18 +147,25 @@ export function useThemeStyles() {
       iconMuted: themeColors.mutedForeground,
 
       // Extended colors for overlays/wizards
-      progressActive: isDark ? primary[500] : primary[600],
+      progressActive: isDark ? primary[400] : primary[600],
       progressInactive: themeColors.muted,
       inputBackground: isDark ? neutral[800] : neutral[100],
       divider: isDark ? neutral[700] : neutral[200],
 
+      // Segmented controls: the active pill must sit ABOVE the track in
+      // luminance (dark cards are darker than the track, so cardBackground
+      // makes the active segment vanish in dark mode).
+      segmentTrack: isDark ? neutral[800] : neutral[100],
+      segmentActive: isDark ? neutral[700] : BASE_WHITE,
+
       // Skeleton shimmer palette. Neutral pair matches the Skeleton
       // primitive's historical defaults (kept verbatim so existing screens
-      // don't shift); tinted pair matches the primary-tinted card surfaces.
+      // don't shift); tinted pair matches the v2 card surfaces (white/dark
+      // card with a neutral shimmer).
       skeletonBackground: isDark ? '#2C2C2E' : '#E1E9EE',
       skeletonHighlight: isDark ? '#3C3C3E' : '#F2F8FC',
-      skeletonTintedBackground: isDark ? primary[900] : primary[100],
-      skeletonTintedHighlight: isDark ? primary[800] : primary[50],
+      skeletonTintedBackground: isDark ? neutral[800] : neutral[100],
+      skeletonTintedHighlight: isDark ? neutral[700] : neutral[50],
     };
   }, [isDark]);
 

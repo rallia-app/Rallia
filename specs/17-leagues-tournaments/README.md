@@ -47,6 +47,7 @@ Pending schema deltas before league V6 (documented in [data-model.md § Schema d
 | [leagues.md](./leagues.md)                       | League / season / session lifecycle, membership, suspension, mid-season impact                              |
 | [match-sheet.md](./match-sheet.md)               | Pairing algorithms (BY_RANK, AVOID_REPEAT, SWISS, BALANCED_DOUBLES), round/court allocator                  |
 | [score-entry.md](./score-entry.md)               | Score format regexes, sport-aware validator, retirement/walkover, dispute resolution                        |
+| [round-deadlines.md](./round-deadlines.md)       | Per-round deadlines, countdown + nudges, automated walkover resolution ladder                               |
 | [ranking.md](./ranking.md)                       | Points, bonuses/malus, tie-breakers, ranking calculation, stored vs derived                                 |
 | [notifications.md](./notifications.md)           | Per-event notification payloads, channels, i18n keys, deep-links, batching                                  |
 | [permissions.md](./permissions.md)               | Role × action matrix, RLS policy snippets                                                                   |

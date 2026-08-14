@@ -6,10 +6,8 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import {
-  getPlayerGroups,
   getGroup,
   getGroupWithMembers,
-  createGroup,
   updateGroup,
   deleteGroup,
   addGroupMember,
@@ -45,7 +43,6 @@ import {
   subscribeToGroupActivity,
   subscribeToGroupMatches,
   subscribeToGroupSettings,
-  subscribeToPlayerGroups,
   subscribeToScoreConfirmations,
   unsubscribeFromGroupChannel,
   type Group,
@@ -53,7 +50,6 @@ import {
   type GroupMember,
   type GroupActivity,
   type GroupStats,
-  type CreateGroupInput,
   type UpdateGroupInput,
   type GroupMatch,
   type MatchSet,
@@ -111,19 +107,6 @@ export const groupKeys = {
 // =============================================================================
 // QUERY HOOKS
 // =============================================================================
-
-/**
- * Get all groups for the current player
- * @param playerId - The player's ID
- * @param sportId - Optional sport ID to filter by (null/undefined returns all groups)
- */
-export function usePlayerGroups(playerId: string | undefined, sportId?: string | null) {
-  return useQuery({
-    queryKey: groupKeys.playerGroups(playerId || '', sportId),
-    queryFn: () => getPlayerGroups(playerId!, sportId),
-    enabled: !!playerId,
-  });
-}
 
 /**
  * Get a single group by ID
@@ -211,22 +194,6 @@ export { getGroupInviteLink };
 // =============================================================================
 // MUTATION HOOKS
 // =============================================================================
-
-/**
- * Create a new group
- */
-export function useCreateGroup() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ playerId, input }: { playerId: string; input: CreateGroupInput }) =>
-      createGroup(playerId, input),
-    onSuccess: (_, variables) => {
-      // Invalidate player groups list
-      queryClient.invalidateQueries({ queryKey: groupKeys.playerGroups(variables.playerId) });
-    },
-  });
-}
 
 /**
  * Update a group
@@ -745,29 +712,6 @@ export function useDisputeRebuttalScore() {
 // =============================================================================
 // REALTIME HOOKS
 // =============================================================================
-
-/**
- * Subscribe to real-time updates for player's groups list
- * Automatically refreshes when the player joins or leaves a group
- */
-export function usePlayerGroupsRealtime(playerId: string | undefined) {
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (!playerId) return;
-
-    const channel = subscribeToPlayerGroups(playerId, () => {
-      // Refresh the groups list when membership changes
-      queryClient.invalidateQueries({
-        queryKey: groupKeys.playerGroups(playerId),
-      });
-    });
-
-    return () => {
-      unsubscribeFromGroupChannel(channel);
-    };
-  }, [playerId, queryClient]);
-}
 
 /**
  * Subscribe to real-time updates for a specific group

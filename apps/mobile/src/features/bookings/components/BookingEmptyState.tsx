@@ -4,11 +4,9 @@
  */
 
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Text } from '@rallia/shared-components';
+import { EmptyState } from '@rallia/shared-components';
 import { Ionicons } from '@expo/vector-icons';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { spacingPixels } from '@rallia/design-system';
 import type { BookingTab } from '@rallia/shared-services';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
@@ -87,33 +85,10 @@ export default function BookingEmptyState({
   const { title, description } = getContent();
 
   return (
-    <View style={styles.container}>
-      <Ionicons name={icon} size={64} color={colors.textMuted} />
-      <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.title}>
-        {title}
-      </Text>
-      <Text size="sm" color={colors.textMuted} style={styles.description}>
-        {description}
-      </Text>
-    </View>
+    <EmptyState
+      icon={<Ionicons name={icon} size={64} color={colors.primary} />}
+      title={title}
+      description={description}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[8],
-    paddingTop: spacingPixels[8],
-    paddingBottom: spacingPixels[8],
-  },
-  title: {
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-    textAlign: 'center',
-  },
-  description: {
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-});

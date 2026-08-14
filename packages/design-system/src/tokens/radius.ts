@@ -2,7 +2,7 @@
  * Border Radius Tokens
  *
  * Consistent border radius values for rounded corners.
- * Base radius is 0.625rem (10px) as defined in globals.css.
+ * Base radius is 1rem (16px) as defined in globals.css.
  */
 
 /**
@@ -36,21 +36,22 @@ export const radiusPixels = {
 } as const;
 
 /**
- * Semantic border radius tokens for common components
+ * Semantic border radius tokens for common components (theme v2 shape
+ * language: pill buttons, 16px cards, 24px sheets/modals, 12px inputs)
  */
 export const radiusSemantic = {
-  // Buttons
-  buttonSm: radius.md, // 6px
-  buttonMd: radius.lg, // 8px
-  buttonLg: radius.xl, // 12px
-  buttonPill: radius.full, // Pill shape
+  // Buttons are pill-shaped at every size
+  buttonSm: radius.full,
+  buttonMd: radius.full,
+  buttonLg: radius.full,
+  buttonPill: radius.full,
 
   // Cards
-  card: radius.xl, // 12px
-  cardLg: radius['2xl'], // 16px
+  card: radius['2xl'], // 16px
+  cardLg: radius['3xl'], // 24px
 
   // Inputs
-  input: radius.lg, // 8px
+  input: radius.xl, // 12px
 
   // Badges/Tags
   badge: radius.full, // Pill shape
@@ -62,28 +63,28 @@ export const radiusSemantic = {
   avatarLg: radius['2xl'], // 16px
   avatarCircle: radius.full, // Circle
 
-  // Modals/Dialogs
-  modal: radius['2xl'], // 16px
-  dialog: radius.xl, // 12px
+  // Modals/Dialogs/Sheets
+  modal: radius['3xl'], // 24px
+  dialog: radius['2xl'], // 16px
 
   // Tooltips/Popovers
   tooltip: radius.md, // 6px
-  popover: radius.lg, // 8px
+  popover: radius.xl, // 12px
 } as const;
 
 /**
  * Semantic border radius in pixels (for React Native)
  */
 export const radiusSemanticPixels = {
-  buttonSm: radiusPixels.md,
-  buttonMd: radiusPixels.lg,
-  buttonLg: radiusPixels.xl,
+  buttonSm: radiusPixels.full,
+  buttonMd: radiusPixels.full,
+  buttonLg: radiusPixels.full,
   buttonPill: radiusPixels.full,
 
-  card: radiusPixels.xl,
-  cardLg: radiusPixels['2xl'],
+  card: radiusPixels['2xl'],
+  cardLg: radiusPixels['3xl'],
 
-  input: radiusPixels.lg,
+  input: radiusPixels.xl,
 
   badge: radiusPixels.full,
   tag: radiusPixels.md,
@@ -93,11 +94,11 @@ export const radiusSemanticPixels = {
   avatarLg: radiusPixels['2xl'],
   avatarCircle: radiusPixels.full,
 
-  modal: radiusPixels['2xl'],
-  dialog: radiusPixels.xl,
+  modal: radiusPixels['3xl'],
+  dialog: radiusPixels['2xl'],
 
   tooltip: radiusPixels.md,
-  popover: radiusPixels.lg,
+  popover: radiusPixels.xl,
 } as const;
 
 export type RadiusKey = keyof typeof radius;

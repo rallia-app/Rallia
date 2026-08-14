@@ -185,9 +185,7 @@ export function ReportUserActionSheet({ payload }: SheetProps<'report-user'>) {
                         ? isDark
                           ? primary[900]
                           : primary[50]
-                        : isDark
-                          ? '#2C2C2E'
-                          : '#F2F2F7',
+                        : colors.inputBackground,
                     borderColor: selectedReason === reason ? primary[500] : 'transparent',
                   },
                 ]}
@@ -216,7 +214,7 @@ export function ReportUserActionSheet({ payload }: SheetProps<'report-user'>) {
               style={[
                 styles.descriptionInput,
                 {
-                  backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7',
+                  backgroundColor: colors.inputBackground,
                   color: colors.text,
                   borderColor: colors.border,
                 },
@@ -266,7 +264,7 @@ export function ReportUserActionSheet({ payload }: SheetProps<'report-user'>) {
                       style={[
                         styles.addEvidenceButton,
                         {
-                          backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7',
+                          backgroundColor: colors.inputBackground,
                           borderColor: colors.border,
                         },
                       ]}

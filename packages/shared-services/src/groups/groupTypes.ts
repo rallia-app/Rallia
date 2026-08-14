@@ -148,20 +148,6 @@ export interface GroupStats {
 // ============================================================================
 
 /**
- * Input for creating a new group
- * @property name - Required display name for the group
- * @property description - Optional group description
- * @property cover_image_url - Optional URL to cover image
- * @property sport_id - Optional sport association (null/undefined = both sports)
- */
-export interface CreateGroupInput {
-  name: string;
-  description?: string;
-  cover_image_url?: string;
-  sport_id?: string | null;
-}
-
-/**
  * Input for updating an existing group
  * All fields are optional - only provided fields will be updated
  * @property name - New display name

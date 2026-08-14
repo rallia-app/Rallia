@@ -871,6 +871,50 @@ export const AvailabilityService = {
       return { data: null, error: handleError(error) };
     }
   },
+
+  /**
+   * Hours where EVERY one of `playerIds` is free, as `${day}-${hour}` cell keys.
+   *
+   * Backs the opponent overlay on the availability grid: opened from a pairing
+   * context the picker draws these underneath the player's own selection so
+   * mutual hours are visible while painting. Intersection (not union) to match
+   * `match_organizer_options`' `free_count = n` semantics, which is what decides
+   * whether a suggestion can actually be played.
+   *
+   * One query, grouped client-side. `player_availability` is SELECT-open to
+   * authenticated users (and already rendered on PlayerProfile), so this
+   * discloses nothing new.
+   */
+  async getSharedAvailabilityCells(playerIds: string[]): Promise<DatabaseResponse<string[]>> {
+    try {
+      const ids = Array.from(new Set(playerIds.filter(Boolean)));
+      if (ids.length === 0) return { data: [], error: null };
+
+      const { data, error } = await supabase
+        .from('player_availability')
+        .select('player_id, day, hour_of_day')
+        .in('player_id', ids)
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      const freeBy = new Map<string, Set<string>>();
+      for (const row of data ?? []) {
+        const key = `${row.day}-${row.hour_of_day}`;
+        if (!freeBy.has(key)) freeBy.set(key, new Set());
+        freeBy.get(key)!.add(row.player_id);
+      }
+
+      const shared: string[] = [];
+      for (const [key, players] of freeBy) {
+        if (players.size === ids.length) shared.push(key);
+      }
+
+      return { data: shared, error: null };
+    } catch (error) {
+      return { data: null, error: handleError(error) };
+    }
+  },
 };
 
 // ============================================

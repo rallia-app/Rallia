@@ -29,8 +29,8 @@ import {
 } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
+  useNearbyOpenCourtCount,
   useProfile,
   useTheme,
   usePlayer,
@@ -51,11 +51,7 @@ import {
   useMyUnscheduledSessionMatches,
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type {
-  MatchScoringPreferences,
-  MySportRank,
-  MyTournamentRanking,
-} from '@rallia/shared-hooks';
+import type { MatchScoringPreferences } from '@rallia/shared-hooks';
 import type { FacilitySearchResult, MatchWithDetails } from '@rallia/shared-types';
 import {
   Logger,
@@ -69,6 +65,7 @@ import {
   spacingPixels,
   radiusPixels,
   accent,
+  base,
   neutral,
   primary,
   secondary,
@@ -106,7 +103,11 @@ import {
 } from '#/hooks';
 import * as Analytics from '#/services/analytics';
 import { SportIcon } from '#/components/SportIcon';
-import { GradientNavTile, NAV_TILE_WATERMARK_COLOR } from '#/components/GradientNavTile';
+import {
+  GradientStatTile,
+  NAV_TILE_WATERMARK_COLOR,
+  breakTileLabel,
+} from '#/components/GradientNavTile';
 import { FavoriteAvailabilityCard, FavoriteAvailabilityCardSkeleton } from '#/features/facilities';
 import { useHomeNavigation, useAppNavigation } from '#/navigation/hooks';
 import { useTabPreload } from '#/navigation/useTabPreload';
@@ -173,192 +174,13 @@ const quickNavStyles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
   },
-  // Fixed two-column grid: an odd trailing tile stretches the full row via
-  // flexGrow, so the grid never leaves a stranded half-width gap.
+  // Full-width stack: every tile spans the row and carries a live status
+  // caption, so each entry point doubles as a status card.
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[2],
-  },
-  item: {
-    flexGrow: 1,
-    flexBasis: '40%',
-  },
-});
-
-/**
- * Classements entry point: two sibling tiles — the monthly challenge (games
- * played, gold) and the Circuit Rallia (tournament points, teal) — each
- * showing the player's live standing (or a join nudge when unranked) and
- * deep-linking to its own tab of the Classements screen.
- */
-const ClassementsTile: React.FC<{
-  icon: keyof typeof Ionicons.glyphMap;
-  watermark: keyof typeof Ionicons.glyphMap;
-  gradient: [string, string];
-  borderColor: string;
-  label: string;
-  standing: { rank: number; value: number; unit: string } | null;
-  loading: boolean;
-  nudge: string;
-  onPress: () => void;
-}> = ({ icon, watermark, gradient, borderColor, label, standing, loading, nudge, onPress }) => {
-  const handlePress = () => {
-    void lightHaptic();
-    onPress();
-  };
-
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.85}
-      style={classementsCardStyles.tileWrap}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}. ${standing ? `#${standing.rank} · ${standing.value} ${standing.unit}` : nudge}`}
-    >
-      <LinearGradient
-        colors={gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[classementsCardStyles.tileInner, { borderColor }]}
-      >
-        <Ionicons
-          name={watermark}
-          size={64}
-          color="rgba(255,255,255,0.12)"
-          style={classementsCardStyles.watermark}
-        />
-        <View style={classementsCardStyles.labelRow}>
-          <Ionicons name={icon} size={14} color="rgba(255,255,255,0.92)" />
-          <Text
-            size="xs"
-            weight="semibold"
-            color="rgba(255,255,255,0.92)"
-            numberOfLines={1}
-            style={classementsCardStyles.labelText}
-          >
-            {label}
-          </Text>
-          <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.7)" />
-        </View>
-
-        <View style={classementsCardStyles.valueBlock}>
-          {standing ? (
-            <>
-              <Text size="xl" weight="bold" color="#ffffff" numberOfLines={1}>
-                {`#${standing.rank}`}
-              </Text>
-              <Text size="xs" color="rgba(255,255,255,0.85)" numberOfLines={1}>
-                {`${standing.value.toLocaleString()} ${standing.unit}`}
-              </Text>
-            </>
-          ) : (
-            <Text
-              size="sm"
-              weight="semibold"
-              color="#ffffff"
-              numberOfLines={2}
-              style={classementsCardStyles.nudge}
-            >
-              {/* Space, not empty, while loading — reserves the block height. */}
-              {loading ? ' ' : nudge}
-            </Text>
-          )}
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
-};
-
-const ClassementsCard: React.FC<{
-  challengeRank: MySportRank | null | undefined;
-  challengeLoading: boolean;
-  circuitRank: MyTournamentRanking | null | undefined;
-  circuitLoading: boolean;
-  onPressBoard: (board: 'challenge' | 'ranking') => void;
-  t: (key: string, options?: Record<string, string | number | boolean>) => string;
-}> = ({ challengeRank, challengeLoading, circuitRank, circuitLoading, onPressBoard, t }) => (
-  <View style={classementsCardStyles.row}>
-    <ClassementsTile
-      icon="calendar"
-      watermark="podium"
-      gradient={[accent[400], accent[600]]}
-      borderColor={accent[500]}
-      label={t('classements.tabs.challenge')}
-      standing={
-        challengeRank
-          ? { rank: challengeRank.rank, value: challengeRank.games, unit: t('leaderboard.games') }
-          : null
-      }
-      loading={challengeLoading}
-      nudge={t('home.classementsCard.challengeNudge')}
-      onPress={() => onPressBoard('challenge')}
-    />
-    <ClassementsTile
-      icon="trophy"
-      watermark="ribbon"
-      gradient={[primary[500], primary[700]]}
-      borderColor={primary[600]}
-      label={t('classements.tabs.ranking')}
-      standing={
-        circuitRank
-          ? {
-              rank: circuitRank.rank,
-              value: circuitRank.points,
-              unit: t('tournamentRanking.points'),
-            }
-          : null
-      }
-      loading={circuitLoading}
-      nudge={t('home.classementsCard.circuitNudge')}
-      onPress={() => onPressBoard('ranking')}
-    />
-  </View>
-);
-
-const classementsCardStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: spacingPixels[3],
-    marginHorizontal: spacingPixels[4],
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-  },
-  tileWrap: {
-    flex: 1,
-    borderRadius: radiusPixels.xl,
-  },
-  tileInner: {
-    flex: 1,
-    borderRadius: radiusPixels.xl,
-    borderWidth: 1.5,
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[3],
-    overflow: 'hidden',
-    gap: spacingPixels[2],
-  },
-  watermark: {
-    position: 'absolute',
-    right: -spacingPixels[2],
-    bottom: -spacingPixels[3],
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  labelText: {
-    flex: 1,
-  },
-  valueBlock: {
-    minHeight: 42,
-    justifyContent: 'center',
-  },
-  nudge: {
-    lineHeight: 18,
   },
 });
 
@@ -410,13 +232,12 @@ const Home = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  // Card-skeleton palette — mirrors PlayerCardSkeleton / FacilityCardSkeleton
-  // so My Matches & Just-for-you skeletons sit on the same tinted surface
-  // as the real MatchCard / MyMatchCard (primary[50/950]).
-  const skeletonCardBg = isDark ? primary[950] : primary[50];
+  // Card-skeleton palette — mirrors the v2 MatchCard / MyMatchCard surfaces
+  // (plain white / dark card with a neutral shimmer).
+  const skeletonCardBg = isDark ? neutral[900] : base.white;
   const skeletonCardBorder = isDark ? `${primary[400]}40` : `${primary[500]}20`;
-  const skeletonShimmerBg = isDark ? primary[900] : primary[100];
-  const skeletonShimmerHighlight = isDark ? primary[800] : primary[50];
+  const skeletonShimmerBg = isDark ? neutral[800] : neutral[100];
+  const skeletonShimmerHighlight = isDark ? neutral[700] : neutral[50];
   const navigation = useHomeNavigation();
   const appNavigation = useAppNavigation();
   const toast = useToast();
@@ -453,6 +274,11 @@ const Home = () => {
           } else if (nav.screen === 'TournamentDetail' && nav.params?.tournamentId) {
             appNavigation.navigate('TournamentDetail', {
               tournamentId: nav.params.tournamentId,
+              inviteToken: nav.params.inviteToken,
+            });
+          } else if (nav.screen === 'LeagueDetail' && nav.params?.leagueId) {
+            appNavigation.navigate('LeagueDetail', {
+              leagueId: nav.params.leagueId,
               inviteToken: nav.params.inviteToken,
             });
           }
@@ -547,6 +373,21 @@ const Home = () => {
               tournamentId: pending.targetId,
               inviteToken: pending.shareToken,
             });
+          } else if (pending.type === 'league') {
+            // Session links land on the sheet; SessionDetail bounces to the
+            // league (carrying the token) if RLS hides the session.
+            if (pending.sessionId) {
+              appNavigation.navigate('SessionDetail', {
+                sessionId: pending.sessionId,
+                leagueId: pending.targetId,
+                inviteToken: pending.shareToken,
+              });
+            } else {
+              appNavigation.navigate('LeagueDetail', {
+                leagueId: pending.targetId,
+                inviteToken: pending.shareToken,
+              });
+            }
           }
         } catch {
           // Ignore parse errors
@@ -735,6 +576,22 @@ const Home = () => {
               tournamentId: payload.targetId,
               inviteToken: payload.shareToken,
             });
+          } else if (payload.invitationType === 'league' && payload.targetId) {
+            // Same preview-then-confirm shape as tournaments. A session link
+            // lands on the sheet; SessionDetail bounces to the league
+            // (carrying the token) if RLS hides the session.
+            if (payload.sessionId) {
+              appNavigation.navigate('SessionDetail', {
+                sessionId: payload.sessionId,
+                leagueId: payload.targetId,
+                inviteToken: payload.shareToken,
+              });
+            } else {
+              appNavigation.navigate('LeagueDetail', {
+                leagueId: payload.targetId,
+                inviteToken: payload.shareToken,
+              });
+            }
           }
           // referral-only: nothing to do, already persisted to AsyncStorage by the store
           break;
@@ -1082,6 +939,17 @@ const Home = () => {
     enabled: !!location && !!selectedSport?.id,
   });
 
+  // Courts open around the player — the play grid's book-a-court stat. Always
+  // geography-scoped (never the favorites carousel's list), so the number means
+  // the same thing signed in or out.
+  const { count: openCourtCount, isLoading: openCourtCountLoading } = useNearbyOpenCourtCount({
+    sportId: selectedSport?.id,
+    latitude: location?.latitude,
+    longitude: location?.longitude,
+    maxDistanceKm: searchRadiusKm,
+    enabled: !!location && !!selectedSport?.id,
+  });
+
   // Favorites are edited on other screens (sport profile, onboarding) while Home
   // stays mounted in the tab navigator, so the availability query never refetches
   // on its own. Refresh it whenever Home regains focus so newly added/removed
@@ -1339,7 +1207,7 @@ const Home = () => {
             taller LocationSelector pill grows the row. The subtitle sits below. */}
         <View style={styles.sectionHeaderTopRow}>
           <View style={styles.sectionTitleRow}>
-            <Text size="xl" weight="bold" color={colors.text}>
+            <Text variant="display" size="xl" weight="bold" color={colors.text}>
               {t(titleKey)}
             </Text>
             {/* Only show LocationSelector when both GPS and home location are available */}
@@ -1404,7 +1272,7 @@ const Home = () => {
           {/* Header with title and "See All" button */}
           <View style={[styles.sectionHeader]}>
             <View style={styles.sectionHeaderText}>
-              <Text size="xl" weight="bold" color={colors.text}>
+              <Text variant="display" size="xl" weight="bold" color={colors.text}>
                 {t('home.myMatches')}
               </Text>
               <Text size="sm" color={colors.textMuted}>
@@ -1579,7 +1447,7 @@ const Home = () => {
       <View>
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderText}>
-            <Text size="xl" weight="bold" color={colors.text}>
+            <Text variant="display" size="xl" weight="bold" color={colors.text}>
               {sectionTitle}
             </Text>
             <Text size="sm" color={colors.textMuted}>
@@ -1898,128 +1766,95 @@ const Home = () => {
       );
     }
 
-    // Standings card sits right under the action banners: the player's live
-    // rank is the first thing an onboarded player sees — the dual Classements
-    // card (challenge + Circuit Rallia).
-    if (session && isOnboarded) {
-      headerComponents.push(
-        <ClassementsCard
-          key="classements-card"
-          challengeRank={myLeaderboardRank}
-          challengeLoading={myLeaderboardRankLoading}
-          circuitRank={myCircuitRank}
-          circuitLoading={myCircuitRankLoading}
-          t={t as (key: string, options?: Record<string, string | number | boolean>) => string}
-          onPressBoard={board => {
-            Logger.logUserAction('home_leaderboard_card_pressed', {
-              board,
-              ranked: board === 'challenge' ? !!myLeaderboardRank : !!myCircuitRank,
-            });
-            appNavigation.navigate('Classements', { initialTab: board });
-          }}
-        />
-      );
-    }
-
-    if (!session) {
-      // Not signed in: show sign-in prompt
-      headerComponents.push(
-        <View
-          key="sign-in"
-          style={[
-            styles.matchesSection,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              paddingHorizontal: spacingPixels[10],
-            },
-          ]}
-        >
-          <Text size="xl" weight="bold" color={colors.text} style={styles.matchesSectionTitle}>
-            {t('home.yourMatches')}
-          </Text>
-          <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
-            {t('home.signInPrompt')}
-          </Text>
-          <Button
-            variant="primary"
-            rounded
-            onPress={openSheet}
-            style={styles.signInButton}
-            leftIcon={<Ionicons name="log-in-outline" size={20} color="#FFFFFF" />}
-            isDark={isDark}
-            testID="home-signin"
-          >
-            {t('auth.signIn')}
-          </Button>
-        </View>
-      );
-    } else if (!isOnboarded) {
-      // Signed in but not onboarded: show complete profile prompt
-      headerComponents.push(
-        <View
-          key="complete-profile"
-          style={[
-            styles.matchesSection,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          <View style={[styles.matchesSectionIconWrap, { backgroundColor: `${primary[500]}20` }]}>
-            <Ionicons name="person-add-outline" size={40} color={primary[500]} />
-          </View>
-          <Text size="xl" weight="bold" color={colors.text} style={styles.matchesSectionTitle}>
-            {t('home.yourMatches')}
-          </Text>
-          <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
-            {t('home.onboardingPrompt')}
-          </Text>
-          <Button
-            variant="primary"
-            rounded
-            onPress={openSheet}
-            style={styles.signInButton}
-            leftIcon={<Ionicons name="person-add-outline" size={20} color="#FFFFFF" />}
-            isDark={isDark}
-          >
-            {t('home.completeProfile')}
-          </Button>
-        </View>
-      );
-    } else {
-      // Add "My Games" for fully onboarded users
-      headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
-    }
-
-    // Play grid: fixed two-column dispatch tiles — same layout every launch,
-    // nothing hidden behind a horizontal scroll. Signed-out users get the two
-    // public destinations, which gate themselves where needed.
+    // Play grid: full-width dispatch tiles, one per destination — identity
+    // (icon + label) on the left, a live stat showcase on the right. Same
+    // layout every launch, nothing hidden behind a horizontal scroll.
+    // Signed-out users get the same tiles; destinations gate themselves where
+    // needed, and unloaded stats fall back to a nudge line.
     const SportIconComponent =
       selectedSport?.name?.toLowerCase() === 'pickleball' ? PickleballIcon : TennisIcon;
+    const breakLabel = breakTileLabel;
+    // Find-a-game showcases the monthly-challenge standing (playing games is
+    // what moves it), replacing the old standalone Classements card.
+    const findGameStat = myLeaderboardRank
+      ? {
+          prefix: t('home.playGrid.rankPrefix'),
+          value: `#${myLeaderboardRank.rank}`,
+          detail: t('home.playGrid.findGameStatDetail', { count: myLeaderboardRank.games }),
+        }
+      : null;
+    // Book-a-court showcases the courts open around the player. Without
+    // location the count query is disabled — fall back to the generic value
+    // line rather than a false "nothing open".
+    const bookCourtStat =
+      location && openCourtCount
+        ? {
+            value: openCourtCount.toLocaleString(),
+            unit: t('home.playGrid.bookCourtStatCourts', { count: openCourtCount }),
+            detail: t('home.playGrid.bookCourtStatDetail'),
+          }
+        : null;
+    // Tournaments and leagues share one destination now, so they share one
+    // tile. It keeps the tournament identity (trophy, coral) the Compete hub's
+    // own Events segment uses. Public like the other two tiles: the hub reads
+    // for everyone and gates its own actions. It also showcases the Circuit
+    // Rallia standing, which is what entering an event earns.
+    const competeStat = myCircuitRank
+      ? {
+          prefix: t('home.playGrid.rankPrefix'),
+          value: `#${myCircuitRank.rank}`,
+          detail: t('home.playGrid.competeStatDetail', {
+            points: myCircuitRank.points.toLocaleString(),
+            count: myCircuitRank.eventsPlayed,
+          }),
+        }
+      : null;
     const playTiles: React.ReactNode[] = [
-      <GradientNavTile
+      <GradientStatTile
+        key="compete"
+        icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
+        watermark={<Ionicons name="trophy" size={56} color={NAV_TILE_WATERMARK_COLOR} />}
+        gradient={[secondary[400], secondary[600]]}
+        borderColor={secondary[500]}
+        label={breakLabel(t('home.playGrid.compete'))}
+        statTitle={t('classements.tabs.ranking')}
+        statIcon="ribbon"
+        stat={competeStat}
+        statFallback={t('home.playGrid.competeNudge')}
+        statLoading={myCircuitRankLoading}
+        onPress={() => appNavigation.navigate('Compete')}
+      />,
+      <GradientStatTile
         key="find-game"
-        style={quickNavStyles.item}
         icon={color => <SportIconComponent width={24} height={24} fill={color} />}
         watermark={<SportIconComponent width={56} height={56} fill={NAV_TILE_WATERMARK_COLOR} />}
         gradient={[primary[500], primary[700]]}
         borderColor={primary[600]}
-        label={t('home.playGrid.findGame')}
+        label={breakLabel(t('home.playGrid.findGame'))}
+        statTitle={t('classements.tabs.challenge')}
+        statIcon="podium"
+        stat={findGameStat}
+        statFallback={t('home.playGrid.findGameNudge')}
+        statLoading={myLeaderboardRankLoading}
         onPress={() => {
           Analytics.publicMatchesOpened({ cta: 'find_game' });
           navigation.navigate('PublicMatches');
         }}
       />,
-      <GradientNavTile
+      <GradientStatTile
         key="book-court"
-        style={quickNavStyles.item}
         icon={color => <Ionicons name="calendar-outline" size={24} color={color} />}
         watermark={<TennisCourtIcon width={56} height={56} stroke={NAV_TILE_WATERMARK_COLOR} />}
         gradient={[accent[400], accent[600]]}
         borderColor={accent[500]}
-        label={t('home.playGrid.bookCourt')}
+        label={breakLabel(t('home.playGrid.bookCourt'))}
+        statTitle={t('home.playGrid.bookCourtStatTitle')}
+        statLive
+        stat={bookCourtStat}
+        statFallback={
+          location ? t('home.playGrid.bookCourtEmpty') : t('home.playGrid.bookCourtNudge')
+        }
+        statLoading={openCourtCountLoading}
         onPress={() => {
           appNavigation.navigate('Main', {
             screen: 'Courts',
@@ -2028,45 +1863,80 @@ const Home = () => {
         }}
       />,
     ];
-    if (session) {
-      playTiles.push(
-        <GradientNavTile
-          key="tournaments"
-          style={quickNavStyles.item}
-          icon={color => <Ionicons name="trophy-outline" size={24} color={color} />}
-          watermark={<Ionicons name="trophy" size={56} color={NAV_TILE_WATERMARK_COLOR} />}
-          gradient={[secondary[400], secondary[600]]}
-          borderColor={secondary[500]}
-          label={t('home.playGrid.tournaments')}
-          onPress={() => appNavigation.navigate('Tournaments')}
-        />
-      );
-      // Leagues are re-admin-gated during rollout.
-      if (isAdmin) {
-        playTiles.push(
-          <GradientNavTile
-            key="leagues"
-            style={quickNavStyles.item}
-            icon={color => <Ionicons name="ribbon-outline" size={24} color={color} />}
-            watermark={<Ionicons name="ribbon" size={56} color={NAV_TILE_WATERMARK_COLOR} />}
-            gradient={[primary[700], primary[900]]}
-            borderColor={primary[800]}
-            label={t('home.playGrid.leagues')}
-            onPress={() => appNavigation.navigate('Leagues')}
-          />
-        );
-      }
-    }
     headerComponents.push(
       <View key="play-grid">
         <View style={quickNavStyles.sectionHeader}>
-          <Text size="xl" weight="bold" color={colors.text}>
+          <Text variant="display" size="xl" weight="bold" color={colors.text}>
             {t('home.playGrid.title')}
           </Text>
         </View>
         <View style={quickNavStyles.grid}>{playTiles}</View>
       </View>
     );
+
+    if (!session) {
+      // Not signed in: show sign-in prompt
+      headerComponents.push(
+        <View key="sign-in">
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderText}>
+              <Text variant="display" size="xl" weight="bold" color={colors.text}>
+                {t('home.yourMatches')}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.myMatchesEmptyWrap}>
+            <View style={[styles.myMatchesEmpty, { backgroundColor: colors.card }]}>
+              <Ionicons name="log-in-outline" size={32} color={colors.textMuted} />
+              <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
+                {t('home.signInEmpty.title')}
+              </Text>
+              <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
+                {t('home.signInEmpty.description')}
+              </Text>
+              <Button
+                variant="primary"
+                onPress={openSheet}
+                style={styles.myMatchesEmptyCta}
+                testID="home-signin"
+              >
+                {t('auth.signIn')}
+              </Button>
+            </View>
+          </View>
+        </View>
+      );
+    } else if (!isOnboarded) {
+      // Signed in but not onboarded: show complete profile prompt
+      headerComponents.push(
+        <View key="complete-profile">
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderText}>
+              <Text variant="display" size="xl" weight="bold" color={colors.text}>
+                {t('home.yourMatches')}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.myMatchesEmptyWrap}>
+            <View style={[styles.myMatchesEmpty, { backgroundColor: colors.card }]}>
+              <Ionicons name="person-add-outline" size={32} color={colors.textMuted} />
+              <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
+                {t('home.onboardingEmpty.title')}
+              </Text>
+              <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
+                {t('home.onboardingEmpty.description')}
+              </Text>
+              <Button variant="primary" onPress={openSheet} style={styles.myMatchesEmptyCta}>
+                {t('home.completeProfile')}
+              </Button>
+            </View>
+          </View>
+        </View>
+      );
+    } else {
+      // Add "My Games" for fully onboarded users
+      headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
+    }
 
     // Only show "Soon & Nearby" section header if we have location.
     // The favorite-availability section renders below the Just-for-you carousel
@@ -2127,6 +1997,9 @@ const Home = () => {
     myLeaderboardRankLoading,
     myCircuitRank,
     myCircuitRankLoading,
+    location,
+    openCourtCount,
+    openCourtCountLoading,
     tournamentActionMatches,
     sessionActionMatches,
   ]);
@@ -2224,16 +2097,30 @@ const Home = () => {
             }}
           >
             {showJfyEmpty ? (
-              <View
-                style={[
-                  styles.matchesSection,
-                  { backgroundColor: colors.card, borderColor: colors.border, marginTop: 0 },
-                ]}
-              >
-                <Ionicons name="location-outline" size={32} color={colors.textMuted} />
-                <Text size="sm" color={colors.textMuted} style={styles.jfyEmptyText}>
-                  {t('home.nearbyEmpty.title')}
-                </Text>
+              /* Same empty-state shell as My Matches / Favorite Availability. */
+              <View style={styles.myMatchesEmptyWrap}>
+                <View style={[styles.myMatchesEmpty, { backgroundColor: colors.card }]}>
+                  <Ionicons name="location-outline" size={32} color={colors.textMuted} />
+                  <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
+                    {t('home.nearbyEmpty.title')}
+                  </Text>
+                  <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
+                    {t('home.nearbyEmpty.description', { distance: searchRadiusKm })}
+                  </Text>
+                  <Button
+                    variant="primary"
+                    onPress={() => {
+                      Analytics.createGameCtaPressed({
+                        placement: 'home_nearby_empty',
+                        has_active_filters: false,
+                      });
+                      openSheetForMatchCreation('home_nearby_empty');
+                    }}
+                    style={styles.myMatchesEmptyCta}
+                  >
+                    {t('matches.createMatch')}
+                  </Button>
+                </View>
               </View>
             ) : showJfyLoading ? (
               <ScrollView
@@ -2405,36 +2292,6 @@ const styles = StyleSheet.create({
   jfyMatchInner: {
     marginHorizontal: -spacingPixels[4],
   },
-  jfyEmptyText: {
-    textAlign: 'center',
-  },
-  matchesSection: {
-    padding: spacingPixels[6],
-    margin: spacingPixels[4],
-    marginTop: spacingPixels[5],
-    borderRadius: radiusPixels.xl,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  matchesSectionIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  matchesSectionTitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  sectionSubtitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  signInButton: {
-    marginTop: spacingPixels[2],
-  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2443,8 +2300,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[5],
+    // More room above the title than below it, so the header groups with its
+    // own content instead of floating between two sections.
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[3],
   },
   // Variant of sectionHeader used when the title row carries inline controls
   // (the LocationSelector). The title row and "View all" live in a centered top
@@ -2453,8 +2312,8 @@ const styles = StyleSheet.create({
   sectionHeaderStacked: {
     gap: spacingPixels[0.5],
     paddingHorizontal: spacingPixels[4],
-    paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[5],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[3],
   },
   sectionHeaderTopRow: {
     flexDirection: 'row',
@@ -2492,7 +2351,6 @@ const styles = StyleSheet.create({
   // single scrollable card.
   myMatchesEmptyWrap: {
     paddingHorizontal: spacingPixels[4],
-    paddingTop: 10,
     paddingBottom: spacingPixels[2],
   },
   myMatchesEmpty: {
@@ -2514,10 +2372,9 @@ const styles = StyleSheet.create({
     minWidth: 180,
   },
   myMatchesScrollContent: {
-    paddingLeft: spacingPixels[4],
-    paddingRight: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
     paddingBottom: spacingPixels[2],
-    gap: spacingPixels[2],
+    gap: spacingPixels[3],
   },
   favAvailScrollContent: {
     paddingHorizontal: spacingPixels[4],

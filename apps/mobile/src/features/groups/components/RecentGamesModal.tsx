@@ -7,7 +7,7 @@ import React, { useCallback, useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, EmptyState } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import type { GroupMatch } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels, status } from '@rallia/design-system';
@@ -258,12 +258,11 @@ export function RecentGamesActionSheet({ payload }: SheetProps<'recent-games'>) 
   const content = useMemo(() => {
     if (matches.length === 0) {
       return (
-        <View style={styles.emptyState}>
-          <SportIcon sportName="tennis" size={48} color={colors.textMuted} />
-          <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-            {t('groups.recentGames.noGames')}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<SportIcon sportName="tennis" size={36} color={colors.primary} />}
+          title={t('groups.recentGames.noGames')}
+        />
       );
     }
 
@@ -429,10 +428,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 10,
     padding: 2,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
   },
 });

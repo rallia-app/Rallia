@@ -91,9 +91,9 @@ export function GET(request: NextRequest): NextResponse {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Rallia</title>
   </head>
-  <body style="margin:0;padding:48px 24px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#171717;background:#f0fdfa;">
+  <body style="margin:0;padding:48px 24px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#15211f;background:#f0faf7;">
     <p style="font-size:16px;">${isFr ? 'Ouverture de Rallia…' : 'Opening Rallia…'}</p>
-    <p style="font-size:14px;"><a href="${escapeHtml(appUrl)}" style="color:#0d9488;font-weight:600;text-decoration:none;">${isFr ? "Ouvrir l'application" : 'Open the app'}</a></p>
+    <p style="font-size:14px;"><a href="${escapeHtml(appUrl)}" style="color:#007a6e;font-weight:600;text-decoration:none;">${isFr ? "Ouvrir l'application" : 'Open the app'}</a></p>
     <script>
       (function () {
         var app = ${toScriptLiteral(appUrl)};

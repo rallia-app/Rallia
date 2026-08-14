@@ -2,13 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, EmptyState } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { supabase, Logger } from '@rallia/shared-services';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 
 import { selectionHaptic, mediumHaptic } from '#/utils/haptics';
-import { useThemeStyles } from '#/hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 import { SearchBar } from '#/components/SearchBar';
 
 interface Player {
@@ -26,6 +26,7 @@ function PeerRatingRequestOverlayComponent({ payload }: SheetProps<'peer-rating-
   const onSendRequests = payload?.onSendRequests;
 
   const { colors } = useThemeStyles();
+  const { t } = useTranslation();
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
@@ -329,17 +330,16 @@ function PeerRatingRequestOverlayComponent({ payload }: SheetProps<'peer-rating-
                 </Text>
               </View>
             ) : filteredPlayers.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="people-outline" size={64} color={colors.textMuted} />
-                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-                  No players found
-                </Text>
-                <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
-                  {players.length === 0
-                    ? 'Complete matches to request peer ratings'
-                    : 'Try a different search term'}
-                </Text>
-              </View>
+              <EmptyState
+                variant="sheet"
+                icon={<Ionicons name="people-outline" size={36} color={colors.primary} />}
+                title={t('profile.certification.peerRating.noPlayersFound')}
+                description={
+                  players.length === 0
+                    ? t('profile.certification.peerRating.noEligiblePlayers')
+                    : t('common.tryDifferentSearch')
+                }
+              />
             ) : (
               <View style={styles.playersGrid}>
                 {filteredPlayers.map(player => renderPlayerCard(player))}
@@ -532,22 +532,5 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    textAlign: 'center',
-    paddingHorizontal: 40,
   },
 });

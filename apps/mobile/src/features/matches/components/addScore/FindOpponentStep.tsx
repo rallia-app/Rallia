@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Button, Skeleton } from '@rallia/shared-components';
+import { Text, Button, Skeleton, EmptyState } from '@rallia/shared-components';
 import { usePlayerSearch } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import { getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
@@ -285,22 +285,21 @@ export function FindOpponentStep({ onContinue }: FindOpponentStepProps) {
 
       {/* Search results or empty state */}
       {searchQuery.length < 2 ? (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIcon}>
-            <Ionicons name="search-outline" size={64} color={colors.textMuted} />
-          </View>
-          <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
-            {t('addScore.findOpponent.searchHint')}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="search-outline" size={36} color={colors.primary} />}
+          title={t('addScore.findOpponent.searchHint')}
+          style={styles.emptyState}
+        />
       ) : isSearching ? (
         renderPlayerSkeleton()
       ) : players.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
-            {t('addScore.findOpponent.noPlayersFound', { query: searchQuery })}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="search-outline" size={36} color={colors.primary} />}
+          title={t('addScore.findOpponent.noPlayersFound', { query: searchQuery })}
+          style={styles.emptyState}
+        />
       ) : (
         <View style={{ flex: 1 }}>
           <Text
@@ -386,12 +385,6 @@ const styles = StyleSheet.create({
   emptyState: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyIcon: {
-    marginBottom: 16,
-    opacity: 0.5,
   },
   listContent: {
     paddingBottom: 100,

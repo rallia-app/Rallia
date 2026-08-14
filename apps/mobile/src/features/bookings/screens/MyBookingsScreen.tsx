@@ -239,14 +239,11 @@ export default function MyBookingsScreen() {
 
   // Render tab bar
   const renderTabBar = () => (
-    <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+    <View style={[styles.tabBar, { backgroundColor: colors.segmentTrack }]}>
       <TouchableOpacity
         style={[
           styles.tab,
-          activeTab === 'upcoming' && [
-            styles.activeTab,
-            { backgroundColor: colors.cardBackground },
-          ],
+          activeTab === 'upcoming' && [styles.activeTab, { backgroundColor: colors.segmentActive }],
         ]}
         onPress={() => handleTabChange('upcoming')}
         activeOpacity={0.8}
@@ -270,7 +267,7 @@ export default function MyBookingsScreen() {
       <TouchableOpacity
         style={[
           styles.tab,
-          activeTab === 'past' && [styles.activeTab, { backgroundColor: colors.cardBackground }],
+          activeTab === 'past' && [styles.activeTab, { backgroundColor: colors.segmentActive }],
         ]}
         onPress={() => handleTabChange('past')}
         activeOpacity={0.8}
@@ -320,7 +317,10 @@ export default function MyBookingsScreen() {
                 key={i}
                 style={[
                   styles.skeletonBookingCard,
-                  { backgroundColor: isDark ? '#1C1C1E' : neutral[50], borderColor: colors.border },
+                  {
+                    backgroundColor: isDark ? neutral[900] : neutral[50],
+                    borderColor: colors.border,
+                  },
                 ]}
               >
                 {/* Facility name + status badge row */}

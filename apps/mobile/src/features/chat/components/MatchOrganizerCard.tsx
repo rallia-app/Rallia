@@ -13,16 +13,18 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, status as statusColors } from '@rallia/design-system';
+import { SheetManager } from 'react-native-actions-sheet';
+import { Button, Text } from '@rallia/shared-components';
+import { base, spacingPixels, radiusPixels, status as statusColors } from '@rallia/design-system';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import {
   lightHaptic,
   successHaptic,
   warningHaptic,
   formatIntuitiveDateInTimezone,
+  getProfilePictureUrl,
 } from '@rallia/shared-utils';
 import type {
   MatchOrganizerMetadata,
@@ -33,6 +35,8 @@ import {
   useMatchTimeVotes,
   useToggleMatchTimeVote,
   useCreateCasualMatch,
+  useProfilesByIds,
+  useSharedAvailability,
 } from '@rallia/shared-hooks';
 
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
@@ -40,11 +44,23 @@ import { useMatchDetailSheet } from '#/context/MatchDetailSheetContext';
 import * as Analytics from '#/services/analytics';
 import { useAuth, useTranslation, useThemeStyles } from '#/hooks';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
+
+import { courtStateIcon, courtStateLabel, resolveCourtState } from '../utils/courtState';
 import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
+
+import {
+  ChatCardFallback,
+  ChatCardHeader,
+  ChatConfirmationBand,
+  chatCardShell,
+} from './ChatCardShell';
 
 interface MatchOrganizerCardProps {
   message: MessageWithSender;
 }
+
+/** Every chip is this tall, glyph or labelled, so the row reads as one band. */
+const CHIP_HEIGHT = 24;
 
 const localDateKey = (d: Date): string =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -77,6 +93,58 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
   }, [votes]);
 
   const createdMatchId = metadata?.created_match_id ?? null;
+
+  // Players read the list like a calendar, so it is shown chronologically. The
+  // true array index rides along because votes are stored positionally
+  // (match_time_vote.option_index): a proposal appended to the end of the
+  // snapshot has to render in its date position without its votes moving.
+  const orderedOptions = useMemo(
+    () =>
+      (metadata?.options ?? [])
+        .map((option, index) => ({ option, index }))
+        .sort((a, b) => Date.parse(a.option.slot_start) - Date.parse(b.option.slot_start)),
+    [metadata]
+  );
+
+  // Availability editor, opened with pairing context so the grid draws the
+  // opponent's free hours underneath the player's own. Saving regenerates this
+  // card, so a widened week turns "no shared times" into real options in place.
+  const opponentIds = useMemo(
+    () => participants.filter(id => id !== currentUserId),
+    [participants, currentUserId]
+  );
+  const { data: opponentProfiles = {} } = useProfilesByIds(opponentIds);
+  const { data: myGrid } = useSharedAvailability(currentUserId ? [currentUserId] : undefined);
+
+  const openAvailabilityEditor = useCallback(() => {
+    void lightHaptic();
+    void SheetManager.show('player-availabilities', {
+      payload: {
+        mode: 'edit',
+        initialData: myGrid ? new Set(myGrid) : undefined,
+        opponentIds,
+        opponentName:
+          Object.values(opponentProfiles)
+            .map(p => p.first_name)
+            .filter(Boolean)
+            .join(', ') || null,
+        tournamentMatchId: metadata?.tournament_match_id ?? null,
+      },
+    });
+  }, [myGrid, opponentIds, opponentProfiles, metadata?.tournament_match_id]);
+
+  // The funnel floor: when the engine has nothing to offer (no shared hours, no
+  // facility it knows), a participant names a slot themselves and it becomes a
+  // normal votable option. Without this the card can dead-end.
+  const openCustomSlotSheet = useCallback(() => {
+    void lightHaptic();
+    void SheetManager.show('match-organizer-custom-slot', {
+      payload: {
+        messageId: message.id,
+        conversationId: message.conversation_id,
+      },
+    });
+  }, [message.id, message.conversation_id]);
 
   const handleToggle = useCallback(
     (optionIndex: number) => {
@@ -114,6 +182,9 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
           playerIds: participants,
           format: metadata!.format,
           facilityId: option.facility_id ?? null,
+          // A hand-proposed place has no facility row, so it rides along as the
+          // game's location name instead of leaving the game location TBD.
+          locationName: option.facility_id ? null : (option.place_name ?? null),
           sourceMessageId: message.id,
           optionIndex,
           conversationId: message.conversation_id,
@@ -168,15 +239,50 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
     [locale, t]
   );
 
-  // Defensive: no structured payload -> plain text (shouldn't happen).
-  if (!metadata || !Array.isArray(metadata.options) || metadata.options.length === 0) {
+  // Zero-overlap card: the engine found no slot free for every participant.
+  // Deliberately not a plain-text fallback — it explains and points at the fix.
+  if (metadata?.no_overlap && (metadata.options?.length ?? 0) === 0) {
     return (
-      <View style={styles.fallback}>
-        <Text size="sm" color={colors.textMuted} style={styles.center}>
-          {message.content}
-        </Text>
+      <View style={chatCardShell.wrapper}>
+        <View
+          style={[
+            chatCardShell.card,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+        >
+          <ChatCardHeader
+            icon="calendar-outline"
+            accent={colors.primary}
+            title={t('matchOrganizer.card.noOverlapTitle')}
+            subtitle={t('matchOrganizer.card.noOverlapBody')}
+            colors={colors}
+          />
+          {/* Proposing a time leads here: the pair may simply have hours they
+              never declared, and asking them to repaint a whole week first is
+              the slower fix. Editing availability stays available underneath.
+              Both actions span the card so it has no dead side. */}
+          <View style={chatCardShell.cardCta}>
+            <Button
+              variant="primary"
+              size="sm"
+              fullWidth
+              onPress={openCustomSlotSheet}
+              leftIcon={<Ionicons name="add-circle-outline" size={16} color={base.white} />}
+            >
+              {t('matchOrganizer.custom.cta')}
+            </Button>
+            <Button variant="ghost" size="sm" fullWidth onPress={openAvailabilityEditor}>
+              {t('matchOrganizer.card.noOverlapCta')}
+            </Button>
+          </View>
+        </View>
       </View>
     );
+  }
+
+  // Defensive: no structured payload -> plain text (shouldn't happen).
+  if (!metadata || !Array.isArray(metadata.options) || metadata.options.length === 0) {
+    return <ChatCardFallback text={message.content} colors={colors} />;
   }
 
   const isParticipant = currentUserId ? participants.includes(currentUserId) : false;
@@ -198,83 +304,47 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
     const start = confirmed ? new Date(confirmed.slot_start) : null;
     const success = statusColors.success.DEFAULT;
 
+    // The same confirmation band the court-booked card uses, so every
+    // "it happened" message in a chat reads identically.
     return (
-      <View style={styles.wrapper}>
-        <Pressable
-          onPress={() => {
-            void handleOpenMatch();
-          }}
-          style={[
-            styles.card,
-            { backgroundColor: colors.cardBackground, borderColor: colors.border },
-          ]}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: success + '1A' }]}>
-            <Ionicons name="checkmark-circle" size={20} color={success} />
-          </View>
-          <View style={styles.body}>
-            <Text size="sm" weight="semibold" color={colors.text}>
-              {t('matchOrganizer.card.created')}
-            </Text>
-            <Text size="xs" color={colors.textMuted} style={styles.subtitle}>
-              {confirmed && start
-                ? `${friendlyDate(start)} · ${formatTimeOfDay(start, locale)}${
-                    confirmed.facility_name ? ` · ${confirmed.facility_name}` : ''
-                  }`
-                : t('matchOrganizer.card.createdSubtitle')}
-            </Text>
-            <View style={[styles.cta, { backgroundColor: success }]}>
-              <Text
-                size="sm"
-                weight="semibold"
-                color="#fff"
-                style={isOpening ? styles.ctaLabelHidden : undefined}
-              >
-                {t('matchOrganizer.card.viewGame')}
-              </Text>
-              {isOpening ? (
-                <View style={styles.ctaSpinner} pointerEvents="none">
-                  <ActivityIndicator size="small" color="#fff" />
-                </View>
-              ) : null}
-            </View>
-          </View>
-        </Pressable>
-      </View>
+      <ChatConfirmationBand
+        accent={success}
+        title={t('matchOrganizer.card.created')}
+        lines={[
+          confirmed && start
+            ? `${friendlyDate(start)} · ${formatTimeOfDay(start, locale)}`
+            : t('matchOrganizer.card.createdSubtitle'),
+          confirmed?.facility_name ?? confirmed?.place_name,
+        ]}
+        onPress={() => {
+          void handleOpenMatch();
+        }}
+        isOpening={isOpening}
+        accessibilityLabel={t('matchOrganizer.card.viewGame')}
+        colors={colors}
+      />
     );
   }
 
   // ---- Voting state --------------------------------------------------------
   return (
-    <View style={styles.wrapper}>
+    <View style={chatCardShell.wrapper}>
       <View
         style={[
-          styles.card,
+          chatCardShell.card,
           { backgroundColor: colors.cardBackground, borderColor: colors.border },
         ]}
       >
-        <View style={styles.headerRow}>
-          <View style={[styles.iconCircle, { backgroundColor: accent + '1A' }]}>
-            <Ionicons name="calendar-outline" size={20} color={accent} />
-          </View>
-          <View style={styles.headerText}>
-            <Text size="sm" weight="semibold" color={colors.text} lineHeight="tight">
-              {t('matchOrganizer.card.title')}
-              {metadata.sport_name ? ` · ${metadata.sport_name}` : ''}
-            </Text>
-            <Text
-              size="xs"
-              color={colors.textMuted}
-              lineHeight="tight"
-              style={styles.headerSubtitle}
-            >
-              {t('matchOrganizer.card.subtitlePrompt')}
-            </Text>
-          </View>
-        </View>
+        <ChatCardHeader
+          icon="calendar-outline"
+          accent={accent}
+          title={`${t('matchOrganizer.card.title')}${metadata.sport_name ? ` · ${metadata.sport_name}` : ''}`}
+          subtitle={t('matchOrganizer.card.subtitlePrompt')}
+          colors={colors}
+        />
 
         <View style={styles.options}>
-          {metadata.options.map((option, index) => {
+          {orderedOptions.map(({ option, index }) => {
             const voters = votersByOption.get(index) ?? new Set<string>();
             const hasVoted = currentUserId ? voters.has(currentUserId) : false;
             const isMutual = participants.length > 0 && participants.every(p => voters.has(p));
@@ -283,14 +353,48 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
             const timeLabel = formatTimeOfDay(start, locale);
             const priceLabel = formatPrice(option.price_cents);
             const courtCount = option.court_count ?? 0;
-            const courtLabel = !option.court_confirmed
-              ? t('matchOrganizer.tier.usuallyFree')
-              : courtCount > 1
-                ? t('matchOrganizer.tier.courtsMany').replace('{count}', String(courtCount))
-                : courtCount === 1
-                  ? t('matchOrganizer.tier.courtsOne')
-                  : t('matchOrganizer.tier.courtAvailable');
+            const courtState = resolveCourtState(option);
+            const courtLabel = courtStateLabel(courtState, courtCount, t);
+            // A hand-proposed slot carries no court and no availability data, so
+            // it must not borrow the engine's "usually free" reassurance.
+            const isCustom = option.tier === 'custom';
+            const proposerLabel = !isCustom
+              ? null
+              : option.proposed_by && option.proposed_by === currentUserId
+                ? t('matchOrganizer.custom.proposedByYou')
+                : t('matchOrganizer.custom.proposedBy').replace(
+                    '{name}',
+                    (option.proposed_by
+                      ? opponentProfiles[option.proposed_by]?.first_name
+                      : null) ?? t('matchOrganizer.custom.proposedByFallback')
+                  );
             const isCreatingThis = creatingIndex === index;
+            // A court BOTH players already favourite is better evidence the slot
+            // will happen than any court feed, so it gets its own chip.
+            const sharedFavorite =
+              option.fav_count != null &&
+              participants.length > 0 &&
+              option.fav_count >= participants.length;
+            // The state that matters most on this card: someone ELSE already
+            // liked this slot and it is waiting on you. A bare count next to the
+            // thumb was invisible, so their FACES sit beside the thumb, wearing
+            // one small thumbs-up badge, and the row takes a firmer border.
+            const otherVoters = [...voters].filter(id => id !== currentUserId);
+            const awaitingMe = !isMutual && otherVoters.length > 0;
+            // Screen readers hear what sighted users infer from the faces.
+            const votersA11y =
+              otherVoters.length === 0
+                ? undefined
+                : otherVoters.length === 1
+                  ? t('matchOrganizer.card.likedBy').replace(
+                      '{name}',
+                      opponentProfiles[otherVoters[0]]?.first_name ??
+                        t('matchOrganizer.custom.proposedByFallback')
+                    )
+                  : t('matchOrganizer.card.likedByCount').replace(
+                      '{count}',
+                      String(otherVoters.length)
+                    );
 
             return (
               <View
@@ -298,101 +402,223 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                 style={[
                   styles.option,
                   {
-                    borderColor: isMutual ? accent : colors.border,
-                    backgroundColor: isMutual ? `${accent}15` : colors.buttonInactive,
+                    borderColor: isMutual ? accent : awaitingMe ? `${accent}80` : colors.border,
+                    backgroundColor: isMutual
+                      ? `${accent}15`
+                      : awaitingMe
+                        ? `${accent}0A`
+                        : colors.buttonInactive,
                   },
                 ]}
               >
-                <View style={styles.optionInfo}>
-                  <Text size="sm" weight="semibold" color={colors.text}>
-                    {dateLabel} · {timeLabel}
-                  </Text>
-                  {option.facility_name ? (
-                    <Text size="xs" color={colors.textMuted} style={styles.optionFacility}>
-                      {option.facility_name}
+                {/* Row 1: when and where, with the action beside it. */}
+                <View style={styles.optionHeader}>
+                  <View style={styles.optionInfo}>
+                    <Text size="sm" weight="semibold" color={colors.text}>
+                      {dateLabel} · {timeLabel}
                     </Text>
-                  ) : null}
-                  <View
-                    style={[
-                      styles.courtPill,
-                      {
-                        backgroundColor: option.court_confirmed
-                          ? statusColors.success.DEFAULT + '1A'
-                          : colors.border + '66',
-                      },
-                    ]}
-                  >
-                    {option.court_confirmed ? (
-                      <TennisCourtIcon
-                        width={13}
-                        height={13}
-                        stroke={statusColors.success.DEFAULT}
-                        style={styles.courtIcon}
-                      />
-                    ) : (
-                      <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-                    )}
-                    <Text
-                      size="xs"
-                      weight="semibold"
-                      color={
-                        option.court_confirmed ? statusColors.success.DEFAULT : colors.textMuted
-                      }
-                    >
-                      {courtLabel}
-                      {option.court_confirmed && priceLabel ? ` · ${priceLabel}` : ''}
-                    </Text>
+                    {option.facility_name ? (
+                      <Text size="xs" color={colors.textMuted} style={styles.optionFacility}>
+                        {option.facility_name}
+                      </Text>
+                    ) : null}
                   </View>
+
+                  {/* Who already liked this slot, as faces: one badge on the
+                      stack says these are likes, not just members. */}
+                  {otherVoters.length > 0 ? (
+                    <View style={styles.voterCluster} accessibilityLabel={votersA11y}>
+                      {otherVoters.slice(0, 3).map((id, i) => {
+                        const uri = getProfilePictureUrl(
+                          opponentProfiles[id]?.profile_picture_url ?? null
+                        );
+                        return (
+                          <View
+                            key={id}
+                            style={[
+                              styles.voterAvatar,
+                              i > 0 && styles.voterAvatarOverlap,
+                              { backgroundColor: colors.buttonInactive },
+                            ]}
+                          >
+                            {uri ? (
+                              <Image source={{ uri }} style={styles.voterAvatarImg} />
+                            ) : (
+                              <Ionicons name="person" size={15} color={colors.textMuted} />
+                            )}
+                          </View>
+                        );
+                      })}
+                      <View style={[styles.voterBadge, { backgroundColor: accent }]}>
+                        <Ionicons name="thumbs-up" size={9} color={base.white} />
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {isMutual ? (
+                    <Pressable
+                      onPress={() => {
+                        void handleCreate(option, index);
+                      }}
+                      disabled={createMatch.isPending || !isParticipant}
+                      style={[styles.createBtn, { backgroundColor: accent }]}
+                    >
+                      {isCreatingThis ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text size="xs" weight="semibold" color="#fff">
+                          {t('matchOrganizer.card.createGame')}
+                        </Text>
+                      )}
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      onPress={() => handleToggle(index)}
+                      disabled={!isParticipant}
+                      style={[
+                        styles.voteBtn,
+                        {
+                          borderColor: hasVoted ? accent : colors.border,
+                          backgroundColor: hasVoted ? accent : 'transparent',
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={hasVoted ? 'thumbs-up' : 'thumbs-up-outline'}
+                        size={16}
+                        color={hasVoted ? '#fff' : colors.textMuted}
+                      />
+                    </Pressable>
+                  )}
                 </View>
 
-                {isMutual ? (
-                  <Pressable
-                    onPress={() => {
-                      void handleCreate(option, index);
-                    }}
-                    disabled={createMatch.isPending || !isParticipant}
-                    style={[styles.createBtn, { backgroundColor: accent }]}
-                  >
-                    {isCreatingThis ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Text size="xs" weight="semibold" color="#fff">
-                        {t('matchOrganizer.card.createGame')}
-                      </Text>
-                    )}
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    onPress={() => handleToggle(index)}
-                    disabled={!isParticipant}
-                    style={[
-                      styles.voteBtn,
-                      {
-                        borderColor: hasVoted ? accent : colors.border,
-                        backgroundColor: hasVoted ? accent : 'transparent',
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name={hasVoted ? 'thumbs-up' : 'thumbs-up-outline'}
-                      size={16}
-                      color={hasVoted ? '#fff' : colors.textMuted}
-                    />
-                    {voters.size > 0 ? (
+                {/* Row 2: the chips, across the full width. */}
+                <View style={styles.optionChips}>
+                  {isCustom ? (
+                    <View style={[styles.courtPill, { backgroundColor: accent + '1A' }]}>
+                      <Ionicons name="person-outline" size={12} color={accent} />
                       <Text
                         size="xs"
                         weight="semibold"
-                        color={hasVoted ? '#fff' : colors.textMuted}
+                        color={accent}
+                        numberOfLines={1}
+                        style={styles.pillLabel}
                       >
-                        {voters.size}
+                        {proposerLabel}
                       </Text>
-                    ) : null}
-                  </Pressable>
-                )}
+                    </View>
+                  ) : (
+                    <View
+                      style={[
+                        styles.courtPill,
+                        {
+                          backgroundColor:
+                            courtState === 'confirmed'
+                              ? statusColors.success.DEFAULT + '1A'
+                              : colors.textMuted + '26',
+                        },
+                      ]}
+                    >
+                      {courtState === 'confirmed' ? (
+                        <TennisCourtIcon
+                          width={13}
+                          height={13}
+                          stroke={statusColors.success.DEFAULT}
+                          style={styles.courtIcon}
+                        />
+                      ) : (
+                        <Ionicons
+                          name={courtStateIcon(courtState)}
+                          size={12}
+                          color={colors.textMuted}
+                        />
+                      )}
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        color={
+                          courtState === 'confirmed'
+                            ? statusColors.success.DEFAULT
+                            : colors.textMuted
+                        }
+                        numberOfLines={1}
+                        style={styles.pillLabel}
+                      >
+                        {courtLabel}
+                        {courtState === 'confirmed' && priceLabel ? ` · ${priceLabel}` : ''}
+                      </Text>
+                    </View>
+                  )}
+
+                  {sharedFavorite ? (
+                    <View
+                      style={[
+                        styles.courtPill,
+                        { backgroundColor: statusColors.success.DEFAULT + '1A' },
+                      ]}
+                    >
+                      <Ionicons name="star" size={12} color={statusColors.success.DEFAULT} />
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        color={statusColors.success.DEFAULT}
+                        numberOfLines={1}
+                        style={styles.pillLabel}
+                      >
+                        {t('matchOrganizer.availability.favoriteShared')}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {/* A voted option the engine stopped returning is kept so the
+                      agreement does not vanish, but it is no longer real. */}
+                  {option.stale ? (
+                    <View
+                      style={[
+                        styles.courtPill,
+                        { backgroundColor: statusColors.warning.DEFAULT + '1A' },
+                      ]}
+                    >
+                      <Ionicons
+                        name="alert-circle-outline"
+                        size={12}
+                        color={statusColors.warning.DEFAULT}
+                      />
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        color={statusColors.warning.DEFAULT}
+                        numberOfLines={1}
+                        style={styles.pillLabel}
+                      >
+                        {t('matchOrganizer.card.staleOption')}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
               </View>
             );
           })}
         </View>
+
+        {/* None of these work? Name your own slot rather than falling back to
+            free-text chat, which is where pairings stall. */}
+        {isParticipant ? (
+          <View style={chatCardShell.cardCta}>
+            {/* Deliberately `secondary`, not `primary`: the primary action on
+                this card is agreeing on one of the times above, and a filled
+                button here would outrank the "create" buttons on the rows. */}
+            <Button
+              variant="secondary"
+              size="sm"
+              fullWidth
+              onPress={openCustomSlotSheet}
+              leftIcon={<Ionicons name="add-circle-outline" size={16} color={accent} />}
+            >
+              {t('matchOrganizer.custom.cta')}
+            </Button>
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -401,52 +627,26 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
 export default MatchOrganizerCard;
 
 const styles = StyleSheet.create({
-  wrapper: {
-    paddingHorizontal: spacingPixels[5],
-    paddingVertical: spacingPixels[2],
-  },
-  card: {
-    borderWidth: 1,
-    borderRadius: radiusPixels.xl,
-    padding: spacingPixels[4],
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacingPixels[3],
-  },
-  headerText: {
-    flex: 1,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  body: {
-    flex: 1,
-    gap: spacingPixels[1],
-  },
-  subtitle: {
-    marginTop: 2,
-  },
-  headerSubtitle: {
-    marginTop: spacingPixels[1],
-  },
   options: {
     marginTop: spacingPixels[4],
     gap: spacingPixels[1.5],
   },
   option: {
+    gap: spacingPixels[2],
+    borderWidth: 1,
+    borderRadius: radiusPixels.xl,
+    padding: spacingPixels[4],
+  },
+  optionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacingPixels[3],
-    borderWidth: 1,
-    borderRadius: radiusPixels.xl,
-    padding: spacingPixels[4],
+  },
+  optionChips: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
   },
   optionInfo: {
     flex: 1,
@@ -455,15 +655,58 @@ const styles = StyleSheet.create({
   optionFacility: {
     marginTop: 1,
   },
+  // The facepile: overlapping voter avatars sharing ONE thumbs-up badge, so a
+  // face on a row can only mean "this person liked this time".
+  voterCluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  // 32pt matches the thumb button's height, so faces and button sit flush.
+  voterAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  voterAvatarOverlap: {
+    marginLeft: -spacingPixels[2.5],
+  },
+  voterAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  voterBadge: {
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-end',
+    marginLeft: -spacingPixels[2.5],
+    marginBottom: -1,
+  },
   courtPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    justifyContent: 'center',
     gap: spacingPixels[1],
     borderRadius: 999,
     paddingHorizontal: spacingPixels[2],
-    paddingVertical: 3,
-    marginTop: spacingPixels[1],
+    // Every chip is exactly CHIP_HEIGHT tall. Left to their content a labelled
+    // pill measures its 12px line at a 1.5 ratio plus padding while a glyph pill
+    // measures only the 12px icon, so the glyphs came out 6pt shorter.
+    height: CHIP_HEIGHT,
+    // The chips stay on ONE line: the pill shrinks and its label ellipsizes
+    // rather than wrapping onto a second row. flexShrink defaults to 0 in RN,
+    // so both the pill and the label below have to opt in.
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  pillLabel: {
+    flexShrink: 1,
   },
   courtIcon: {
     transform: [{ rotate: '90deg' }],
@@ -487,30 +730,5 @@ const styles = StyleSheet.create({
     minHeight: 32,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  cta: {
-    marginTop: spacingPixels[3],
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[2],
-    borderRadius: 999,
-    minWidth: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaLabelHidden: {
-    opacity: 0,
-  },
-  ctaSpinner: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fallback: {
-    paddingHorizontal: spacingPixels[6],
-    paddingVertical: spacingPixels[2],
-  },
-  center: {
-    textAlign: 'center',
   },
 });

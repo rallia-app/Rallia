@@ -15,7 +15,6 @@ import { CreateListActionSheet } from '#/features/shared-lists/components/Create
 import { ShareMatchActionSheet } from '#/features/shared-lists/components/ShareMatchModal';
 import { AddContactActionSheet } from '#/features/shared-lists/components/AddContactModal';
 import { ImportContactsActionSheet } from '#/features/shared-lists/components/ImportContactsModal';
-import { CreateGroupActionSheet } from '#/features/groups/components/CreateGroupModal';
 import { GroupOptionsActionSheet } from '#/features/groups/components/GroupOptionsModal';
 import { MemberOptionsActionSheet } from '#/features/groups/components/MemberOptionsModal';
 import { InviteLinkActionSheet } from '#/features/groups/components/InviteLinkModal';
@@ -44,6 +43,7 @@ import { TournamentInviteSheet } from '#/features/tournaments/components/Tournam
 import { TournamentInvitePlayersActionSheet } from '#/features/tournaments/components/TournamentInvitePlayersSheet';
 import { TournamentCoOrganizerActionSheet } from '#/features/tournaments/components/TournamentCoOrganizerSheet';
 import { LeagueInvitePlayersActionSheet } from '#/features/leagues/components/LeagueInvitePlayersSheet';
+import { LeagueInviteSheet } from '#/features/leagues/components/LeagueInviteSheet';
 import {
   LeagueEditActionSheet,
   LeagueCreateActionSheet,
@@ -51,6 +51,7 @@ import {
 import { CreateSeasonActionSheet } from '#/features/leagues/components/CreateSeasonSheet';
 import { CreateSessionActionSheet } from '#/features/leagues/components/CreateSessionSheet';
 import { SessionLinkMatchActionSheet } from '#/features/leagues/components/SessionLinkMatchSheet';
+import { SessionSwapPlayerActionSheet } from '#/features/leagues/components/SessionSwapPlayerSheet';
 import { SessionRecordScoreActionSheet } from '#/features/leagues/components/SessionRecordScoreSheet';
 import type { TournamentEditData } from '#/features/tournaments';
 import type { LeagueEditData } from '#/features/leagues';
@@ -80,6 +81,7 @@ import { ChatAgreementActionSheet } from '#/features/chat/components/ChatAgreeme
 import { AddMembersToChatActionSheet } from '#/features/chat/components/AddMembersToChatModal';
 import { CreateGroupChatActionSheet } from '#/features/chat/components/CreateGroupChatModal';
 import { MatchOrganizerSetupActionSheet } from '#/features/chat/components/MatchOrganizerSetupSheet';
+import { MatchOrganizerCustomSlotActionSheet } from '#/features/chat/components/MatchOrganizerCustomSlotSheet';
 // Onboarding/Profile components
 import { PersonalInformationActionSheet } from '#/features/onboarding/components/overlays/PersonalInformationOverlay';
 import { PlayerInformationActionSheet } from '#/features/onboarding/components/overlays/PlayerInformationOverlay';
@@ -160,11 +162,6 @@ declare module 'react-native-actions-sheet' {
         existingContacts: SharedContact[];
       };
     }>;
-    'create-group': SheetDefinition<{
-      payload: {
-        playerId: string;
-      };
-    }>;
     // Chat sheets
     'message-actions': SheetDefinition<{
       payload: {
@@ -217,6 +214,15 @@ declare module 'react-native-actions-sheet' {
     'create-group-chat': SheetDefinition<{
       payload: {
         onSuccess?: (conversationId: string) => void;
+      };
+    }>;
+    /** Propose your own time/place on a card when the engine has nothing to offer. */
+    'match-organizer-custom-slot': SheetDefinition<{
+      payload: {
+        /** The match_organizer card the option is appended to. */
+        messageId: string;
+        /** Invalidated so the card re-renders with the new option. */
+        conversationId: string;
       };
     }>;
     'match-organizer-setup': SheetDefinition<{
@@ -390,6 +396,16 @@ declare module 'react-native-actions-sheet' {
         onDismiss?: () => void;
       };
     }>;
+    'session-swap-player': SheetDefinition<{
+      payload: {
+        sessionId: string;
+        /** The player leaving their pairing. */
+        userOut: string;
+        userOutName: string;
+        /** Guards the swap against a stale copy of the sheet. */
+        sessionVersion: number;
+      };
+    }>;
     'session-link-match': SheetDefinition<{
       payload: {
         sessionMatchId: string;
@@ -465,6 +481,16 @@ declare module 'react-native-actions-sheet' {
         organizerId: string;
       };
     }>;
+    'league-invite': SheetDefinition<{
+      payload: {
+        leagueId: string;
+        leagueName: string;
+        /** Present when sharing a specific session — the link carries it. */
+        sessionId?: string;
+        /** Human-readable session date/name for the share message. */
+        sessionLabel?: string;
+      };
+    }>;
     'league-invite-players': SheetDefinition<{
       payload: {
         leagueId: string;
@@ -482,6 +508,8 @@ declare module 'react-native-actions-sheet' {
       payload: {
         seasonId: string;
         leagueId: string;
+        /** The season's gamesPerPlayer rule, so the form opens on it. */
+        defaultRounds?: number;
       };
     }>;
     'court-selection': SheetDefinition<{
@@ -624,6 +652,7 @@ declare module 'react-native-actions-sheet' {
           dateOfBirth?: string;
           gender?: string;
           phoneNumber?: string;
+          phoneVerified?: boolean;
           profilePictureUrl?: string;
         };
         onSave?: () => void;
@@ -672,6 +701,18 @@ declare module 'react-native-actions-sheet' {
         currentStep?: number;
         totalSteps?: number;
         selectedSportIds?: string[];
+        /**
+         * Pairing context. When present the grid renders these players' shared
+         * free hours underneath the player's own selection, so mutual slots are
+         * visible while painting, and the sheet persists the save itself (no
+         * `onSave` needed) then regenerates the round chat's suggestion card.
+         * Opened from a tournament round chat / league pairing.
+         */
+        opponentIds?: string[];
+        /** First name(s) for the overlay legend, e.g. "Marc". */
+        opponentName?: string | null;
+        /** Bracket pairing whose organizer card should regenerate after save. */
+        tournamentMatchId?: string | null;
       };
     }>;
     'tennis-rating': SheetDefinition<{
@@ -954,7 +995,6 @@ export const Sheets = () => {
         'share-match': ShareMatchActionSheet,
         'add-contact': AddContactActionSheet,
         'import-contacts': ImportContactsActionSheet,
-        'create-group': CreateGroupActionSheet,
         // Chat sheets
         'message-actions': MessageActionsActionSheet,
         'conversation-actions': ConversationActionsActionSheet,
@@ -964,6 +1004,7 @@ export const Sheets = () => {
         'add-members-to-chat': AddMembersToChatActionSheet,
         'create-group-chat': CreateGroupChatActionSheet,
         'match-organizer-setup': MatchOrganizerSetupActionSheet,
+        'match-organizer-custom-slot': MatchOrganizerCustomSlotActionSheet,
         // Group sheets
         'group-options': GroupOptionsActionSheet,
         'member-options': MemberOptionsActionSheet,
@@ -983,12 +1024,14 @@ export const Sheets = () => {
         'tournament-record-score': TournamentRecordScoreActionSheet,
         'tournament-link-match': TournamentLinkMatchActionSheet,
         'session-link-match': SessionLinkMatchActionSheet,
+        'session-swap-player': SessionSwapPlayerActionSheet,
         'session-record-score': SessionRecordScoreActionSheet,
         'tournament-partner-picker': TournamentPartnerPickerActionSheet,
         'tournament-edit': TournamentEditActionSheet,
         'tournament-invite': TournamentInviteSheet,
         'tournament-invite-players': TournamentInvitePlayersActionSheet,
         'tournament-co-organizers': TournamentCoOrganizerActionSheet,
+        'league-invite': LeagueInviteSheet,
         'league-invite-players': LeagueInvitePlayersActionSheet,
         'league-edit': LeagueEditActionSheet,
         'league-create': LeagueCreateActionSheet,

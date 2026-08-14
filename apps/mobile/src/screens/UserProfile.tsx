@@ -556,6 +556,7 @@ const UserProfile = () => {
                 dateOfBirth: profile?.birth_date || '',
                 gender: player?.gender || '',
                 phoneNumber: profile?.phone || '',
+                phoneVerified: profile?.phone_verified || false,
                 profilePictureUrl: profile?.profile_picture_url || undefined,
               },
               onSave: () => {
@@ -854,6 +855,7 @@ const UserProfile = () => {
                         dateOfBirth: profile?.birth_date || '',
                         gender: player?.gender || '',
                         phoneNumber: profile?.phone || '',
+                        phoneVerified: profile?.phone_verified || false,
                         profilePictureUrl: profile?.profile_picture_url || undefined,
                       },
                       onSave: () => {

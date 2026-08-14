@@ -23,9 +23,9 @@ export function GET(): NextResponse {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Rallia</title>
   </head>
-  <body style="margin:0;padding:48px 24px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#171717;background:#f0fdfa;">
+  <body style="margin:0;padding:48px 24px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#15211f;background:#f0faf7;">
     <p style="font-size:16px;">Opening Rallia… · Ouverture de Rallia…</p>
-    <p style="font-size:14px;"><a href="${APP_URL}" style="color:#0d9488;font-weight:600;text-decoration:none;">Return to the app · Retourner à l'application</a></p>
+    <p style="font-size:14px;"><a href="${APP_URL}" style="color:#007a6e;font-weight:600;text-decoration:none;">Return to the app · Retourner à l'application</a></p>
     <script>
       (function () {
         window.location.href = ${JSON.stringify(APP_URL)};

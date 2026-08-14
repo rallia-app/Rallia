@@ -24,7 +24,6 @@ export type {
   GroupWithMembers,
   GroupActivity,
   GroupStats,
-  CreateGroupInput,
   UpdateGroupInput,
   MatchSet,
   GroupMatch,
@@ -64,15 +63,7 @@ export { getNetworkPulse } from './networkPulseService';
 // GROUP CRUD OPERATIONS
 // ============================================================================
 
-export {
-  getPlayerGroupTypeId,
-  createGroup,
-  getGroup,
-  getGroupWithMembers,
-  getPlayerGroups,
-  updateGroup,
-  deleteGroup,
-} from './groupCrudService';
+export { getGroup, getGroupWithMembers, updateGroup, deleteGroup } from './groupCrudService';
 
 // ============================================================================
 // MEMBER MANAGEMENT

@@ -2380,6 +2380,7 @@ export type Database = {
           created_by: string
           expires_at: string | null
           id: string
+          kind: string
           label: string | null
           league_id: string
           max_uses: number | null
@@ -2392,6 +2393,7 @@ export type Database = {
           created_by: string
           expires_at?: string | null
           id?: string
+          kind?: string
           label?: string | null
           league_id: string
           max_uses?: number | null
@@ -2404,6 +2406,7 @@ export type Database = {
           created_by?: string
           expires_at?: string | null
           id?: string
+          kind?: string
           label?: string | null
           league_id?: string
           max_uses?: number | null
@@ -2846,6 +2849,7 @@ export type Database = {
         Row: {
           booking_captain_id: string | null
           booking_id: string | null
+          booking_nudge_sent_at: string | null
           cancelled_at: string | null
           closed_at: string | null
           cost_split_type:
@@ -2885,6 +2889,7 @@ export type Database = {
           sport_id: string
           start_time: string
           timezone: string
+          unfilled_recovery_sent_at: string | null
           updated_at: string | null
           visibility:
             | Database["public"]["Enums"]["match_visibility_enum"]
@@ -2895,6 +2900,7 @@ export type Database = {
         Insert: {
           booking_captain_id?: string | null
           booking_id?: string | null
+          booking_nudge_sent_at?: string | null
           cancelled_at?: string | null
           closed_at?: string | null
           cost_split_type?:
@@ -2934,6 +2940,7 @@ export type Database = {
           sport_id: string
           start_time: string
           timezone?: string
+          unfilled_recovery_sent_at?: string | null
           updated_at?: string | null
           visibility?:
             | Database["public"]["Enums"]["match_visibility_enum"]
@@ -2944,6 +2951,7 @@ export type Database = {
         Update: {
           booking_captain_id?: string | null
           booking_id?: string | null
+          booking_nudge_sent_at?: string | null
           cancelled_at?: string | null
           closed_at?: string | null
           cost_split_type?:
@@ -2983,6 +2991,7 @@ export type Database = {
           sport_id?: string
           start_time?: string
           timezone?: string
+          unfilled_recovery_sent_at?: string | null
           updated_at?: string | null
           visibility?:
             | Database["public"]["Enums"]["match_visibility_enum"]
@@ -5908,6 +5917,44 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: true
             referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_sms_consent: {
+        Row: {
+          created_at: string
+          granted_at: string
+          id: string
+          phone: string
+          player_id: string
+          source: string
+          wording_version: number
+        }
+        Insert: {
+          created_at?: string
+          granted_at?: string
+          id?: string
+          phone: string
+          player_id: string
+          source: string
+          wording_version: number
+        }
+        Update: {
+          created_at?: string
+          granted_at?: string
+          id?: string
+          phone?: string
+          player_id?: string
+          source?: string
+          wording_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_sms_consent_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
             referencedColumns: ["id"]
           },
         ]
@@ -8884,6 +8931,50 @@ export type Database = {
           },
         ]
       }
+      tournament_fanout_job: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: number
+          last_error: string | null
+          last_player_id: string | null
+          notified_count: number
+          status: string
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: never
+          last_error?: string | null
+          last_player_id?: string | null
+          notified_count?: number
+          status?: string
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: never
+          last_error?: string | null
+          last_player_id?: string | null
+          notified_count?: number
+          status?: string
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_fanout_job_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_invite_links: {
         Row: {
           created_at: string
@@ -9013,6 +9104,9 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
+          deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
           match_id: string | null
@@ -9024,6 +9118,7 @@ export type Database = {
           player1_registration_id: string | null
           player2_is_bye: boolean
           player2_registration_id: string | null
+          pool_number: number | null
           round_number: number
           scheduled_at: string | null
           score: string | null
@@ -9037,6 +9132,9 @@ export type Database = {
           bracket_side?: string
           court_id?: string | null
           created_at?: string
+          deadline_nudge12_at?: string | null
+          deadline_nudge48_at?: string | null
+          deadline_override_at?: string | null
           id?: string
           loser_next_match_id?: string | null
           match_id?: string | null
@@ -9048,6 +9146,7 @@ export type Database = {
           player1_registration_id?: string | null
           player2_is_bye?: boolean
           player2_registration_id?: string | null
+          pool_number?: number | null
           round_number: number
           scheduled_at?: string | null
           score?: string | null
@@ -9061,6 +9160,9 @@ export type Database = {
           bracket_side?: string
           court_id?: string | null
           created_at?: string
+          deadline_nudge12_at?: string | null
+          deadline_nudge48_at?: string | null
+          deadline_override_at?: string | null
           id?: string
           loser_next_match_id?: string | null
           match_id?: string | null
@@ -9072,6 +9174,7 @@ export type Database = {
           player1_registration_id?: string | null
           player2_is_bye?: boolean
           player2_registration_id?: string | null
+          pool_number?: number | null
           round_number?: number
           scheduled_at?: string | null
           score?: string | null
@@ -9237,6 +9340,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -9257,6 +9361,7 @@ export type Database = {
           approved_by?: string | null
           bracket_position?: number | null
           created_at?: string
+          forfeited_at?: string | null
           id?: string
           invited_by?: string | null
           notes?: string | null
@@ -9277,6 +9382,7 @@ export type Database = {
           approved_by?: string | null
           bracket_position?: number | null
           created_at?: string
+          forfeited_at?: string | null
           id?: string
           invited_by?: string | null
           notes?: string | null
@@ -9326,6 +9432,41 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_round_deadlines: {
+        Row: {
+          bracket_side: string
+          created_at: string
+          deadline_at: string
+          round_number: number
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          bracket_side?: string
+          created_at?: string
+          deadline_at: string
+          round_number: number
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          bracket_side?: string
+          created_at?: string
+          deadline_at?: string
+          round_number?: number
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_round_deadlines_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
             referencedColumns: ["id"]
           },
         ]
@@ -9395,6 +9536,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -9406,8 +9548,11 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -9420,7 +9565,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -9454,6 +9601,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string | null
+          draw_nudged_at?: string | null
           end_date: string
           entry_fee_cents?: number
           entry_format?: Database["public"]["Enums"]["entry_format"]
@@ -9465,8 +9613,11 @@ export type Database = {
           final_set_tiebreak?: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set?: number
           id?: string
+          knockout_nudged_at?: string | null
+          latitude?: number | null
           level?: string | null
           logo_url?: string | null
+          longitude?: number | null
           match_format?: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating?: number | null
@@ -9479,7 +9630,9 @@ export type Database = {
           organizer_id: string
           payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game?: number | null
+          pool_size?: number | null
           prize_money_cents?: number | null
+          qualifiers_per_pool?: number | null
           ranking_draw_size?: number | null
           ranking_multiplier?: number | null
           ranking_points_ceiling?: number | null
@@ -9513,6 +9666,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string | null
+          draw_nudged_at?: string | null
           end_date?: string
           entry_fee_cents?: number
           entry_format?: Database["public"]["Enums"]["entry_format"]
@@ -9524,8 +9678,11 @@ export type Database = {
           final_set_tiebreak?: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set?: number
           id?: string
+          knockout_nudged_at?: string | null
+          latitude?: number | null
           level?: string | null
           logo_url?: string | null
+          longitude?: number | null
           match_format?: Database["public"]["Enums"]["match_format"]
           max_participants?: number
           max_rating?: number | null
@@ -9538,7 +9695,9 @@ export type Database = {
           organizer_id?: string
           payout_timing?: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game?: number | null
+          pool_size?: number | null
           prize_money_cents?: number | null
+          qualifiers_per_pool?: number | null
           ranking_draw_size?: number | null
           ranking_multiplier?: number | null
           ranking_points_ceiling?: number | null
@@ -9767,6 +9926,28 @@ export type Database = {
           winner_registration_id: string
         }[]
       }
+      _lt_compute_pool_assignment: {
+        Args: { p_pool_size: number; p_regs: string[] }
+        Returns: {
+          pool_number: number
+          registration_id: string
+          seed_idx: number
+        }[]
+      }
+      _lt_rank_pool_group: {
+        Args: { p_level: number; p_regs: string[]; p_tournament_id: string }
+        Returns: string[]
+      }
+      _lt_seed_default_deadlines: {
+        Args: {
+          p_from: string
+          p_rounds: number
+          p_side: string
+          p_to: string
+          p_tournament_id: string
+        }
+        Returns: undefined
+      }
       accept_match_time_suggestion: {
         Args: { p_suggestion_id: string }
         Returns: Json
@@ -9906,6 +10087,15 @@ export type Database = {
         }
         Returns: number
       }
+      count_available_courts_nearby: {
+        Args: {
+          p_latitude: number
+          p_longitude: number
+          p_max_distance_km?: number
+          p_sport_ids: string[]
+        }
+        Returns: number
+      }
       count_checkin_window_committed_matches: {
         Args: { p_player_id: string; p_sport_id?: string; p_today: string }
         Returns: number
@@ -9930,6 +10120,7 @@ export type Database = {
           p_duration_minutes?: number
           p_facility_id?: string
           p_format?: Database["public"]["Enums"]["match_format_enum"]
+          p_location_name?: string
           p_option_index?: number
           p_player_ids: string[]
           p_slot_start: string
@@ -10492,6 +10683,38 @@ export type Database = {
           sport_name: string
         }[]
       }
+      get_match_invite_candidates: {
+        Args: {
+          p_limit?: number
+          p_match_id: string
+          p_offset?: number
+          p_reasons?: string[]
+        }
+        Returns: {
+          active_recently: boolean
+          available_at_slot: boolean
+          badge_status: string
+          city: string
+          compat_score: number
+          display_name: string
+          distance_meters: number
+          favorite_facility: boolean
+          first_name: string
+          gender: string
+          id: string
+          last_name: string
+          played_together: boolean
+          profile_picture_url: string
+          rating_label: string
+          rating_value: number
+          reputation_is_public: boolean
+          reputation_score: number
+          reputation_tier: string
+          responds_fast: boolean
+          same_rating: boolean
+          total_count: number
+        }[]
+      }
       get_match_quality_analytics: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
@@ -10679,6 +10902,7 @@ export type Database = {
       get_my_points_to_defend: {
         Args: { p_within_days?: number }
         Returns: {
+          board: string
           counts_now: boolean
           days_remaining: number
           earned_at: string
@@ -10970,8 +11194,10 @@ export type Database = {
           last_message_at: string
           last_message_content: string
           last_message_id: string
+          last_message_meta: Json
           last_message_sender_first_name: string
           last_message_sender_id: string
+          last_message_type: string
           last_read_at: string
           match_date: string
           match_format: string
@@ -11009,8 +11235,10 @@ export type Database = {
           last_message_at: string
           last_message_content: string
           last_message_id: string
+          last_message_meta: Json
           last_message_sender_first_name: string
           last_message_sender_id: string
+          last_message_type: string
           last_read_at: string
           match_date: string
           match_format: string
@@ -11863,6 +12091,7 @@ export type Database = {
           p_min_reputation?: number
           p_name: string
           p_network_id?: string
+          p_rules_override?: Json
           p_sport_id: string
           p_venue_name?: string
           p_visibility?: Database["public"]["Enums"]["tournament_visibility"]
@@ -11902,13 +12131,85 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      league_get_by_invite_token: { Args: { p_token: string }; Returns: Json }
+      league_invite_get_or_create: {
+        Args: { p_league_id: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          kind: string
+          label: string | null
+          league_id: string
+          max_uses: number | null
+          revoked_at: string | null
+          token: string
+          uses: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "league_invite_links"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       league_invite_members: {
         Args: { p_league_id: string; p_user_ids: string[] }
         Returns: number
       }
+      league_invite_reset: {
+        Args: { p_league_id: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          kind: string
+          label: string | null
+          league_id: string
+          max_uses: number | null
+          revoked_at: string | null
+          token: string
+          uses: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "league_invite_links"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       league_is_public: { Args: { p_league_id: string }; Returns: boolean }
       league_join: {
         Args: { p_league_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          joined_at: string
+          league_id: string
+          left_at: string | null
+          role: Database["public"]["Enums"]["league_role"]
+          status: Database["public"]["Enums"]["league_member_status"]
+          suspended_at: string | null
+          suspended_reason: string | null
+          suspended_until: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "league_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      league_join_via_invite: {
+        Args: { p_token: string }
         Returns: {
           approved_at: string | null
           approved_by: string | null
@@ -12244,6 +12545,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      lt_advance_double_walkover: {
+        Args: { p_tm_id: string }
+        Returns: undefined
+      }
       lt_advance_tournament_winner: {
         Args: {
           p_tournament_match_id: string
@@ -12251,6 +12556,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      lt_assert_league_rules: { Args: { p_rules: Json }; Returns: undefined }
       lt_assert_rating_band: {
         Args: {
           p_max: number
@@ -12277,6 +12583,13 @@ export type Database = {
       lt_close_due_session_confirmations: { Args: never; Returns: number }
       lt_close_due_tournament_registrations: { Args: never; Returns: number }
       lt_draw_multiplier: { Args: { p_n: number }; Returns: number }
+      lt_effective_match_deadline: {
+        Args: {
+          p_tm: Database["public"]["Tables"]["tournament_matches"]["Row"]
+        }
+        Returns: string
+      }
+      lt_ensure_ranking_season: { Args: { p_at: string }; Returns: string }
       lt_event_earnings: {
         Args: { p_season_id?: string; p_tournament_id?: string }
         Returns: {
@@ -12316,10 +12629,35 @@ export type Database = {
         Args: { p_min_rating: number; p_sport_id: string }
         Returns: number
       }
+      lt_notify_knockout_published: {
+        Args: { p_tournament_id: string }
+        Returns: undefined
+      }
+      lt_notify_pool_forfeit: {
+        Args: { p_match_ids: string[]; p_registration_id: string }
+        Returns: undefined
+      }
+      lt_notify_pools_published: {
+        Args: { p_tournament_id: string }
+        Returns: undefined
+      }
+      lt_notify_tournament_deadline_changed: {
+        Args: {
+          p_bracket_side: string
+          p_rounds: number[]
+          p_tournament_id: string
+        }
+        Returns: undefined
+      }
       lt_notify_tournament_match_ready: {
         Args: { p_tm_id: string }
         Returns: undefined
       }
+      lt_notify_tournament_walkover: {
+        Args: { p_double: boolean; p_tm_id: string; p_winner: string }
+        Returns: undefined
+      }
+      lt_nudge_tournament_gates: { Args: never; Returns: number }
       lt_order_avoid_repeat: {
         Args: { p_pool: string[]; p_season_id: string }
         Returns: string[]
@@ -12327,6 +12665,10 @@ export type Database = {
       lt_parse_score: {
         Args: { p_score: string }
         Returns: Record<string, unknown>
+      }
+      lt_post_system_match_organizer_card: {
+        Args: { p_tournament_match_id: string }
+        Returns: string
       }
       lt_propagate_match_result_to_bracket: {
         Args: { p_match_result_id: string }
@@ -12341,10 +12683,15 @@ export type Database = {
         Args: { p_skill_level: Database["public"]["Enums"]["skill_level"] }
         Returns: string
       }
+      lt_regenerate_system_organizer_card: {
+        Args: { p_actor_id?: string; p_tournament_match_id: string }
+        Returns: string
+      }
       lt_registration_display_name: {
         Args: { p_registration_id: string }
         Returns: string
       }
+      lt_registration_users: { Args: { p_reg: string }; Returns: string[] }
       lt_release_candidates: {
         Args: never
         Returns: {
@@ -12356,6 +12703,10 @@ export type Database = {
           payment_id: string
           stripe_charge_id: string
         }[]
+      }
+      lt_resolve_due_tournament_matches: {
+        Args: { p_dry_run?: boolean }
+        Returns: number
       }
       lt_rotate_for_round: {
         Args: { p_ids: string[]; p_round: number }
@@ -12398,8 +12749,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      lt_score_for_side: {
+        Args: { p_is_player1: boolean; p_score: string }
+        Returns: string
+      }
       lt_seed_positions: { Args: { p_size: number }; Returns: number[] }
       lt_send_session_confirm_reminders: { Args: never; Returns: number }
+      lt_send_tournament_deadline_nudges: { Args: never; Returns: number }
+      lt_side_effort: {
+        Args: { p_tm_id: string; p_users: string[] }
+        Returns: Json
+      }
       lt_snap_ranking_multiplier: { Args: { p_mult: number }; Returns: number }
       lt_sport_rating_system: { Args: { p_sport_id: string }; Returns: string }
       lt_tournament_ranking_multiplier: {
@@ -12444,6 +12804,15 @@ export type Database = {
         Returns: undefined
       }
       mark_notifications_seen: { Args: never; Returns: undefined }
+      match_organizer_add_custom_option: {
+        Args: {
+          p_facility_id?: string
+          p_message_id: string
+          p_place_name?: string
+          p_slot_start: string
+        }
+        Returns: number
+      }
       match_organizer_options: {
         Args: {
           p_limit?: number
@@ -12455,17 +12824,29 @@ export type Database = {
           court_confirmed: boolean
           court_count: number
           court_name: string
+          court_state: string
           day_label: string
           distance_km: number
           facility_id: string
           facility_name: string
           fav_count: number
+          free_count: number
           hour_of_day: number
+          option_key: string
           price_cents: number
           score: number
           slot_start: string
           tier: string
         }[]
+      }
+      mo_opponent_agrees: { Args: { p_message_id: string }; Returns: number }
+      momentum_bucket: {
+        Args: { p_key: string; p_user: string }
+        Returns: number
+      }
+      momentum_enabled_for: {
+        Args: { p_key: string; p_user: string }
+        Returns: boolean
       }
       parse_match_duration_to_minutes: {
         Args: { p_duration: string }
@@ -12528,6 +12909,10 @@ export type Database = {
       }
       post_global_announcement: { Args: { p_content: string }; Returns: string }
       process_announcement_fanout: {
+        Args: { p_batch_size?: number }
+        Returns: number
+      }
+      process_tournament_registration_fanout: {
         Args: { p_batch_size?: number }
         Returns: number
       }
@@ -13214,6 +13599,10 @@ export type Database = {
         }
         Returns: Json
       }
+      send_court_booking_nudges: { Args: never; Returns: number }
+      send_last_minute_spot_pushes: { Args: never; Returns: number }
+      send_play_rhythm_nudges: { Args: never; Returns: number }
+      send_unfilled_host_recovery: { Args: never; Returns: number }
       session_attach_match: {
         Args: { p_match_id: string; p_session_match_id: string }
         Returns: {
@@ -13363,6 +13752,56 @@ export type Database = {
           to: "sessions"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      session_create_series: {
+        Args: {
+          p_capacity?: number
+          p_duration_minutes?: number
+          p_facility_id?: string
+          p_first_at: string
+          p_name: string
+          p_occurrences: number
+          p_pairing_mode?: Database["public"]["Enums"]["pairing_mode"]
+          p_repeat_every_days: number
+          p_rounds?: number
+          p_season_id: string
+          p_timezone?: string
+          p_venue_name?: string
+        }
+        Returns: {
+          allow_guests: boolean
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          capacity: number | null
+          completed_at: string | null
+          confirm_reminder_sent_at: string | null
+          confirmation_deadline_at: string | null
+          created_at: string
+          duration_minutes: number
+          facility_id: string | null
+          formats_allowed: Database["public"]["Enums"]["entry_format"][]
+          id: string
+          match_format: Database["public"]["Enums"]["match_format"] | null
+          name: string
+          odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
+          pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game: number | null
+          published_at: string | null
+          rounds: number
+          scheduled_at: string
+          season_id: string
+          status: Database["public"]["Enums"]["session_status"]
+          timezone: string
+          updated_at: string
+          venue_name: string | null
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       session_generate_sheet: {
@@ -13556,6 +13995,48 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      session_swap_player: {
+        Args: {
+          p_session_id: string
+          p_user_in: string
+          p_user_out: string
+          p_version_was: number
+        }
+        Returns: {
+          allow_guests: boolean
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          capacity: number | null
+          completed_at: string | null
+          confirm_reminder_sent_at: string | null
+          confirmation_deadline_at: string | null
+          created_at: string
+          duration_minutes: number
+          facility_id: string | null
+          formats_allowed: Database["public"]["Enums"]["entry_format"][]
+          id: string
+          match_format: Database["public"]["Enums"]["match_format"] | null
+          name: string
+          odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
+          pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          points_per_game: number | null
+          published_at: string | null
+          rounds: number
+          scheduled_at: string
+          season_id: string
+          status: Database["public"]["Enums"]["session_status"]
+          timezone: string
+          updated_at: string
+          venue_name: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       session_withdraw_member: {
         Args: { p_session_id: string; p_user_id: string; p_version_was: number }
         Returns: {
@@ -13652,6 +14133,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -13696,6 +14178,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -13732,6 +14215,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -13743,8 +14227,11 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -13757,7 +14244,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -13792,6 +14281,9 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
+          deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
           match_id: string | null
@@ -13803,6 +14295,7 @@ export type Database = {
           player1_registration_id: string | null
           player2_is_bye: boolean
           player2_registration_id: string | null
+          pool_number: number | null
           round_number: number
           scheduled_at: string | null
           score: string | null
@@ -13859,6 +14352,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -13870,8 +14364,11 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -13884,7 +14381,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -13927,6 +14426,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -13938,8 +14438,11 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -13952,7 +14455,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -13998,7 +14503,9 @@ export type Database = {
           p_name: string
           p_network_id?: string
           p_points_per_game?: number
+          p_pool_size?: number
           p_prize_money_cents?: number
+          p_qualifiers_per_pool?: number
           p_registration_closes_at?: string
           p_registration_mode?: Database["public"]["Enums"]["tournament_registration_mode"]
           p_registration_opens_at?: string
@@ -14021,6 +14528,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -14032,8 +14540,11 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -14046,7 +14557,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -14075,6 +14588,47 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      tournament_extend_match_deadline: {
+        Args: {
+          p_deadline_at: string
+          p_reason?: string
+          p_tournament_match_id: string
+        }
+        Returns: {
+          bracket_side: string
+          court_id: string | null
+          created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
+          deadline_override_at: string | null
+          id: string
+          loser_next_match_id: string | null
+          match_id: string | null
+          match_position: number
+          next_match_id: string | null
+          next_match_slot: number | null
+          played_at: string | null
+          player1_is_bye: boolean
+          player1_registration_id: string | null
+          player2_is_bye: boolean
+          player2_registration_id: string | null
+          pool_number: number | null
+          round_number: number
+          scheduled_at: string | null
+          score: string | null
+          status: Database["public"]["Enums"]["tournament_match_status"]
+          tournament_id: string
+          updated_at: string
+          version: number
+          winner_registration_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournament_matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       tournament_fee_quote: {
         Args: { p_tournament_id: string }
         Returns: {
@@ -14090,12 +14644,49 @@ export type Database = {
           total_cents: number
         }[]
       }
+      tournament_forfeit_registration: {
+        Args: {
+          p_reason?: string
+          p_registration_id: string
+          p_version_was: number
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          bracket_position: number | null
+          created_at: string
+          forfeited_at: string | null
+          id: string
+          invited_by: string | null
+          notes: string | null
+          partner_user_id: string | null
+          partnership_id: string | null
+          registered_at: string
+          seed_rank: number | null
+          self_declared_rank: number | null
+          status: Database["public"]["Enums"]["registration_status"]
+          tournament_id: string
+          updated_at: string
+          user_id: string
+          version: number
+          withdrawn_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournament_registrations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       tournament_generate_bracket: {
         Args: { p_tournament_id: string; p_version_was: number }
         Returns: {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
+          deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
           match_id: string | null
@@ -14107,6 +14698,81 @@ export type Database = {
           player1_registration_id: string | null
           player2_is_bye: boolean
           player2_registration_id: string | null
+          pool_number: number | null
+          round_number: number
+          scheduled_at: string | null
+          score: string | null
+          status: Database["public"]["Enums"]["tournament_match_status"]
+          tournament_id: string
+          updated_at: string
+          version: number
+          winner_registration_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tournament_matches"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      tournament_generate_knockout: {
+        Args: { p_tournament_id: string; p_version_was: number }
+        Returns: {
+          bracket_side: string
+          court_id: string | null
+          created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
+          deadline_override_at: string | null
+          id: string
+          loser_next_match_id: string | null
+          match_id: string | null
+          match_position: number
+          next_match_id: string | null
+          next_match_slot: number | null
+          played_at: string | null
+          player1_is_bye: boolean
+          player1_registration_id: string | null
+          player2_is_bye: boolean
+          player2_registration_id: string | null
+          pool_number: number | null
+          round_number: number
+          scheduled_at: string | null
+          score: string | null
+          status: Database["public"]["Enums"]["tournament_match_status"]
+          tournament_id: string
+          updated_at: string
+          version: number
+          winner_registration_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tournament_matches"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      tournament_generate_pools: {
+        Args: { p_tournament_id: string; p_version_was: number }
+        Returns: {
+          bracket_side: string
+          court_id: string | null
+          created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
+          deadline_override_at: string | null
+          id: string
+          loser_next_match_id: string | null
+          match_id: string | null
+          match_position: number
+          next_match_id: string | null
+          next_match_slot: number | null
+          played_at: string | null
+          player1_is_bye: boolean
+          player1_registration_id: string | null
+          player2_is_bye: boolean
+          player2_registration_id: string | null
+          pool_number: number | null
           round_number: number
           scheduled_at: string | null
           score: string | null
@@ -14186,6 +14852,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -14222,6 +14889,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -14233,8 +14901,11 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -14247,7 +14918,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -14286,6 +14959,9 @@ export type Database = {
           bracket_side: string
           court_id: string | null
           created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
+          deadline_override_at: string | null
           id: string
           loser_next_match_id: string | null
           match_id: string | null
@@ -14297,6 +14973,7 @@ export type Database = {
           player1_registration_id: string | null
           player2_is_bye: boolean
           player2_registration_id: string | null
+          pool_number: number | null
           round_number: number
           scheduled_at: string | null
           score: string | null
@@ -14313,6 +14990,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      tournament_pool_standings: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          eligible: boolean
+          games_lost: number
+          games_won: number
+          partner_user_id: string
+          pool_number: number
+          pool_rank: number
+          registration_id: string
+          sets_lost: number
+          sets_won: number
+          settled: number
+          user_id: string
+          wins: number
+          withdrawn: boolean
+        }[]
+      }
       tournament_preview_bracket: {
         Args: { p_tournament_id: string }
         Returns: {
@@ -14325,6 +15020,17 @@ export type Database = {
           round_number: number
           status: Database["public"]["Enums"]["tournament_match_status"]
           winner_registration_id: string
+        }[]
+      }
+      tournament_preview_pools: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          partner_user_id: string
+          pool_number: number
+          registration_id: string
+          seed_rank: number
+          slot: number
+          user_id: string
         }[]
       }
       tournament_ranked_board: {
@@ -14349,6 +15055,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -14393,6 +15100,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -14429,6 +15137,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -14440,8 +15149,11 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -14454,7 +15166,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -14503,6 +15217,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -14525,6 +15240,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      tournament_set_round_deadlines: {
+        Args: { p_rounds: Json; p_tournament_id: string }
+        Returns: {
+          bracket_side: string
+          created_at: string
+          deadline_at: string
+          round_number: number
+          tournament_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tournament_round_deadlines"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       tournament_set_seeds: {
         Args: {
           p_ordered_registration_ids: string[]
@@ -14536,6 +15268,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -14572,6 +15305,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -14583,8 +15317,11 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -14597,7 +15334,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -14640,6 +15379,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          draw_nudged_at: string | null
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
@@ -14651,8 +15391,11 @@ export type Database = {
           final_set_tiebreak: Database["public"]["Enums"]["final_set_tiebreak"]
           games_per_set: number
           id: string
+          knockout_nudged_at: string | null
+          latitude: number | null
           level: string | null
           logo_url: string | null
+          longitude: number | null
           match_format: Database["public"]["Enums"]["match_format"]
           max_participants: number
           max_rating: number | null
@@ -14665,7 +15408,9 @@ export type Database = {
           organizer_id: string
           payout_timing: Database["public"]["Enums"]["payout_timing_enum"]
           points_per_game: number | null
+          pool_size: number | null
           prize_money_cents: number | null
+          qualifiers_per_pool: number | null
           ranking_draw_size: number | null
           ranking_multiplier: number | null
           ranking_points_ceiling: number | null
@@ -14701,6 +15446,7 @@ export type Database = {
           approved_by: string | null
           bracket_position: number | null
           created_at: string
+          forfeited_at: string | null
           id: string
           invited_by: string | null
           notes: string | null
@@ -14823,7 +15569,10 @@ export type Database = {
         | "no_show"
         | "awaiting_approval"
       booking_type_enum: "player" | "program_session" | "maintenance"
-      bracket_type: "single_elimination" | "double_elimination"
+      bracket_type:
+        | "single_elimination"
+        | "double_elimination"
+        | "pool_knockout"
       cancellation_reason_enum:
         | "weather"
         | "court_unavailable"
@@ -15070,6 +15819,19 @@ export type Database = {
         | "tournament_match_ready"
         | "session_cancelled"
         | "season_cancelled"
+        | "court_booking_nudge"
+        | "match_last_minute_spots"
+        | "match_unfilled_recovery"
+        | "play_rhythm_nudge"
+        | "tournament_registration_open"
+        | "league_member_rejected"
+        | "tournament_deadline_changed"
+        | "tournament_round_deadline_soon"
+        | "tournament_deadline_extended"
+        | "tournament_match_walkover"
+        | "tournament_dispute_escalated"
+        | "tournament_pool_eliminated"
+        | "tournament_action_required"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -15213,6 +15975,7 @@ export type Database = {
         | "first_match_bonus"
         | "feedback_submitted"
         | "match_left_late"
+        | "tournament_unresponsive"
       reputation_tier: "unknown" | "bronze" | "silver" | "gold" | "platinum"
       role_enum: "admin" | "staff" | "player" | "coach" | "owner"
       score_validation_status: "pending_validation" | "validated" | "rejected"
@@ -15483,7 +16246,11 @@ export const Constants = {
         "awaiting_approval",
       ],
       booking_type_enum: ["player", "program_session", "maintenance"],
-      bracket_type: ["single_elimination", "double_elimination"],
+      bracket_type: [
+        "single_elimination",
+        "double_elimination",
+        "pool_knockout",
+      ],
       cancellation_reason_enum: [
         "weather",
         "court_unavailable",
@@ -15747,6 +16514,19 @@ export const Constants = {
         "tournament_match_ready",
         "session_cancelled",
         "season_cancelled",
+        "court_booking_nudge",
+        "match_last_minute_spots",
+        "match_unfilled_recovery",
+        "play_rhythm_nudge",
+        "tournament_registration_open",
+        "league_member_rejected",
+        "tournament_deadline_changed",
+        "tournament_round_deadline_soon",
+        "tournament_deadline_extended",
+        "tournament_match_walkover",
+        "tournament_dispute_escalated",
+        "tournament_pool_eliminated",
+        "tournament_action_required",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],
@@ -15908,6 +16688,7 @@ export const Constants = {
         "first_match_bonus",
         "feedback_submitted",
         "match_left_late",
+        "tournament_unresponsive",
       ],
       reputation_tier: ["unknown", "bronze", "silver", "gold", "platinum"],
       role_enum: ["admin", "staff", "player", "coach", "owner"],

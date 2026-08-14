@@ -17,6 +17,8 @@ import type {
   RatingReferencesScreenParams,
   SportProfileScreenParams,
   FacilityDetailScreenParams,
+  DateRangeFilter,
+  SpotsAvailableFilter,
 } from '@rallia/shared-types';
 
 // =============================================================================
@@ -53,12 +55,15 @@ export type RootStackParamList = {
   IncomingReferenceRequests: undefined; // Incoming reference requests from other players
   GroupDetail: { groupId: string; groupName?: string; fromChat?: boolean }; // Group detail view
   CommunityDetail: { communityId: string; communityName?: string; fromChat?: boolean }; // Community detail view
-  Tournaments: undefined; // Public tournament discovery — full-screen, reached from Home quick-nav (back returns to Home)
-  MyTournaments: undefined; // Caller's tournaments (organized + registered), reached from Tournaments
-  Leagues: undefined; // Public league discovery — full-screen, reached from Home quick-nav (back returns to Home)
-  MyLeagues: undefined; // Caller's leagues (organized + member), reached from Leagues or Community
-  Leaderboard: undefined; // Monthly GMA challenge board (old card UI) — non-admin Home entry point; also the "challenge" tab body inside Classements
-  Classements: { initialTab?: 'challenge' | 'ranking' } | undefined; // Boards hub — monthly challenge + Points Rallia tabs, admin-only Home entry point during Circuit Rallia rollout
+  /**
+   * Compete hub — the anchor for everything competitive. Segments: the unified
+   * event list (tournaments + leagues), the monthly challenge, and Points
+   * Rallia. Replaces the Tournaments/Leagues/MyTournaments/MyLeagues split and
+   * the separate Classements screen.
+   */
+  Compete: { initialSegment?: 'events' | 'ranking' } | undefined;
+  MyEvents: undefined; // Caller's events across formats (organizing + playing), reached from Compete
+  Leaderboard: undefined; // Monthly GMA challenge board, reached from the public games feed
   TournamentDetail: {
     tournamentId: string;
     tournamentName?: string;
@@ -68,8 +73,13 @@ export type RootStackParamList = {
     openInviteSheet?: boolean;
   }; // Tournament detail view
   TournamentBracketSetup: { tournamentId: string }; // Organizer seeding + bracket preview before publish
-  LeagueDetail: { leagueId: string; leagueName?: string }; // League detail view
-  SessionDetail: { sessionId: string; leagueId: string; sessionName?: string }; // League session detail + confirm CTA
+  LeagueDetail: { leagueId: string; leagueName?: string; inviteToken?: string }; // League detail view (token = arrived via share link)
+  SessionDetail: {
+    sessionId: string;
+    leagueId: string;
+    sessionName?: string;
+    inviteToken?: string;
+  }; // League session detail + confirm CTA (token = arrived via share link)
   FacilityDetail: FacilityDetailScreenParams; // Facility detail (root-level for external navigation)
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
   ChatConversation: { conversationId: string; title?: string }; // Direct chat navigation
@@ -144,7 +154,29 @@ export type BottomTabParamList = {
 export type HomeStackParamList = {
   HomeScreen: undefined;
   PlayerMatches: undefined;
-  PublicMatches: undefined;
+  PublicMatches:
+    | {
+        /** Context shown when arriving from a cancelled/unfilled-game notification tap. */
+        cancelledContext?: {
+          matchId?: string;
+          matchDate?: string;
+          startTime?: string;
+          sportName?: string;
+          reason?: 'cancelled' | 'unfilled';
+        };
+        /**
+         * Filters the unfilled-recovery push counted its games with. Applying
+         * them on arrival is what makes the number in the message and the list
+         * behind it the same set. Sent verbatim in the notification payload.
+         */
+        initialFilters?: {
+          ratingScoreId?: string;
+          distanceKm?: number;
+          dateRange?: DateRangeFilter;
+          spotsAvailable?: SpotsAvailableFilter;
+        };
+      }
+    | undefined;
 };
 
 /**
@@ -162,7 +194,6 @@ export type CommunityStackParamList = {
   PlayerDirectory: undefined;
   ShareLists: undefined;
   SharedListDetail: { listId: string; listName: string };
-  Groups: undefined;
   Communities: undefined;
   Leagues: undefined;
   CommunityDetail: { communityId: string; fromChat?: boolean };

@@ -13,7 +13,7 @@ import { spacingPixels, fontSizePixels, primary, neutral, status } from '@rallia
 import type { ConversationPreview } from '@rallia/shared-services';
 import { getConversationDisplayName } from '@rallia/shared-services';
 
-import { useThemeStyles, useTranslation } from '#/hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
 import { SportIcon } from '#/components/SportIcon';
 
@@ -159,6 +159,36 @@ function getConversationInfo(
   };
 }
 
+/**
+ * Localized preview line for messages whose stored `content` is not in the
+ * reader's language. Server-posted cards and system notes are written once and
+ * read by people in different locales, so the text has to come from the message
+ * type + metadata instead. Returns null when there is nothing special to say and
+ * the caller should fall back to `content`.
+ */
+function localizedPreview(
+  conversation: ConversationPreview,
+  t: (key: TranslationKey) => string
+): string | null {
+  const meta = conversation.last_message_meta;
+
+  if (meta?.system_note === 'availability_updated') {
+    return t('availabilityOverlay.systemNote.updated').replace('{name}', meta.actor_name ?? '');
+  }
+
+  if (meta?.system_note === 'custom_option_added') {
+    return t('matchOrganizer.custom.systemNote').replace('{name}', meta.actor_name ?? '');
+  }
+
+  if (conversation.last_message_type === 'match_organizer') {
+    return meta?.no_overlap
+      ? t('matchOrganizer.card.noOverlapTitle')
+      : t('matchOrganizer.card.previewSuggestions');
+  }
+
+  return null;
+}
+
 function ConversationItemComponent({
   conversation,
   onPress,
@@ -185,10 +215,23 @@ function ConversationItemComponent({
     previewText = t('chat.conversation.blockedUser');
     isBlockedPreview = true;
   } else if (conversation.last_message_content) {
-    if (conversation.conversation_type !== 'direct' && conversation.last_message_sender_name) {
-      previewText = `${conversation.last_message_sender_name}: ${conversation.last_message_content}`;
+    // Structured cards and system notes are written server-side, so their stored
+    // `content` cannot be in the reader's language. Localize those here from the
+    // message type + trimmed metadata; everything else echoes `content`.
+    const localized = localizedPreview(conversation, t);
+    const body = localized ?? conversation.last_message_content;
+    // A system note already names the actor, so the sender prefix would just
+    // repeat it ("Rallia: Mathis updated...").
+    const skipSenderPrefix = !!conversation.last_message_meta?.system_note;
+
+    if (
+      !skipSenderPrefix &&
+      conversation.conversation_type !== 'direct' &&
+      conversation.last_message_sender_name
+    ) {
+      previewText = `${conversation.last_message_sender_name}: ${body}`;
     } else {
-      previewText = conversation.last_message_content;
+      previewText = body;
     }
   }
 

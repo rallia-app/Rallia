@@ -150,7 +150,6 @@ BEGIN
   -- Phase 3b cleanup
   DELETE FROM player_report WHERE id::text LIKE 'c5000000-0000-0000-0000-%';
   DELETE FROM referral_link_click WHERE referral_code LIKE 'SEED%';
-  DELETE FROM referral_fingerprint WHERE referral_code LIKE 'SEED%';
   DELETE FROM score_confirmation WHERE match_result_id::text LIKE 'b2000000-0000-0000-0000-%';
   DELETE FROM proof_endorsement WHERE proof_id::text LIKE 'f1000000-0000-0000-0000-%';
 
@@ -180,6 +179,15 @@ BEGIN
   DELETE FROM conversation WHERE id IN (
     SELECT conversation_id FROM network WHERE id::text LIKE 'd1000000-0000-0000-0000-%'
     AND conversation_id IS NOT NULL);
+
+  -- Phase 3 cleanup: auto-created match conversations. match_id is ON DELETE SET NULL,
+  -- so deleting the matches would strand these rather than cascade.
+  DELETE FROM message_reaction WHERE message_id IN (
+    SELECT msg.id FROM message msg JOIN conversation c ON c.id = msg.conversation_id
+    WHERE c.match_id::text LIKE 'b1000000-0000-0000-0000-%');
+  DELETE FROM message WHERE conversation_id IN (
+    SELECT id FROM conversation WHERE match_id::text LIKE 'b1000000-0000-0000-0000-%');
+  DELETE FROM conversation WHERE match_id::text LIKE 'b1000000-0000-0000-0000-%';
 
   -- Phase 3 cleanup: group_activity and match_network (before network delete)
   DELETE FROM group_activity WHERE network_id IN (
@@ -262,7 +270,10 @@ BEGIN
     DELETE FROM player_rating_score WHERE player_id = logged_in_user;
     DELETE FROM player_availability WHERE player_id = logged_in_user;
     DELETE FROM player_reputation WHERE player_id = logged_in_user;
-    DELETE FROM player WHERE id = logged_in_user;
+    -- Keep the player row: conversation.created_by cascades, so deleting it takes
+    -- the global announcement channel (20260724220000) with it, and the
+    -- enroll-on-signup trigger then fails for every player we recreate below.
+    -- Section 5 re-upserts this row anyway.
   END IF;
 
   -- Delete files uploaded by fake users (must happen before profile cascade sets uploaded_by=NULL on NOT NULL column)
@@ -292,8 +303,6 @@ ALTER TABLE notification             DISABLE TRIGGER on_notification_insert;
 ALTER TABLE match                    DISABLE TRIGGER match_notify_group_members_on_create;
 ALTER TABLE match                    DISABLE TRIGGER match_notify_nearby_players_on_create;
 ALTER TABLE feedback                 DISABLE TRIGGER trigger_notify_new_feedback;
-ALTER TABLE rating_reference_request DISABLE TRIGGER trigger_notify_referee_on_reference_request;
-ALTER TABLE rating_reference_request DISABLE TRIGGER trigger_notify_requester_on_reference_response;
 
 -- ============================================================================
 -- 3. Create 100 Test Users in auth.users
@@ -2829,23 +2838,33 @@ BEGIN
   END LOOP;
 
   -- ---- 21b: Match conversations (for matches 1-10) ----
+  -- Match chats are auto-created by trigger (20260426120000), so reuse those
+  -- rather than inserting: conversation.match_id is uniquely indexed.
   FOR i IN 1..10 LOOP
     v_host := ((i - 1) % 60) + 1;
     v_opp1 := ((v_host + (i % 10)) % 100) + 1;
 
-    INSERT INTO conversation (id, conversation_type, match_id, created_by)
-    VALUES (
-      (cv || LPAD((30 + i)::text, 4, '0'))::uuid,
-      'match',
-      (m || LPAD(i::text, 4, '0'))::uuid,
-      (p || LPAD(v_host::text, 4, '0'))::uuid
-    );
+    SELECT id INTO v_conv_id
+    FROM conversation
+    WHERE match_id = (m || LPAD(i::text, 4, '0'))::uuid;
+
+    IF v_conv_id IS NULL THEN
+      v_conv_id := (cv || LPAD((30 + i)::text, 4, '0'))::uuid;
+      INSERT INTO conversation (id, conversation_type, match_id, created_by)
+      VALUES (
+        v_conv_id,
+        'match',
+        (m || LPAD(i::text, 4, '0'))::uuid,
+        (p || LPAD(v_host::text, 4, '0'))::uuid
+      );
+    END IF;
 
     -- Add host and opponent as participants
     INSERT INTO conversation_participant (conversation_id, player_id, joined_at)
     VALUES
-      ((cv || LPAD((30 + i)::text, 4, '0'))::uuid, (p || LPAD(v_host::text, 4, '0'))::uuid, NOW() - interval '5 days'),
-      ((cv || LPAD((30 + i)::text, 4, '0'))::uuid, (p || LPAD(v_opp1::text, 4, '0'))::uuid, NOW() - interval '5 days');
+      (v_conv_id, (p || LPAD(v_host::text, 4, '0'))::uuid, NOW() - interval '5 days'),
+      (v_conv_id, (p || LPAD(v_opp1::text, 4, '0'))::uuid, NOW() - interval '5 days')
+    ON CONFLICT DO NOTHING;
   END LOOP;
 
   RAISE NOTICE 'Created 40 conversations (30 direct + 10 match)';
@@ -2911,7 +2930,13 @@ BEGIN
   FOR i IN 1..10 LOOP
     v_host := ((i - 1) % 60) + 1;
     v_opp1 := ((v_host + (i % 10)) % 100) + 1;
-    v_conv_id := (cv || LPAD((30 + i)::text, 4, '0'))::uuid;
+
+    SELECT id INTO v_conv_id
+    FROM conversation
+    WHERE match_id = (m || LPAD(i::text, 4, '0'))::uuid;
+
+    IF v_conv_id IS NULL THEN CONTINUE; END IF;
+
     v_base_time := NOW() - interval '3 days' + (i * interval '4 hours');
 
     FOR j IN 1..6 LOOP
@@ -2944,6 +2969,7 @@ BEGIN
       FROM message msg
       JOIN conversation c ON c.id = msg.conversation_id
       WHERE c.id::text LIKE 'e1000000-0000-0000-0000-%'
+         OR c.match_id::text LIKE 'b1000000-0000-0000-0000-%'
          OR c.id IN (SELECT conversation_id FROM network WHERE id::text LIKE 'd1000000-0000-0000-0000-%' AND conversation_id IS NOT NULL)
     LOOP
       IF rec.rn % 4 = 0 THEN
@@ -3281,9 +3307,9 @@ END $$;
 -- ============================================================================
 -- 26. Referral Link Clicks & Fingerprints (~150 rows)
 -- ============================================================================
--- The referral system uses referral_link_click and referral_fingerprint tables.
--- Each profile has a unique referral_code column. We create click + fingerprint
--- records to simulate the referral funnel.
+-- The referral system tracks clicks in referral_link_click. Each profile has a
+-- unique referral_code column. Fingerprint matching was dropped in
+-- 20260518100000_invitation_stats_accuracy.sql.
 DO $$
 DECLARE
   p TEXT := 'a1000000-0000-0000-0000-00000000';
@@ -3301,7 +3327,6 @@ DECLARE
     '192.168.1.100', '10.0.0.42', '172.16.0.88', '192.168.0.55',
     '10.0.1.33', '172.16.1.12', '192.168.2.77', '10.0.2.99'
   ];
-  converted_player_idx INT;
 BEGIN
   FOR i IN 1..150 LOOP
     player_idx := ((i - 1) % 30) + 1;
@@ -3324,28 +3349,10 @@ BEGIN
       ip_addrs[((i - 1) % 8) + 1],
       user_agents[((i - 1) % 4) + 1],
       NOW() - ((30 - i) * INTERVAL '22 hours')
-    ) ON CONFLICT (referral_code, device_fingerprint) DO NOTHING;
-
-    -- ~30% convert: create a fingerprint match for some
-    IF i % 3 = 0 THEN
-      converted_player_idx := 50 + (i / 3);  -- players 51-100
-
-      INSERT INTO referral_fingerprint (
-        referral_code, device_fingerprint, ip_address, user_agent,
-        matched_player_id, matched_at, created_at
-      ) VALUES (
-        ref_code,
-        v_fp,
-        ip_addrs[((i - 1) % 8) + 1],
-        user_agents[((i - 1) % 4) + 1],
-        (p || LPAD(converted_player_idx::text, 4, '0'))::uuid,
-        NOW() - ((30 - i) * INTERVAL '22 hours') + INTERVAL '2 hours',
-        NOW() - ((30 - i) * INTERVAL '22 hours')
-      );
-    END IF;
+    );
   END LOOP;
 
-  RAISE NOTICE 'Created ~150 referral link clicks + ~50 fingerprint matches';
+  RAISE NOTICE 'Created ~150 referral link clicks';
 END $$;
 
 -- ============================================================================
@@ -3473,8 +3480,6 @@ ALTER TABLE notification             ENABLE TRIGGER on_notification_insert;
 ALTER TABLE match                    ENABLE TRIGGER match_notify_group_members_on_create;
 ALTER TABLE match                    ENABLE TRIGGER match_notify_nearby_players_on_create;
 ALTER TABLE feedback                 ENABLE TRIGGER trigger_notify_new_feedback;
-ALTER TABLE rating_reference_request ENABLE TRIGGER trigger_notify_referee_on_reference_request;
-ALTER TABLE rating_reference_request ENABLE TRIGGER trigger_notify_requester_on_reference_response;
 
 -- ============================================================================
 -- Done! Summary of seeded data

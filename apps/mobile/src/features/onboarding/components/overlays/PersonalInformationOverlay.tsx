@@ -58,7 +58,6 @@ export function PersonalInformationActionSheet({ payload }: SheetProps<'personal
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [gender, setGender] = useState(initialData?.gender || '');
   const [phoneNumber, setPhoneNumber] = useState(initialData?.phoneNumber || '');
-
   // Use custom hook for image picker
   const { image: profileImage, pickImage } = useImagePicker();
 

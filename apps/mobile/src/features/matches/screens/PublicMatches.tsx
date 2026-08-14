@@ -4,11 +4,19 @@
  */
 
 import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  ScrollView,
+  ActivityIndicator,
+  RefreshControl,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { MatchCard, Text } from '@rallia/shared-components';
+import { useNavigation, useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native';
+import { Button, EmptyState, MatchCard, Text } from '@rallia/shared-components';
 import {
   useTheme,
   usePlayer,
@@ -21,10 +29,10 @@ import {
   type MatchScoringPreferences,
   type PublicMatch,
 } from '@rallia/shared-hooks';
+import type { DistanceFilter } from '@rallia/shared-types';
 import { getUpcomingDateSection, type UpcomingDateSection } from '@rallia/shared-utils';
-import type { TranslationKey } from '@rallia/shared-translations';
 import { Logger, supabase } from '@rallia/shared-services';
-import { neutral, spacingPixels } from '@rallia/design-system';
+import { COLORS, neutral, spacingPixels, radiusPixels } from '@rallia/design-system';
 
 import {
   useAuth,
@@ -34,40 +42,19 @@ import {
   useImpressionTracker,
 } from '#/hooks';
 import * as Analytics from '#/services/analytics';
-import { useMatchDetailSheet, useSport, useUserHomeLocation } from '#/context';
+import { useActionsSheet, useMatchDetailSheet, useSport, useUserHomeLocation } from '#/context';
+import type { HomeStackParamList } from '#/navigation/types';
 import { SportIcon } from '#/components/SportIcon';
+import { PrimaryEntryButton, RowEntryButton } from '#/components/HubEntryButton';
+import { SegmentBar, type SegmentOption } from '#/components/SegmentBar';
+import Leaderboard from '#/screens/Leaderboard';
 import { SearchBar, MatchFiltersBar, MatchCardSkeleton } from '#/features/matches/components';
 
 // A card counts as shown once it's ≥50% visible for 500ms. Module constant so
 // the FlatList viewability config never changes identity (a runtime crash).
 const FEED_VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 50, minimumViewTime: 500 };
 
-// =============================================================================
-// HELPER COMPONENTS
-// =============================================================================
-
-interface EmptyStateProps {
-  hasFilters: boolean;
-  textMutedColor: string;
-  t: (key: TranslationKey) => string;
-}
-
-function EmptyState({ hasFilters, textMutedColor, t }: EmptyStateProps) {
-  return (
-    <View style={styles.emptyWrapper}>
-      <View style={styles.inlineEmpty}>
-        <Ionicons
-          name={hasFilters ? 'filter-outline' : 'search-outline'}
-          size={20}
-          color={textMutedColor}
-        />
-        <Text size="sm" color={textMutedColor} style={styles.inlineEmptyText}>
-          {hasFilters ? t('publicMatches.empty.title') : t('publicMatches.empty.noFilters.title')}
-        </Text>
-      </View>
-    </View>
-  );
-}
+export type PublicMatchesSegment = 'games' | 'challenge';
 
 // =============================================================================
 // MAIN COMPONENT
@@ -88,6 +75,8 @@ export default function PublicMatches() {
     navigation.setOptions({ headerTitle: t('screens.publicMatches') });
   }, [navigation, t]);
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
+  const { openSheetForMatchCreation } = useActionsSheet();
+  const route = useRoute<RouteProp<HomeStackParamList, 'PublicMatches'>>();
   const isDark = theme === 'dark';
 
   // Get user location and preferences
@@ -128,6 +117,25 @@ export default function PublicMatches() {
     resetFilters,
     clearSearch,
   } = usePublicMatchFilters();
+
+  // Games feed | monthly challenge board. The board counts the games this feed
+  // helps you find, so the two belong on one screen rather than the board
+  // living with events on the Compete hub.
+  const [activeSegment, setActiveSegment] = useState<PublicMatchesSegment>('games');
+  const segments = useMemo<Array<SegmentOption<PublicMatchesSegment>>>(
+    () => [
+      {
+        key: 'games',
+        // The active sport's own racquet, so the tab reads as "these games".
+        icon: color => (
+          <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={18} color={color} />
+        ),
+        label: t('publicMatches.tabs.games'),
+      },
+      { key: 'challenge', icon: 'podium-outline', label: t('leaderboard.title') },
+    ],
+    [t, selectedSport?.name]
+  );
 
   // Fetch favorite player IDs for favorites filter
   const [favoritePlayerIds, setFavoritePlayerIds] = useState<string[]>([]);
@@ -485,19 +493,124 @@ export default function PublicMatches() {
   // Check if we're loading due to filter/search changes (not initial load or pagination)
   const isSearching = isFetching && !isLoading && !isRefetching && !isFetchingNextPage;
 
+  // Recovery context from a match_cancelled notification tap: show a banner and
+  // prefilter to the cancelled game's date (if still upcoming) so alternatives
+  // for the freed-up slot surface first.
+  const [cancelledContext, setCancelledContext] = useState<
+    NonNullable<HomeStackParamList['PublicMatches']>['cancelledContext'] | null
+  >(null);
+  useEffect(() => {
+    const ctx = route.params?.cancelledContext;
+    if (!ctx) return;
+    setCancelledContext(ctx);
+    // Prefilter to the freed-up date only for cancellations; an unfilled game's
+    // slot has already passed, so leave the feed open to the coming days.
+    const todayIso = new Date().toISOString().slice(0, 10);
+    if (ctx.reason !== 'unfilled' && ctx.matchDate && ctx.matchDate >= todayIso) {
+      setSpecificDate(ctx.matchDate);
+    }
+    // Consume the param so re-focusing the screen doesn't replay the banner.
+    navigation.setParams({ cancelledContext: undefined } as never);
+  }, [route.params?.cancelledContext, navigation, setSpecificDate]);
+
+  // The unfilled-recovery push announces a count, so it also sends the filters
+  // it counted with. Applying them here is what makes the list the same set as
+  // the number. Reset first: a filter left over from the previous visit would
+  // narrow the feed below what was promised.
+  useEffect(() => {
+    const incoming = route.params?.initialFilters;
+    if (!incoming) return;
+    resetFilters();
+    if (incoming.ratingScoreId) setRating([incoming.ratingScoreId]);
+    if (incoming.distanceKm) setDistance(incoming.distanceKm as DistanceFilter);
+    if (incoming.dateRange) setDateRange(incoming.dateRange);
+    if (incoming.spotsAvailable) setSpotsAvailable(incoming.spotsAvailable);
+    navigation.setParams({ initialFilters: undefined } as never);
+  }, [
+    route.params?.initialFilters,
+    navigation,
+    resetFilters,
+    setRating,
+    setDistance,
+    setDateRange,
+    setSpotsAvailable,
+  ]);
+
+  // "Create your own game" CTA — shared by the empty state and the end-of-list footer.
+  const handleCreateGamePress = useCallback(
+    (placement: 'empty_state' | 'feed_footer' | 'feed_header') => {
+      Analytics.createGameCtaPressed({
+        placement,
+        has_active_filters: hasActiveFilters || debouncedSearchQuery.length > 0,
+      });
+      openSheetForMatchCreation(placement === 'empty_state' ? 'empty_feed' : 'feed_footer');
+    },
+    [hasActiveFilters, debouncedSearchQuery, openSheetForMatchCreation]
+  );
+
   // Render empty state — shows once matches have settled and there are none.
   const renderEmptyComponent = useCallback(() => {
     if (isLoading || isSearching) return null;
+    const hasFilters = hasActiveFilters || debouncedSearchQuery.length > 0;
     return (
       <EmptyState
-        hasFilters={hasActiveFilters || debouncedSearchQuery.length > 0}
-        textMutedColor={colors.textMuted}
-        t={t}
+        icon={
+          <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={64} color={colors.primary} />
+        }
+        markIcon={
+          <Ionicons name={hasFilters ? 'filter' : 'search'} size={14} color={COLORS.white} />
+        }
+        title={
+          hasFilters ? t('publicMatches.empty.title') : t('publicMatches.empty.noFilters.title')
+        }
+        description={
+          hasFilters
+            ? t('publicMatches.empty.description')
+            : t('publicMatches.empty.noFilters.description')
+        }
+        ctaLabel={t('matches.createMatch')}
+        onCtaPress={() => handleCreateGamePress('empty_state')}
+        ctaLeftIcon={<Ionicons name="add-circle-outline" size={20} color={COLORS.white} />}
+        helperText={t('publicMatches.empty.helper')}
       />
     );
-  }, [isLoading, isSearching, hasActiveFilters, debouncedSearchQuery, colors.textMuted, t]);
+  }, [
+    isLoading,
+    isSearching,
+    hasActiveFilters,
+    debouncedSearchQuery,
+    colors.primary,
+    selectedSport?.name,
+    t,
+    handleCreateGamePress,
+  ]);
 
-  // Render footer — pagination spinner only.
+  // Entry points above the feed, same anatomy as the Events list: create the
+  // thing this hub is about, then jump to your own, then the board that counts
+  // what you play. The monthly challenge lives here rather than in Compete —
+  // it is won by playing games, not by entering events.
+  const entryPoints = useMemo(
+    () => (
+      <View style={styles.entryPoints}>
+        <PrimaryEntryButton
+          icon="add"
+          title={t('matches.createMatch')}
+          subtitle={t('publicMatches.createSubtitle')}
+          onPress={() => handleCreateGamePress('feed_header')}
+          testID="cta-create-game"
+        />
+        <RowEntryButton
+          icon="calendar"
+          label={t('screens.playerMatches')}
+          onPress={() => navigation.navigate('PlayerMatches' as never)}
+          testID="cta-my-games"
+        />
+      </View>
+    ),
+    [t, handleCreateGamePress, navigation]
+  );
+
+  // Render footer — pagination spinner, or a create-your-own prompt at the end of the list.
   const renderFooter = useCallback(() => {
     if (isFetchingNextPage) {
       return (
@@ -506,15 +619,59 @@ export default function PublicMatches() {
         </View>
       );
     }
+    if (!hasNextPage && sortedMatches.length > 0) {
+      return (
+        <View style={styles.endOfListCta}>
+          <Text size="sm" color={colors.textMuted} style={styles.inlineEmptyText}>
+            {t('publicMatches.endOfList.title')}
+          </Text>
+          <Button variant="outline" size="sm" onPress={() => handleCreateGamePress('feed_footer')}>
+            {t('matches.createMatch')}
+          </Button>
+        </View>
+      );
+    }
     return null;
-  }, [isFetchingNextPage, colors.primary]);
+  }, [
+    isFetchingNextPage,
+    hasNextPage,
+    sortedMatches.length,
+    colors.primary,
+    colors.textMuted,
+    t,
+    handleCreateGamePress,
+  ]);
 
   // Loading state for initial data
   const isInitialLoading = playerLoading || sportLoading;
 
+  // Two segments, same anatomy as the Compete hub: the games feed, and the
+  // board that counts the games you play. The bar renders above every branch
+  // below so it never disappears while a segment loads or comes up empty.
+  const segmentBar = (
+    <SegmentBar
+      segments={segments}
+      active={activeSegment}
+      onChange={setActiveSegment}
+      testIDPrefix="public-matches-segment"
+    />
+  );
+
+  if (activeSegment === 'challenge') {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+        {segmentBar}
+        <View style={styles.body}>
+          <Leaderboard />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (isInitialLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+        {segmentBar}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -526,6 +683,7 @@ export default function PublicMatches() {
   if (!showMatches) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+        {segmentBar}
         <View style={styles.loadingContainer}>
           <Ionicons name="location-outline" size={48} color={colors.textMuted} />
           <Text size="base" color={colors.textMuted} style={styles.noLocationText}>
@@ -536,120 +694,181 @@ export default function PublicMatches() {
     );
   }
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      {/* Fixed Header - Search and Filters always visible */}
-      <View style={styles.headerContainer}>
-        {/* Search Bar */}
-        <View style={styles.searchRow}>
-          <View style={styles.searchContainer}>
-            <SearchBar
-              value={filters.searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder={t('publicMatches.searchPlaceholder')}
-              isLoading={isFetching && debouncedSearchQuery !== filters.searchQuery}
-              onClear={clearSearch}
-            />
-          </View>
-        </View>
+  // The whole screen above the cards is the list's header, so a pull anywhere
+  // refreshes and nothing is pinned. Built as an element, never as a component
+  // function: a fresh function identity each render would remount the search
+  // field and drop the keyboard mid-typing.
+  const listHeader = (
+    <View style={styles.headerContainer}>
+      {entryPoints}
 
-        {/* Filter Chips with Location Selector */}
-        <MatchFiltersBar
-          format={filters.format}
-          matchType={filters.matchType}
-          dateRange={filters.dateRange}
-          timeOfDay={filters.timeOfDay}
-          gender={filters.gender}
-          cost={filters.cost}
-          joinMode={filters.joinMode}
-          distance={filters.distance}
-          duration={filters.duration}
-          matchTier={filters.matchTier}
-          specificDate={filters.specificDate}
-          spotsAvailable={filters.spotsAvailable}
-          favoritesOnly={filters.favoritesOnly}
-          specificTime={filters.specificTime}
-          reputation={filters.reputation}
-          rating={filters.rating}
-          onFormatChange={withFilterTracking('format', setFormat)}
-          onMatchTypeChange={withFilterTracking('match_type', setMatchType)}
-          onDateRangeChange={withFilterTracking('date_range', setDateRange)}
-          onTimeOfDayChange={withFilterTracking('time_of_day', setTimeOfDay)}
-          onGenderChange={withFilterTracking('gender', setGender)}
-          onCostChange={withFilterTracking('cost', setCost)}
-          onJoinModeChange={withFilterTracking('join_mode', setJoinMode)}
-          onDistanceChange={withFilterTracking('distance', setDistance)}
-          onDurationChange={withFilterTracking('duration', setDuration)}
-          onMatchTierChange={withFilterTracking('match_tier', setMatchTier)}
-          onSpecificDateChange={withFilterTracking('specific_date', setSpecificDate, v =>
-            v == null ? 'none' : String(v)
-          )}
-          onSpotsAvailableChange={withFilterTracking('spots_available', setSpotsAvailable)}
-          onFavoritesOnlyChange={withFilterTracking('favorites_only', setFavoritesOnly)}
-          onSpecificTimeChange={withFilterTracking('specific_time', setSpecificTime, v =>
-            v == null ? 'none' : String(v)
-          )}
-          onReputationChange={withFilterTracking('reputation', setReputation)}
-          onRatingChange={withFilterTracking('rating', setRating, v =>
-            v.length ? v.join(',') : 'none'
-          )}
-          ratingOptions={ratingScores}
-          isAuthenticated={!!session?.user}
-          onReset={() => {
-            Analytics.filterApplied({
-              filter_type: 'reset',
-              value: 'all',
-              screen: 'public_matches',
-            });
-            resetFilters();
-          }}
-          hasActiveFilters={hasActiveFilters}
-          showLocationSelector={hasBothLocationOptions}
-          locationMode={locationMode}
-          onLocationModeChange={setLocationMode}
-          hasHomeLocation={hasHomeLocation}
-          homeLocationLabel={homeLocationLabel}
-        />
+      {/* Search Bar */}
+      <View style={styles.searchRow}>
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={filters.searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('publicMatches.searchPlaceholder')}
+            isLoading={isFetching && debouncedSearchQuery !== filters.searchQuery}
+            onClear={clearSearch}
+          />
+        </View>
       </View>
 
-      {/* Match List */}
-      {isLoading ? (
-        <View style={styles.listLoadingContainer}>
-          {[1, 2, 3, 4].map(i => (
-            <MatchCardSkeleton key={i} />
-          ))}
-        </View>
-      ) : (
-        <FlatList
-          data={feed}
-          renderItem={renderFeedItem}
-          keyExtractor={item => item.key}
-          ListHeaderComponent={null}
-          ListEmptyComponent={renderEmptyComponent}
-          ListFooterComponent={renderFooter}
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={0.3}
-          viewabilityConfig={FEED_VIEWABILITY_CONFIG}
-          onViewableItemsChanged={onViewableItemsChanged}
-          contentContainerStyle={[styles.listContent, feed.length === 0 && styles.emptyListContent]}
+      {/* Filter Chips with Location Selector */}
+      <MatchFiltersBar
+        format={filters.format}
+        matchType={filters.matchType}
+        dateRange={filters.dateRange}
+        timeOfDay={filters.timeOfDay}
+        gender={filters.gender}
+        cost={filters.cost}
+        joinMode={filters.joinMode}
+        distance={filters.distance}
+        duration={filters.duration}
+        matchTier={filters.matchTier}
+        specificDate={filters.specificDate}
+        spotsAvailable={filters.spotsAvailable}
+        favoritesOnly={filters.favoritesOnly}
+        specificTime={filters.specificTime}
+        reputation={filters.reputation}
+        rating={filters.rating}
+        onFormatChange={withFilterTracking('format', setFormat)}
+        onMatchTypeChange={withFilterTracking('match_type', setMatchType)}
+        onDateRangeChange={withFilterTracking('date_range', setDateRange)}
+        onTimeOfDayChange={withFilterTracking('time_of_day', setTimeOfDay)}
+        onGenderChange={withFilterTracking('gender', setGender)}
+        onCostChange={withFilterTracking('cost', setCost)}
+        onJoinModeChange={withFilterTracking('join_mode', setJoinMode)}
+        onDistanceChange={withFilterTracking('distance', setDistance)}
+        onDurationChange={withFilterTracking('duration', setDuration)}
+        onMatchTierChange={withFilterTracking('match_tier', setMatchTier)}
+        onSpecificDateChange={withFilterTracking('specific_date', setSpecificDate, v =>
+          v == null ? 'none' : String(v)
+        )}
+        onSpotsAvailableChange={withFilterTracking('spots_available', setSpotsAvailable)}
+        onFavoritesOnlyChange={withFilterTracking('favorites_only', setFavoritesOnly)}
+        onSpecificTimeChange={withFilterTracking('specific_time', setSpecificTime, v =>
+          v == null ? 'none' : String(v)
+        )}
+        onReputationChange={withFilterTracking('reputation', setReputation)}
+        onRatingChange={withFilterTracking('rating', setRating, v =>
+          v.length ? v.join(',') : 'none'
+        )}
+        ratingOptions={ratingScores}
+        isAuthenticated={!!session?.user}
+        onReset={() => {
+          Analytics.filterApplied({
+            filter_type: 'reset',
+            value: 'all',
+            screen: 'public_matches',
+          });
+          resetFilters();
+        }}
+        hasActiveFilters={hasActiveFilters}
+        showLocationSelector={hasBothLocationOptions}
+        locationMode={locationMode}
+        onLocationModeChange={setLocationMode}
+        hasHomeLocation={hasHomeLocation}
+        homeLocationLabel={homeLocationLabel}
+      />
+    </View>
+  );
+
+  const cancelledBanner = cancelledContext ? (
+    <View
+      style={[styles.cancelledBanner, { backgroundColor: colors.card, borderColor: colors.border }]}
+    >
+      <Ionicons
+        name={cancelledContext.reason === 'unfilled' ? 'refresh-outline' : 'close-circle-outline'}
+        size={22}
+        color={colors.textMuted}
+      />
+      <View style={styles.cancelledBannerTextWrap}>
+        <Text size="sm" weight="semibold" color={colors.text}>
+          {cancelledContext.reason === 'unfilled'
+            ? t('publicMatches.unfilledBanner.title')
+            : t('publicMatches.cancelledBanner.title')}
+        </Text>
+        <Text size="xs" color={colors.textMuted}>
+          {cancelledContext.reason === 'unfilled'
+            ? t('publicMatches.unfilledBanner.description')
+            : t('publicMatches.cancelledBanner.description')}
+        </Text>
+      </View>
+      <TouchableOpacity
+        onPress={() => setCancelledContext(null)}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityLabel={t('common.close')}
+      >
+        <Ionicons name="close" size={18} color={colors.textMuted} />
+      </TouchableOpacity>
+    </View>
+  ) : null;
+
+  const refreshControl = (
+    <RefreshControl
+      refreshing={isRefetching && isManualRefresh.current}
+      onRefresh={() => {
+        isManualRefresh.current = true;
+        Analytics.feedRefreshed({ screen: 'public_matches' });
+        setRefreshNonce(n => n + 1);
+        refetch().finally(() => {
+          isManualRefresh.current = false;
+        });
+      }}
+      tintColor={colors.primary}
+      colors={[colors.primary]}
+    />
+  );
+
+  // Initial load: the header still renders, with skeletons where the cards go.
+  // A ScrollView keeps pull-to-refresh alive during that window too.
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+        {segmentBar}
+        <ScrollView
+          contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching && isManualRefresh.current}
-              onRefresh={() => {
-                isManualRefresh.current = true;
-                Analytics.feedRefreshed({ screen: 'public_matches' });
-                setRefreshNonce(n => n + 1);
-                refetch().finally(() => {
-                  isManualRefresh.current = false;
-                });
-              }}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-        />
-      )}
+          refreshControl={refreshControl}
+        >
+          {cancelledBanner}
+          {listHeader}
+          <View style={styles.listLoadingContainer}>
+            {[1, 2, 3, 4].map(i => (
+              <MatchCardSkeleton key={i} />
+            ))}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      {segmentBar}
+      <FlatList
+        data={feed}
+        renderItem={renderFeedItem}
+        keyExtractor={item => item.key}
+        ListHeaderComponent={
+          <>
+            {cancelledBanner}
+            {listHeader}
+          </>
+        }
+        ListEmptyComponent={renderEmptyComponent}
+        ListFooterComponent={renderFooter}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.3}
+        viewabilityConfig={FEED_VIEWABILITY_CONFIG}
+        onViewableItemsChanged={onViewableItemsChanged}
+        contentContainerStyle={[styles.listContent, feed.length === 0 && styles.emptyListContent]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={refreshControl}
+      />
     </SafeAreaView>
   );
 }
@@ -660,6 +879,10 @@ export default function PublicMatches() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  // The board segment brings its own list and bottom inset.
+  body: {
     flex: 1,
   },
   loadingContainer: {
@@ -678,8 +901,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacingPixels[2],
   },
+  // Screen-top rhythm shared with the Events list: 16 above the first block,
+  // 8 between the filters and the first card.
   headerContainer: {
-    paddingTop: spacingPixels[5],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
   },
   searchRow: {
     flexDirection: 'row',
@@ -693,47 +919,40 @@ const styles = StyleSheet.create({
   },
   listContent: {
     flexGrow: 1,
-    paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[5],
+    // Top spacing belongs to the header block above, not to the list.
+    paddingBottom: spacingPixels[6],
   },
+  // No padding of its own: the shared entry buttons carry the 12 rhythm, same
+  // as on the Events list.
+  entryPoints: {},
   emptyListContent: {
-    flexGrow: 0,
-  },
-  emptyWrapper: {
-    paddingTop: spacingPixels[2],
-  },
-  inlineEmpty: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    // Let the hero empty state own the viewport below the filters.
+    flexGrow: 1,
     justifyContent: 'center',
-    gap: spacingPixels[2],
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
   },
   inlineEmptyText: {
     flexShrink: 1,
     textAlign: 'center',
   },
-  emptyContainer: {
-    padding: spacingPixels[8],
+  endOfListCta: {
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacingPixels[3],
+    paddingVertical: spacingPixels[6],
+    paddingHorizontal: spacingPixels[6],
   },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  cancelledBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacingPixels[4],
+    gap: spacingPixels[3],
+    marginHorizontal: spacingPixels[4],
+    marginTop: spacingPixels[4],
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
   },
-  emptyTitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  emptyDescription: {
-    textAlign: 'center',
-    paddingHorizontal: spacingPixels[4],
+  cancelledBannerTextWrap: {
+    flex: 1,
+    gap: 2,
   },
   footerLoader: {
     padding: spacingPixels[4],

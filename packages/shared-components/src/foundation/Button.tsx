@@ -21,6 +21,12 @@
  *   Submitting...
  * </Button>
  * ```
+ *
+ * Role conventions (keep these consistent across screens):
+ * - Full-width primary CTA: `size="lg" fullWidth`
+ * - Retry / empty-state action: `variant="primary" size="sm"` (or `md` when it is the only action)
+ * - Cancel/confirm pair: `variant="outline"` + `variant="primary"` (or `destructive`)
+ * - Icon-only actions (close/back/header/FAB): use `IconButton` instead
  */
 
 import React from 'react';
@@ -34,9 +40,12 @@ import {
   TextStyle,
   StyleProp,
   GestureResponderEvent,
+  Insets,
 } from 'react-native';
+import { status } from '@rallia/design-system';
+import { useThemeStyles } from '@rallia/shared-hooks';
+
 import { typography, spacing, borderRadius } from '../theme';
-import { primary, neutral, lightTheme, darkTheme, status } from '@rallia/design-system';
 
 export interface ButtonProps {
   /** Button style variant */
@@ -55,6 +64,12 @@ export interface ButtonProps {
   destructive?: boolean;
   /** Press handler */
   onPress?: (event?: GestureResponderEvent) => void;
+  /** Long-press handler */
+  onLongPress?: (event?: GestureResponderEvent) => void;
+  /** Screen-reader label (defaults to the visible text) */
+  accessibilityLabel?: string;
+  /** Extra touch area for small buttons */
+  hitSlop?: Insets;
   /** Icon to show on left side */
   leftIcon?: React.ReactNode;
   /** Icon to show on right side */
@@ -67,7 +82,10 @@ export interface ButtonProps {
   textStyle?: StyleProp<TextStyle>;
   /** Test ID for testing */
   testID?: string;
-  /** Theme colors - if not provided, uses design system defaults */
+  /**
+   * @deprecated Button now reads the theme from ThemeProvider automatically.
+   * Only pass this to override the resolved theme colors (e.g. a custom palette).
+   */
   themeColors?: {
     primary: string;
     primaryForeground: string;
@@ -80,7 +98,9 @@ export interface ButtonProps {
     border: string;
     background: string;
   };
-  /** Whether dark mode is active */
+  /**
+   * @deprecated Dark mode is resolved from ThemeProvider automatically; this prop is ignored.
+   */
   isDark?: boolean;
 }
 
@@ -93,6 +113,9 @@ export const Button: React.FC<ButtonProps> = ({
   rounded = false,
   destructive = false,
   onPress,
+  onLongPress,
+  accessibilityLabel,
+  hitSlop,
   leftIcon,
   rightIcon,
   children,
@@ -100,26 +123,22 @@ export const Button: React.FC<ButtonProps> = ({
   textStyle,
   testID,
   themeColors,
-  isDark = false,
 }) => {
   const isDisabled = disabled || loading;
+  const { colors: themeStyleColors } = useThemeStyles();
 
-  // Use theme colors if provided, otherwise use design system defaults
-  // Note: Using string literals for base colors to avoid runtime import issues
-  const basePrimary = destructive ? status.error.DEFAULT : isDark ? primary[500] : primary[600];
-
-  const colors = themeColors || {
-    primary: basePrimary,
-    primaryForeground: '#ffffff', // base.white
-    buttonActive: basePrimary,
-    buttonInactive: isDark ? neutral[700] : neutral[300],
-    buttonTextActive: '#ffffff', // base.white
-    buttonTextInactive: isDark ? neutral[400] : neutral[500],
-    text: isDark ? darkTheme.foreground : lightTheme.foreground,
-    textMuted: isDark ? darkTheme.mutedForeground : lightTheme.mutedForeground,
-    border: destructive ? status.error.DEFAULT : isDark ? darkTheme.border : lightTheme.border,
-    background: isDark ? darkTheme.background : lightTheme.background,
-  };
+  // Explicit themeColors win untouched (legacy call sites build their own palettes,
+  // including destructive ones); otherwise theme context + destructive override.
+  const colors =
+    themeColors ||
+    (destructive
+      ? {
+          ...themeStyleColors,
+          primary: status.error.DEFAULT,
+          buttonActive: status.error.DEFAULT,
+          border: status.error.DEFAULT,
+        }
+      : themeStyleColors);
 
   // Get variant styles
   const variantStyles = getVariantStyles(variant, isDisabled, colors);
@@ -130,8 +149,13 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <TouchableOpacity
       onPress={onPress}
+      onLongPress={onLongPress}
       disabled={isDisabled}
       activeOpacity={0.7}
+      hitSlop={hitSlop}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       testID={testID}
       style={[
         styles.container,
@@ -318,7 +342,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.base,
+    // Theme v2: buttons are pill-shaped by default
+    borderRadius: borderRadius.full,
   },
   fullWidth: {
     width: '100%',

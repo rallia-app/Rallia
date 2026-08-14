@@ -9,7 +9,7 @@
 import React, { useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, SkeletonAvatar, Text } from '@rallia/shared-components';
+import { EmptyState, SkeletonAvatar, Text } from '@rallia/shared-components';
 import { radiusPixels, spacingPixels } from '@rallia/design-system';
 import { useNetworkPulse, type NetworkPulseLeaderboardEntry } from '@rallia/shared-hooks';
 
@@ -68,13 +68,13 @@ export function NetworkLeaderboardTab({
   if (isLoading) return <LoadingSkeleton />;
 
   if (!pulse) {
-    return <EmptyState onAddScorePress={onAddScorePress} />;
+    return <LeaderboardEmptyState onAddScorePress={onAddScorePress} />;
   }
 
   const totalActivity =
     pulse.leaderboard.length + pulse.settling_in.length + pulse.form_strip.length;
   if (totalActivity === 0) {
-    return <EmptyState onAddScorePress={onAddScorePress} />;
+    return <LeaderboardEmptyState onAddScorePress={onAddScorePress} />;
   }
 
   const handleRowPress = (entry: NetworkPulseLeaderboardEntry) => {
@@ -283,30 +283,22 @@ function enrichWithNextMove(
 // States
 // ============================================================================
 
-interface EmptyStateProps {
+interface LeaderboardEmptyStateProps {
   onAddScorePress?: () => void;
 }
 
-function EmptyState({ onAddScorePress }: EmptyStateProps) {
-  const { colors, isDark } = useThemeStyles();
+function LeaderboardEmptyState({ onAddScorePress }: LeaderboardEmptyStateProps) {
+  const { colors } = useThemeStyles();
   const { t } = useTranslation();
 
   return (
     <View style={styles.empty}>
-      <Ionicons name="trophy-outline" size={56} color={colors.textMuted} />
-      <Text
-        size="base"
-        style={{ color: colors.textSecondary, marginTop: spacingPixels[3], textAlign: 'center' }}
-      >
-        {t('groups.detail.playGamesToAppear')}
-      </Text>
-      {onAddScorePress && (
-        <View style={{ marginTop: spacingPixels[5], minWidth: 220 }}>
-          <Button variant="primary" onPress={onAddScorePress} fullWidth isDark={isDark}>
-            {t('groups.leaderboard.addPlayedGame')}
-          </Button>
-        </View>
-      )}
+      <EmptyState
+        icon={<Ionicons name="trophy-outline" size={64} color={colors.primary} />}
+        title={t('groups.detail.playGamesToAppear')}
+        ctaLabel={t('groups.leaderboard.addPlayedGame')}
+        onCtaPress={onAddScorePress}
+      />
     </View>
   );
 }
@@ -366,10 +358,7 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[3],
   },
   empty: {
-    paddingHorizontal: spacingPixels[6],
-    paddingVertical: spacingPixels[12],
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
   },
   skeletonRoot: {
     paddingHorizontal: spacingPixels[4],

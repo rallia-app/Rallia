@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetProps, ScrollView } from 'react-native-actions-sheet';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { Text } from '@rallia/shared-components';
+import { Text, EmptyState } from '@rallia/shared-components';
 import DatabaseService, {
   OnboardingService,
   SportService,
@@ -959,21 +959,21 @@ export function SportSetupWizardActionSheet({ payload }: SheetProps<'sport-setup
             )}
           </>
         ) : facilitySearchQuery ? (
-          <View style={styles.facilityEmptyState}>
-            <Ionicons name="search-outline" size={48} color={colors.textMuted} />
-            <Text style={[styles.facilityEmptyText, { color: colors.textMuted }]}>
-              {t('profile.preferences.noFacilitiesFound')}
-            </Text>
-          </View>
+          <EmptyState
+            variant="sheet"
+            icon={<Ionicons name="search-outline" size={36} color={colors.primary} />}
+            title={t('profile.preferences.noFacilitiesFound')}
+          />
         ) : (
-          <View style={styles.facilityEmptyState}>
-            <View style={{ transform: [{ rotate: '90deg' }] }}>
-              <TennisCourtIcon width={48} height={48} stroke={colors.textMuted} />
-            </View>
-            <Text style={[styles.facilityEmptyText, { color: colors.textMuted }]}>
-              {t('profile.preferences.noFacilitiesFound')}
-            </Text>
-          </View>
+          <EmptyState
+            variant="sheet"
+            icon={
+              <View style={{ transform: [{ rotate: '90deg' }] }}>
+                <TennisCourtIcon width={40} height={40} stroke={colors.primary} />
+              </View>
+            }
+            title={t('profile.preferences.noFacilitiesFound')}
+          />
         )}
       </View>
     </ScrollView>
@@ -1400,11 +1400,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacingPixels[10],
-  },
-  facilityEmptyText: {
-    marginTop: spacingPixels[4],
-    textAlign: 'center',
-    fontSize: 14,
   },
   facilityFooterLoader: {
     paddingVertical: spacingPixels[4],

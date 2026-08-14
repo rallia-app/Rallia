@@ -25,7 +25,7 @@
     },
     "retry": "Réessayer",
     "tryAgain": "Réessayer",
-    "tryDifferentSearch": "Essayez un autre terme de recherche",
+    "tryDifferentSearch": "Essaie un autre terme de recherche",
     "noResultsFound": "Aucun résultat trouvé",
     "processing": "Traitement...",
     "openSettings": "Ouvrir les paramètres",
@@ -197,8 +197,8 @@
   },
   "notifications": {
     "title": "Notifications",
-    "empty": "Aucune notification",
-    "emptyDescription": "Vous verrez ici les invitations aux parties, les rappels et les mises à jour",
+    "empty": "Aucune notification pour le moment",
+    "emptyDescription": "Tu verras ici les invitations aux parties, les rappels et les mises à jour",
     "unread": "non lu(s)",
     "markAllRead": "Tout marquer comme lu",
     "markAsRead": "Marquer comme lu",
@@ -233,6 +233,11 @@
       "match_check_in_available": "Check-in disponible",
       "match_new_available": "Nouvelle partie de groupe",
       "match_spot_opened": "Place libérée",
+      "court_booking_nudge": "Réserver ton terrain",
+      "match_last_minute_spots": "Ça commence bientôt",
+      "match_unfilled_recovery": "Relance de partie",
+      "play_rhythm_nudge": "Créneau habituel libre",
+      "tournament_registration_open": "Inscriptions au tournoi ouvertes",
       "nearby_match_available": "Partie à proximité",
       "player_kicked": "Retiré de la partie",
       "player_left": "Joueur parti",
@@ -289,9 +294,12 @@
       "tournament_updated": "Tournoi mis à jour",
       "tournament_cancelled": "Tournoi annulé",
       "tournament_completed": "Tournoi terminé",
+      "tournament_pool_eliminated": "Résultat de poule",
+      "tournament_action_required": "Action requise",
       "league_invitation": "Invitation à la ligue",
       "league_member_request": "Demande pour la ligue",
       "league_member_approved": "Inscription à la ligue acceptée",
+      "league_member_rejected": "Demande pour la ligue refusée",
       "session_published": "Horaire publié",
       "session_confirm_reminder": "Confirme ta présence",
       "season_closed": "Saison terminée",
@@ -445,6 +453,26 @@
         "title": "Une place s'est libérée en {sportName}",
         "body": "Une place vient de se libérer le {matchDate}{startTime}{locationName}. Touche pour la prendre avant qu'elle disparaisse."
       },
+      "court_booking_nudge": {
+        "title": "Des terrains sont libres à {facilityName}",
+        "body": "Une partie avec terrain réservé attire les joueurs plus vite. Réserve le tien pendant qu'il est libre."
+      },
+      "match_last_minute_spots": {
+        "title": "Ça commence bientôt · {sportName} à {locationName}",
+        "body": "Une partie près de toi commence bientôt et il reste des places. Touche pour rejoindre."
+      },
+      "match_unfilled_recovery": {
+        "title": "Ta partie ne s'est pas remplie",
+        "body": "Ça arrive. Touche pour voir les parties ouvertes et te remettre en jeu."
+      },
+      "play_rhythm_nudge": {
+        "title": "Ton créneau habituel est libre",
+        "body": "Une partie de {sportName}{locationName} cherche encore des joueurs. Touche pour rejoindre."
+      },
+      "tournament_registration_open": {
+        "title": "Inscriptions ouvertes · {tournamentName}",
+        "body": "Les places sont limitées. Touche pour t'inscrire."
+      },
       "nearby_match_available": {
         "title": "Nouvelle partie de {sportName} près de toi",
         "body": "{matchDate}{startTime}{locationName}{minRatingLabel}{spotsLabel}{hostLabel}",
@@ -557,7 +585,7 @@
     "pendingRequests": "Vérifier des niveaux",
     "helpCertifyRatings": "Aidez à certifier les niveaux d'autres joueurs",
     "noRequests": "Aucune demande en attente",
-    "noRequestsDescription": "Lorsque d'autres joueurs vous demandent de valider leur niveau, leurs demandes apparaîtront ici.",
+    "noRequestsDescription": "Quand d'autres joueurs te demandent de valider leur niveau, leurs demandes apparaîtront ici",
     "headerInfo": "D'autres joueurs vous ont demandé de vérifier leur niveau. Appuyez sur une demande pour l'examiner et y répondre.",
     "claimedRating": "Niveau déclaré",
     "expiresVerySoon": "Expire aujourd'hui",
@@ -1093,6 +1121,10 @@
         "playerLevel": "Niveau {level}",
         "certifiedPlayer": "Joueur certifié"
       },
+      "peerRating": {
+        "noPlayersFound": "Aucun joueur trouvé",
+        "noEligiblePlayers": "Complète des parties avec d'autres joueurs pour demander des évaluations à tes pairs"
+      },
       "levelChange": {
         "increased": "Niveau augmenté - certification réinitialisée",
         "decreased": "Niveau diminué - certification maintenue",
@@ -1125,20 +1157,20 @@
         "pending": "En attente"
       },
       "empty": {
-        "title": "Aucune référence",
-        "description": "Envoyez des demandes à des joueurs de votre niveau ou supérieur pour valider votre classement."
+        "title": "Aucune référence pour le moment",
+        "description": "Envoie des demandes à des joueurs de ton calibre ou plus pour valider ton niveau"
       },
       "emptyApproved": {
         "title": "Aucune référence approuvée",
-        "description": "Aucun joueur n'a encore approuvé vos demandes de référence."
+        "description": "Aucun joueur n'a encore approuvé tes demandes de référence"
       },
       "emptyContested": {
         "title": "Aucune référence contestée",
-        "description": "Aucun référent n'a contesté votre classement."
+        "description": "Aucun référent n'a contesté ton niveau"
       },
       "emptyPending": {
         "title": "Aucune demande en attente",
-        "description": "Envoyez une nouvelle demande avec le bouton + ci-dessus."
+        "description": "Envoie une nouvelle demande avec le bouton + ci-dessus"
       }
     },
     "ratingProofs": {
@@ -1146,11 +1178,11 @@
       "myProofs": "Mes preuves de classement",
       "infoMessage": "Veuillez fournir des preuves justes et convaincantes. Toute fausse preuve pourra être signalée par d'autres utilisateurs et entraîner une diminution de votre réputation.",
       "addProof": "Ajouter une preuve",
-      "addFirstProof": "Ajouter votre première preuve",
+      "addFirstProof": "Ajouter ta première preuve",
       "chooseProofType": "Choisissez comment vérifier votre classement",
-      "noProofsYet": "Aucune preuve",
-      "noProofsDescription": "Ajoutez une preuve de votre classement pour aider les autres joueurs à vérifier votre niveau",
-      "noProofsOtherUser": "Cet utilisateur n'a pas encore ajouté de preuve de niveau",
+      "noProofsYet": "Aucune preuve pour le moment",
+      "noProofsDescription": "Ajoute une preuve de ton niveau pour aider les autres joueurs à le vérifier",
+      "noProofsOtherUser": "Ce joueur n'a pas encore ajouté de preuve de niveau",
       "descriptionLabel": "Description",
       "reactions": {
         "like": "J'aime",
@@ -2106,16 +2138,15 @@
     "archivedChats": {
       "title": "Archivées",
       "noArchivedChats": "Aucune conversation archivée",
-      "chatsAppearHere": "Les conversations que vous archivez apparaîtront ici"
+      "chatsAppearHere": "Les conversations que tu archives apparaîtront ici"
     },
     "noConversations": "Aucune conversation pour le moment",
-    "noConversationsSubtitle": "Rejoignez un groupe ou démarrez une conversation avec un autre joueur",
+    "noConversationsSubtitle": "Rejoins un groupe ou démarre une conversation avec un autre joueur",
     "filters": {
       "all": "Tout",
       "unread": "Non lus",
       "direct": "Direct",
       "groupChat": "Groupes",
-      "playerGroup": "Groupes de joueurs",
       "community": "Communautés",
       "club": "Clubs",
       "match": "Matchs",
@@ -2290,7 +2321,8 @@
     },
     "message": {
       "deleted": "Ce message a été supprimé",
-      "edited": "modifié"
+      "edited": "modifié",
+      "matchUnavailable": "Cette partie n'est plus disponible"
     },
     "input": {
       "replyingTo": "Répondre à {name}"
@@ -2325,11 +2357,8 @@
     "placeholder": "Connectez-vous avec d'autres joueurs",
     "title": "Communauté",
     "communities": "Communautés",
-    "groups": "Groupes",
     "shareLists": "Listes Partage",
-    "tournaments": "Tournois",
     "tournamentsComingSoon": "Cette fonctionnalité arrive bientôt!",
-    "leagues": "Ligues",
     "leaguesComingSoon": "Cette fonctionnalité arrive bientôt!",
     "findPartner": "Trouver un partenaire",
     "players": "Joueurs",
@@ -2422,11 +2451,11 @@
     "empty": {
       "discover": {
         "title": "Aucune communauté trouvée",
-        "subtitle": "Soyez le premier à créer une communauté!"
+        "subtitle": "Sois la première personne à créer une communauté!"
       },
       "myCommunities": {
         "title": "Aucune communauté pour le moment",
-        "subtitle": "Rejoignez ou créez une communauté pour vous connecter avec des joueurs"
+        "subtitle": "Rejoins ou crée une communauté pour te connecter avec des joueurs"
       }
     },
     "leaderboard": {
@@ -2448,8 +2477,8 @@
     "matches": {
       "title": "Matchs des membres",
       "empty": {
-        "title": "Aucun match à venir",
-        "description": "Les membres n'ont pas encore partagé de matchs publics"
+        "title": "Aucune partie à venir",
+        "description": "Les membres n'ont pas encore partagé de parties publiques"
       }
     },
     "detail": {
@@ -2593,13 +2622,12 @@
     "addAnotherFacility": "Ajouter un autre site de jeu",
     "noFacilitiesFound": "Aucun site de jeu trouvé",
     "typeToSearchFacility": "Tapez pour rechercher des sites de jeu",
-    "locationRequiredForFacilities": "Emplacement requis pour rechercher des sites de jeu"
+    "locationRequiredForFacilities": "Emplacement requis pour rechercher des sites de jeu",
+    "compete": "Événements"
   },
   "groups": {
     "title": "Groupes",
     "myGroups": "Mes groupes",
-    "createGroup": "Créer un groupe",
-    "createNewGroup": "Créer un nouveau groupe",
     "notFound": "Groupe introuvable",
     "tabs": {
       "home": "Accueil",
@@ -2612,17 +2640,9 @@
     },
     "chatWithMembers": "Discuter avec les membres",
     "empty": {
-      "title": "Aucun groupe pour le moment",
-      "subtitle": "Créez un groupe ou scannez un code QR pour en rejoindre un",
-      "createButton": "Créer un groupe",
       "scanButton": "Scanner le code QR"
     },
-    "listInfoMessage": "Les groupes sont des communautés privées limitées à un maximum de {maxMembers} joueurs.",
-    "welcome": {
-      "title": "Bienvenue!",
-      "joinedMessage": "Vous avez rejoint \"{groupName}\" avec succès"
-    },
-    "viewGroup": "Voir le groupe",
+    "welcome": {},
     "editGroup": "Modifier le groupe",
     "deleteGroup": "Supprimer le groupe",
     "leaveGroup": "Quitter le groupe",
@@ -2636,11 +2656,9 @@
     "descriptionOptional": "Description (optionnel)",
     "descriptionPlaceholder": "De quoi parle ce groupe?",
     "groupImage": "Image du groupe",
-    "groupImageOptional": "Image du groupe (optionnel)",
     "addCoverImage": "Ajouter une image de couverture",
     "changeImage": "Changer",
     "removeImage": "Supprimer",
-    "createGroupHint": "Les groupes peuvent avoir jusqu'à {maxMembers} membres. En tant que créateur, vous serez modérateur avec la possibilité d'ajouter et retirer des membres.",
     "permissionRequired": "Permission requise",
     "photoAccessRequired": "Veuillez autoriser l'accès à vos photos pour ajouter une image au groupe.",
     "photoAccessRequiredEdit": "Veuillez autoriser l'accès à vos photos pour changer l'image du groupe.",
@@ -2861,8 +2879,8 @@
     "matches": {
       "title": "Matchs des membres",
       "empty": {
-        "title": "Aucun match à venir",
-        "description": "Les membres n'ont pas encore partagé de matchs publics"
+        "title": "Aucune partie à venir",
+        "description": "Les membres n'ont pas encore partagé de parties publiques"
       }
     },
     "home": {
@@ -2873,13 +2891,11 @@
       "nameRequired": "Le nom du groupe est requis",
       "nameTooShort": "Le nom du groupe doit contenir au moins 2 caractères",
       "nameTooLong": "Le nom du groupe ne peut pas dépasser 50 caractères",
-      "failedToCreate": "Échec de la création du groupe",
       "failedToUpdate": "Échec de la mise à jour du groupe",
       "failedToDelete": "Échec de la suppression du groupe",
       "failedToLeave": "Échec de la sortie du groupe"
     },
     "success": {
-      "created": "Groupe créé avec succès",
       "updated": "Groupe mis à jour avec succès",
       "deleted": "Groupe supprimé avec succès",
       "left": "Vous avez quitté le groupe"
@@ -2903,7 +2919,7 @@
       "last7DaysActivities": "Activités des 7 derniers jours",
       "viewActivity": "Voir l'activité",
       "noGamesPlayedYet": "Aucune partie jouée pour le moment",
-      "playGamesToAppear": "Jouez des parties avec les membres du groupe pour apparaître au classement",
+      "playGamesToAppear": "Joue des parties avec les membres du groupe pour apparaître au classement",
       "noRecentActivity": "Aucune activité récente",
       "addPlayer": "Ajouter un joueur",
       "shareInviteLink": "Partager le lien d'invitation",
@@ -2952,16 +2968,10 @@
     "sportPickleball": "Pickleball",
     "sportSelectionHint": "Choisissez un sport pour filtrer qui voit ce groupe",
     "favoriteFacilities": "Sites de jeu favoris",
-    "favoriteFacilitiesOptional": "Sites de jeu favoris (Optionnel)",
     "noFavoriteFacilities": "Aucun site de jeu favori",
     "addFavoriteFacilitiesHint": "Ajoutez les sites de jeu où votre groupe joue",
-    "addFavoriteFacility": "Ajouter un site de jeu favori",
-    "addAnotherFacility": "Ajouter un autre site de jeu",
-    "searchFacilityToAdd": "Rechercher un site de jeu à ajouter",
-    "noFacilitiesFound": "Aucun site de jeu trouvé",
     "typeToSearchFacility": "Tapez pour rechercher des sites de jeu",
-    "locationRequiredForFacilities": "La localisation est requise pour rechercher des sites de jeu",
-    "favoriteFacilitiesHint": "Vous pouvez toujours ajouter ou changer les sites de jeu plus tard"
+    "locationRequiredForFacilities": "La localisation est requise pour rechercher des sites de jeu"
   },
   "playerAvailability": {
     "staleHint": "Cela fait un moment — confirmez votre disponibilité pour la semaine.",
@@ -2977,11 +2987,11 @@
     "noPlayersFound": "Aucun joueur trouvé",
     "noPlayersFoundDescription": "Essayez d'ajuster votre recherche ou vos filtres",
     "noPlayersYet": "Aucun joueur pour le moment",
-    "adjustSearch": "Essayez d'ajuster votre recherche ou vos filtres",
-    "beFirstToInvite": "Soyez le premier à inviter des joueurs à votre sport",
-    "selectSport": "Sélectionnez un sport",
+    "adjustSearch": "Essaie d'ajuster ta recherche ou tes filtres",
+    "beFirstToInvite": "Sois la première personne à inviter des joueurs dans ton sport",
+    "selectSport": "Sélectionne un sport",
     "selectSportDescription": "Choisissez un sport dans l'en-tête pour voir les joueurs",
-    "chooseSport": "Choisissez un sport dans l'en-tête pour voir les joueurs",
+    "chooseSport": "Choisis un sport dans l'en-tête pour voir les joueurs",
     "nearby": "À proximité",
     "online": "En ligne",
     "lastSeenToday": "Aujourd'hui",
@@ -3079,9 +3089,9 @@
   },
   "sharedLists": {
     "title": "Listes partagées",
-    "noLists": "Aucune liste partagée",
-    "noListsDescription": "Créez une liste pour inviter facilement vos amis et contacts à vos parties",
-    "createFirstList": "Créer votre première liste",
+    "noLists": "Aucune liste partagée pour le moment",
+    "noListsDescription": "Crée une liste pour inviter facilement tes amis et contacts à tes parties",
+    "createFirstList": "Créer ta première liste",
     "createList": "Créer une liste",
     "newList": "Nouvelle liste",
     "editList": "Modifier la liste",
@@ -3099,8 +3109,8 @@
     "importFromPhone": "Importer du téléphone",
     "addManually": "Ajouter manuellement",
     "emptyState": {
-      "noContacts": "Aucun contact",
-      "addContacts": "Ajoutez des contacts à cette liste pour les inviter facilement à vos parties"
+      "noContacts": "Aucun contact pour le moment",
+      "addContacts": "Ajoute des contacts à cette liste pour les inviter facilement à tes parties"
     },
     "shareMatch": {
       "title": "Partager un match",
@@ -3316,7 +3326,14 @@
       "created": "Partie créée 🙌",
       "createdSubtitle": "Rendez-vous sur le terrain",
       "viewGame": "Voir la partie",
-      "createGame": "Créer la partie"
+      "createGame": "Créer la partie",
+      "noOverlapTitle": "Pas encore de plage commune",
+      "noOverlapBody": "Vos horaires ne concordent sur aucune plage pour l'instant.",
+      "noOverlapCta": "Mettre à jour mes dispos",
+      "previewSuggestions": "Suggestions d'heures pour jouer",
+      "staleOption": "Plus disponible",
+      "likedBy": "{name} aime ce moment",
+      "likedByCount": "{count} joueurs aiment ce moment"
     },
     "banner": {
       "title": "Organiser une partie",
@@ -3326,7 +3343,7 @@
       "courtAvailable": "Terrain libre",
       "courtsOne": "1 terrain libre",
       "courtsMany": "{count} terrains libres",
-      "usuallyFree": "Souvent libre"
+      "courtUnknown": "À confirmer"
     },
     "cost": {
       "free": "Gratuit"
@@ -3343,7 +3360,37 @@
       "entryLabel": "Organiser une partie",
       "error": "Impossible de proposer des moments. Réessaie."
     },
-    "preview": "J'ai proposé des moments pour jouer"
+    "preview": "J'ai proposé des moments pour jouer",
+    "availability": {
+      "favoriteShared": "Terrain favori commun"
+    },
+    "custom": {
+      "cta": "Proposer un autre moment",
+      "sheetTitle": "Proposer un moment",
+      "sheetSubtitle": "Choisis un moment qui te convient. Ton adversaire va le voir dans le chat et pourra l'accepter.",
+      "dateLabel": "Date",
+      "timeLabel": "Heure",
+      "placeLabel": "Endroit",
+      "placePlaceholder": "Ex. Parc Jarry, terrain 3",
+      "placeHint": "Optionnel. Vous pourrez décider plus tard.",
+      "submit": "Proposer ce moment",
+      "success": "Moment proposé 🙌",
+      "proposedBy": "Proposé par {name}",
+      "proposedByYou": "Proposé par toi",
+      "proposedByFallback": "un joueur",
+      "systemNote": "{name} a proposé un autre moment",
+      "errorPast": "Choisis un moment à venir.",
+      "errorSettled": "La partie est déjà créée pour cette rencontre.",
+      "errorGeneric": "Impossible de proposer ce moment. Réessaie."
+    }
+  },
+  "matchShare": {
+    "card": {
+      "title": "Nouvelle partie",
+      "viewGame": "Voir la partie",
+      "placeTbd": "Endroit à confirmer",
+      "levelPrefix": "Niveau"
+    }
   },
   "matchDetail": {
     "title": "Détails de la partie",
@@ -3557,6 +3604,13 @@
     "stepNames": {
       "outcome": "Résultat du match",
       "feedback": "Évaluation"
+    },
+    "nextPrompt": {
+      "title": "Évaluation envoyée. Belle partie!",
+      "subtitle": "Gardez le rythme et planifiez la prochaine dès maintenant.",
+      "playAgain": "Rejouer la semaine prochaine",
+      "joinAnother": "Rejoindre une autre partie",
+      "done": "Terminé"
     },
     "matchContext": {
       "vsPlayer": "avec {name}",
@@ -3788,29 +3842,25 @@
   },
   "actions": {
     "welcome": "Bienvenue sur Rallia",
-    "welcomeSubtitle": "Connectez-vous pour commencer à jouer",
-    "completeProfile": "Complétez votre profil",
-    "completeProfileSubtitle": "Terminez la configuration pour commencer à jouer avec d'autres",
+    "welcomeSubtitle": "Connecte-toi pour commencer à jouer",
+    "completeProfile": "Complète ton profil",
+    "completeProfileSubtitle": "Termine la configuration pour commencer à jouer avec d'autres",
     "continueSetup": "Continuer la configuration",
     "createMatch": "Créer une partie",
-    "createMatchDescription": "Créez une partie et partagez-la avec des joueurs et contacts",
+    "createMatchDescription": "Crée une partie et partage-la avec des joueurs et contacts",
     "invitePlayers": "Faire découvrir Rallia",
-    "invitePlayersDescription": "Partagez votre code ou votre QR pour que vos amis vous rejoignent sur Rallia",
+    "invitePlayersDescription": "Partage ton code ou ton QR pour que tes amis te rejoignent sur Rallia",
     "createShareList": "Créer une liste de partage",
-    "createShareListDescription": "Créez une liste de personnes hors application à inviter à vos parties",
-    "createNetwork": "Créer un réseau",
-    "createNetworkDescription": "Créez un groupe ou une communauté pour organiser des parties régulières",
+    "createShareListDescription": "Crée une liste de personnes hors application à inviter à tes parties",
     "createTournament": "Créer un tournoi",
-    "createTournamentDescription": "Organisez un tournoi avec un tableau et des inscriptions",
+    "createTournamentDescription": "Organise un tournoi avec un tableau et des inscriptions",
     "createLeague": "Créer une ligue",
-    "createLeagueDescription": "Organisez une ligue saisonnière avec des séances et un classement",
+    "createLeagueDescription": "Organise une ligue saisonnière avec des séances et un classement",
     "createEvent": "Créer un événement",
-    "createEventDescription": "Organisez un tournoi ou une ligue et gérez les tableaux et horaires",
-    "selectNetworkType": "Créer un réseau",
-    "selectNetworkTypeDescription": "Choisissez le type de réseau que vous souhaitez créer",
-    "group": "Groupe",
+    "createEventDescription": "Gère un tournoi ou une ligue, des inscriptions au classement",
     "groupDescription": "Réseau privé entre amis",
-    "community": "Communauté",
+    "createCommunity": "Créer une communauté",
+    "createCommunityDescription": "Crée une communauté pour organiser des parties régulières près de chez toi",
     "communityDescription": "Réseau public pour joueurs"
   },
   "referral": {
@@ -4143,13 +4193,28 @@
       "noPlayersFound": "Aucun joueur trouvé",
       "noPlayersAvailable": "Aucun joueur disponible",
       "noPlayersAvailableDescription": "Vous pouvez renvoyer des invitations aux joueurs déjà invités depuis les détails de la partie",
+      "noFilterResults": "Aucun joueur ne correspond à ces filtres",
+      "noFilterResultsDescription": "Retirez un filtre pour voir plus de joueurs",
       "selectPlayers": "Sélectionner des joueurs",
       "sendInvitations": "Envoyer les invitations ({count})",
       "skip": "Passer",
       "invitationsSent": "Invitations envoyées!",
       "invitationsSentCount": "{count} invitation(s) envoyée(s)",
       "shareWithContacts": "Partager avec {count} contact(s)",
-      "selectContactsFromLists": "Sélectionner des contacts dans vos listes"
+      "selectContactsFromLists": "Sélectionner des contacts dans vos listes",
+      "greatFits": "De bons choix pour cette partie",
+      "morePlayers": "Plus de joueurs",
+      "freeAtGameTime": "Libre à l'heure de la partie",
+      "suggestedForGame": "Suggérés pour cette partie",
+      "gameCreatedNote": "Partie créée! Invitez maintenant vos joueurs.",
+      "chips": {
+        "playedTogether": "Déjà joué ensemble",
+        "responsive": "Répond souvent",
+        "sameRating": "Niveau de ta partie",
+        "activeRecently": "Actif cette semaine",
+        "playsHere": "Terrain favori",
+        "nearby": "À proximité"
+      }
     }
   },
   "leaderboard": {
@@ -4219,8 +4284,8 @@
     "createSubtitle": "Pars ta saison pis invite des joueurs",
     "loadError": "Impossible de charger les ligues",
     "retry": "Réessayer",
-    "empty": "Aucune ligue publique pour l'instant",
-    "emptyDescription": "Revenez bientôt, ou créez la vôtre depuis le menu d'actions.",
+    "empty": "Aucune ligue publique pour le moment",
+    "emptyDescription": "Reviens bientôt, ou crée la tienne depuis le menu d'actions",
     "searchPlaceholder": "Rechercher des ligues...",
     "discoverFilters": {
       "joinMode": "Mode d'adhésion",
@@ -4230,16 +4295,20 @@
     },
     "emptySearch": {
       "title": "Aucune ligue trouvée",
-      "description": "Essayez d'ajuster votre recherche ou vos filtres."
+      "description": "Essaie d'ajuster ta recherche ou tes filtres"
     },
     "sectionOpenJoin": "Ouverte",
     "sectionApproval": "Approbation requise",
     "sectionInviteOnly": "Sur invitation",
+    "sections": {
+      "organizing": "Ligues que j'organise",
+      "playing": "Ligues où je joue"
+    },
     "roleOrganizer": "Organisateur",
     "memberCount": "{count} membres",
     "emptyMy": {
-      "title": "Aucune ligue pour l'instant",
-      "description": "Les ligues que vous rejoignez ou organisez apparaîtront ici. Créez-en une depuis le menu d'actions."
+      "title": "Aucune ligue pour le moment",
+      "description": "Les ligues que tu rejoins ou organises apparaîtront ici. Crées-en une depuis le menu d'actions."
     },
     "tabs": {
       "active": "Actives",
@@ -4251,17 +4320,18 @@
     "loadError": "Impossible de charger la ligue",
     "retry": "Réessayer",
     "notFound": "Ligue introuvable",
-    "notFoundDescription": "Cette ligue a peut-être été supprimée ou vous n'y avez pas accès.",
-    "joinSuccess": "Vous avez rejoint la ligue",
-    "joinPending": "Votre demande attend l'approbation de l'organisateur",
-    "membershipPending": "Votre adhésion est en attente d'approbation",
+    "notFoundDescription": "Cette ligue a peut-être été supprimée ou tu n'y as pas accès.",
+    "joinSuccess": "Tu as rejoint la ligue",
+    "joinPending": "Ta demande attend l'approbation de l'organisateur",
+    "membershipPending": "Ton adhésion est en attente d'approbation",
     "queuedInLine": "{rank}e en file pour une place",
-    "memberActive": "Vous êtes membre actif",
+    "memberActive": "Tu es membre actif",
     "memberApproved": "Membre approuvé",
     "inviteAccepted": "Invitation acceptée — tu embarques!",
     "inviteRevoked": "Invitation retirée",
     "leftLeague": "T'as quitté la ligue",
     "requestCancelled": "Demande retirée",
+    "requestRejected": "Demande refusée",
     "memberRemoved": "Membre retiré",
     "memberSuspended": "Membre suspendu",
     "memberReinstated": "Membre réactivé",
@@ -4278,6 +4348,12 @@
       "removeTitle": "Retirer {name}?",
       "removeMessage": "{name} va perdre l'accès à la ligue. Cette personne peut revenir plus tard.",
       "removeConfirm": "Retirer",
+      "rejectTitle": "Refuser {name}?",
+      "rejectMessage": "{name} ne rejoindra pas la ligue. Cette personne pourra redemander plus tard.",
+      "rejectConfirm": "Refuser",
+      "closeSeasonTitle": "Fermer {name}?",
+      "closeSeasonMessage": "Le classement devient final quand la saison ferme, pis tu ne pourras pas la rouvrir.",
+      "closeSeasonConfirm": "Fermer la saison",
       "suspendTitle": "Suspendre {name}?",
       "suspendMessage": "{name} reste dans la ligue mais ne peut pas rejoindre de session tant que tu ne l'as pas réactivée.",
       "suspendConfirm": "Suspendre"
@@ -4327,7 +4403,8 @@
       "leagueNotFound": "Cette ligue n'existe plus.",
       "leagueFull": "Cette ligue est pleine.",
       "notInvited": "Cette ligue est sur invitation seulement.",
-      "sportMismatch": "Ajoute ce sport à ton profil avant de rejoindre."
+      "sportMismatch": "Ajoute ce sport à ton profil avant de rejoindre.",
+      "inviteInvalid": "Ce lien d'invitation n'est plus valide."
     },
     "memberErrors": {
       "memberNotFound": "Ce membre ne fait plus partie de la ligue.",
@@ -4391,7 +4468,11 @@
       "ratingRange": "Plage de cote"
     },
     "overview": {
-      "infoTitle": "Infos de la ligue"
+      "infoTitle": "Infos de la ligue",
+      "rulesTitle": "Comment ça marche",
+      "rulesScoring": "Format de pointage",
+      "rulesPoints": "Victoire {win} · Défaite {loss} · Bye {bye}",
+      "rulesPointsHint": "Points au classement"
     },
     "dashboard": {
       "organizedBy": "Organisée par {name}",
@@ -4410,12 +4491,13 @@
       },
       "pendingRequestsCta": {
         "title": "Demandes d'adhésion en attente",
-        "description": "{count} joueurs attendent votre approbation",
+        "description": "{count} joueurs attendent ton approbation",
         "review": "Voir les demandes"
       },
       "pendingRequests": {
         "title": "En attente ({count})",
         "approveLabel": "Approuver {name}",
+        "rejectLabel": "Refuser {name}",
         "queuedAt": "{rank}e en file pour une place"
       },
       "invited": {
@@ -4436,7 +4518,7 @@
         "suspended": "Suspendus"
       },
       "joinCta": {
-        "description": "Demandez votre adhésion et participez aux saisons"
+        "description": "Demande ton adhésion et participe aux saisons"
       },
       "createSeasonCta": {
         "description": "Les saisons organisent les périodes de jeu et le classement"
@@ -4452,8 +4534,8 @@
       "saving": "Enregistrement...",
       "saved": "Ligue mise à jour",
       "errors": {
-        "notEditable": "Un de ces champs ne peut plus être modifié. Actualisez et réessayez.",
-        "generic": "Impossible d'enregistrer les modifications. Veuillez réessayer."
+        "notEditable": "Un de ces champs ne peut plus être modifié. Actualise et réessaie.",
+        "generic": "Impossible d'enregistrer les modifications. Réessaie."
       }
     },
     "lifecycle": {
@@ -4486,7 +4568,8 @@
       "breakdownServiceFee": "Frais de service Rallia : {amount}",
       "breakdownFeeTax": "TPS + TVQ sur les frais de service : {amount}",
       "breakdownTotal": "Total : {amount}",
-      "feeCoveredByOrganizer": "L'organisateur assume les frais de service Rallia : tu paies le prix d'entrée, rien de plus.",
+      "breakdownTotalTaxesIncluded": "Total : {amount} (taxes incluses)",
+      "feeCoveredByOrganizer": "Frais de service Rallia et taxes : assumés par l'organisateur, rien ne s'ajoute pour toi.",
       "confirmFeeNonRefundable": "Les frais de service Rallia ne sont pas remboursables.",
       "liabilityNotice": "C'est l'organisateur qui gère cette saison, pas Rallia. Rallia s'occupe juste du paiement.",
       "refundNone": "Aucun remboursement une fois que t'es inscrit.",
@@ -4560,6 +4643,23 @@
       "publish": "Publier",
       "created": "Séance créée",
       "published": "Séance publiée",
+      "seriesCreated": "{count} séances créées",
+      "errors": {
+        "seriesTooLong": "Cette série dépasse la fin de la saison. Raccourcis-la ou commence plus tôt."
+      },
+      "repeat": {
+        "label": "Récurrence",
+        "once": "Une fois",
+        "weekly": "Chaque semaine",
+        "biweekly": "Aux 2 semaines",
+        "monthly": "Aux 4 semaines",
+        "countLabel": "Combien de séances",
+        "hint": "Toutes sont créées en brouillon. Tu publies encore chacune toi-même."
+      },
+      "rounds": {
+        "label": "Parties par joueur",
+        "hint": "Combien de parties chaque joueur dispute pendant cette séance."
+      },
       "pairing": {
         "label": "Pairage",
         "by_rank": {
@@ -4586,7 +4686,10 @@
       "community": "Communauté",
       "open": "Ouverte",
       "approval": "Approbation requise",
-      "inviteOnly": "Sur invitation"
+      "inviteOnly": "Sur invitation",
+      "oneSet": "Une manche",
+      "twoOfThree": "2 de 3",
+      "threeOfFive": "3 de 5"
     },
     "actions": {
       "join": "Rejoindre la ligue",
@@ -4604,6 +4707,7 @@
       "enroll": "Rejoindre la saison",
       "enrolling": "Adhésion...",
       "enrolled": "Tu es de la partie cette saison",
+      "autoEnrolled": "Tous les membres actifs jouent cette saison. Confirme les séances où tu es disponible.",
       "leave": "Quitter la saison",
       "leaving": "Retrait...",
       "withdrew": "Tu as quitté la saison",
@@ -4627,6 +4731,15 @@
     },
     "createSeason": {
       "title": "Créer une saison",
+      "gamesPerPlayerLabel": "Parties par joueur, par séance",
+      "gamesPerPlayerHint": "Certaines ligues jouent plus d'une partie par soir. Les séances ouvrent là-dessus et peuvent quand même différer.",
+      "presets": {
+        "hint": "Pars d'une des quatre saisons, pis ajuste ce que tu veux.",
+        "winter": "Hiver",
+        "spring": "Printemps",
+        "summer": "Été",
+        "fall": "Automne"
+      },
       "formatLabel": "Format de jeu",
       "format": {
         "singles": {
@@ -4681,7 +4794,7 @@
       "endBeforeStart": "La date de fin doit être égale ou postérieure à la date de début"
     },
     "errors": {
-      "generic": "Une erreur s'est produite. Réessayez."
+      "generic": "Une erreur s'est produite. Réessaie."
     },
     "earnings": {
       "row": "Revenus",
@@ -4696,7 +4809,34 @@
       "close": "Fermer"
     },
     "seasonEntryFee": "Inscription : {amount}",
-    "viewReceipt": "Voir le reçu"
+    "viewReceipt": "Voir le reçu",
+    "invite": {
+      "title": "Partager la ligue",
+      "shareCta": "Partager cette ligue",
+      "description": "Toute personne avec ce lien peut rejoindre la ligue immédiatement, même si elle est privée ou demande normalement une approbation.",
+      "descriptionPlayer": "Invite des amis à cette ligue. Ils la rejoignent selon les mêmes règles que toi.",
+      "generating": "Préparation de ton lien d'invitation...",
+      "scanToJoin": "Balaie pour rejoindre la ligue",
+      "share": "Partager le lien d'invitation",
+      "shareTitle": "Rejoins {name} sur Rallia",
+      "shareMessage": "Tu es invité à ma ligue {name} sur Rallia. Rejoins-nous ici : {link}",
+      "shareMessageSession": "Rejoins-nous pour la séance {session} de la ligue {name} sur Rallia : {link}",
+      "resetLink": "Réinitialiser le lien",
+      "resetWarning": "Le lien actuel cessera de fonctionner. Les membres déjà dans la ligue gardent leur place.",
+      "resetDone": "Nouveau lien d'invitation prêt",
+      "resetFailed": "Impossible de réinitialiser le lien. Réessaie.",
+      "linkInfo": "Toute personne qui utilise ce lien rejoint la ligue immédiatement, même si elle est privée ou demande normalement une approbation.",
+      "linkInfoPlayer": "Toute personne qui rejoint la ligue avec ton lien t'est créditée.",
+      "invalidTitle": "Ce lien d'invitation ne fonctionne plus",
+      "invalidDescription": "Il a peut-être été réinitialisé par l'organisateur, ou la ligue est fermée. Demande un nouveau lien.",
+      "errors": {
+        "title": "Impossible d'afficher un lien d'invitation",
+        "notFound": "Cette ligue est introuvable.",
+        "notActive": "Cette ligue est fermée, donc son lien d'invitation l'est aussi.",
+        "sharingUnavailable": "Cette ligue ne peut pas être partagée par les joueurs. Demande une invitation à l'organisateur.",
+        "generic": "Impossible de préparer le lien d'invitation. Réessaie."
+      }
+    }
   },
   "sessionDetail": {
     "title": "Séance",
@@ -4752,11 +4892,29 @@
       "published": "Séance publiée",
       "cancelled": "Séance annulée"
     },
+    "swap": {
+      "action": "Remplacer un joueur",
+      "title": "Remplacer {name}",
+      "hint": "Choisis qui prend la place. Un joueur déjà pairé échange sa place; un joueur en bye entre simplement.",
+      "trades": "Déjà pairé, va échanger sa place",
+      "onBye": "En bye",
+      "done": "Pairages mis à jour",
+      "empty": "Personne d'autre n'a encore confirmé pour cette séance.",
+      "errors": {
+        "alreadyPlayed": "Cette partie a déjà un pointage, elle ne peut plus changer.",
+        "alreadyLinked": "Cette partie est déjà rattachée à une partie jouée.",
+        "notConfirmed": "Ce joueur n'a pas confirmé sa présence.",
+        "notOnSheet": "Ce joueur n'est plus sur la feuille.",
+        "sameMatch": "Ces deux-là s'affrontent déjà.",
+        "stale": "La feuille a changé. Rafraîchis pis réessaie."
+      }
+    },
     "sheet": {
       "title": "Feuille de match",
       "empty": "Aucune feuille de match générée",
       "generate": "Générer la feuille",
       "regenerate": "Régénérer la feuille",
+      "regenerateHint": "Refait les pairages, sauf les parties que t'as verrouillées. Ça ne marche plus dès qu'un score est entré.",
       "generating": "Génération...",
       "ready": "Feuille de match prête 🙌",
       "round": "Ronde {n}",
@@ -4772,7 +4930,7 @@
     },
     "score": {
       "title": "Entrer le pointage",
-      "subtitle": "Entrez le score. Le gagnant est déterminé automatiquement.",
+      "subtitle": "Entre le score. Le gagnant est déterminé automatiquement.",
       "enter": "Entrer le pointage",
       "edit": "Modifier le pointage",
       "save": "Enregistrer",
@@ -4798,11 +4956,17 @@
     "linkPicker": {
       "title": "Lier une partie jouée",
       "empty": "Aucune partie trouvée",
-      "emptyHint": "Joue ta partie avec ton adversaire de la session pis entre un pointage confirmé, ensuite reviens la lier ici.",
+      "emptyHint": "Joue ta partie avec ton adversaire de la session pis entre le score, ensuite reviens la lier ici.",
       "emptyHintDoubles": "Joue une partie en double avec les quatre joueurs, entre un pointage confirmé, ensuite reviens la lier ici.",
       "attachFailed": "Impossible de lier la partie",
       "linkCta": "Lier cette partie",
       "addResult": "Ajouter le résultat",
+      "blocked": {
+        "noScoreChip": "Sans score",
+        "unconfirmedChip": "À confirmer",
+        "awaitingScore": "Entre le score de cette partie pour pouvoir la lier.",
+        "awaitingConfirmation": "Ton adversaire doit confirmer le score avant que tu puisses lier cette partie."
+      },
       "errors": {
         "alreadyLinked": "Une partie est déjà liée à ce duel.",
         "notPending": "Ce duel est déjà réglé.",
@@ -4816,7 +4980,7 @@
       "error": "Impossible d'ouvrir le chat de la partie. Réessaie."
     },
     "errors": {
-      "generic": "Une erreur s'est produite. Réessayez."
+      "generic": "Une erreur s'est produite. Réessaie."
     },
     "publishModal": {
       "title": "Publier cette séance?",
@@ -4836,6 +5000,97 @@
     "cancelledNotice": {
       "title": "Séance annulée",
       "reason": "Motif : {reason}"
+    },
+    "shareCta": "Partager cette séance"
+  },
+  "compete": {
+    "title": "Compétition",
+    "tabs": {
+      "events": "Événements",
+      "ranking": "Classement"
+    }
+  },
+  "eventList": {
+    "title": "Événements",
+    "create": "Créer un événement",
+    "createSubtitle": "Pars un tournoi ou une ligue",
+    "myEvents": "Mes événements",
+    "searchPlaceholder": "Rechercher des événements...",
+    "empty": "Aucun événement pour le moment",
+    "emptyDescription": "Rien d'ouvert près de chez toi en ce moment. Reviens bientôt, ou crée le tien.",
+    "emptySearch": {
+      "title": "Aucun événement ne correspond",
+      "description": "Essaie une autre recherche ou enlève tes filtres."
+    },
+    "loadError": "Impossible de charger les événements",
+    "retry": "Réessayer",
+    "sections": {
+      "joinable": "Ouverts aux inscriptions",
+      "startingSoon": "Commencent bientôt",
+      "running": "En cours"
+    },
+    "filters": {
+      "format": "Format",
+      "allFormats": "Tous les formats",
+      "phase": "Statut",
+      "allPhases": "Tous les statuts",
+      "myRating": "Mon calibre",
+      "openSpots": "Places libres"
+    }
+  },
+  "myEvents": {
+    "title": "Mes événements",
+    "tabs": {
+      "upcoming": "À venir",
+      "past": "Passés"
+    },
+    "filters": {
+      "all": "Tous",
+      "playing": "Je joue",
+      "organizing": "J'organise",
+      "drafts": "Brouillons",
+      "completed": "Terminés",
+      "cancelled": "Annulés",
+      "archived": "Archivés"
+    },
+    "empty": {
+      "title": "Rien ici pour le moment",
+      "description": "Les événements que tu organises ou rejoins apparaissent ici."
+    },
+    "signInRequired": "Connecte-toi pour voir tes événements",
+    "signInPrompt": "Tout le monde peut regarder. Connecte-toi et les événements que tu organises ou rejoins vont atterrir ici."
+  },
+  "eventFormats": {
+    "knockout": "Élimination directe",
+    "poolsKnockout": "Poules + éliminatoires",
+    "sessionLeague": "Ligue"
+  },
+  "eventCreation": {
+    "pickerTitle": "Tu organises quoi?",
+    "pickerDescription": "Chaque format se joue différemment. Choisis selon le temps que t'as.",
+    "continue": "Continuer",
+    "kinds": {
+      "knockout": {
+        "title": "Tournoi à élimination",
+        "description": "Un tableau classique. Tu gagnes, tu continues.",
+        "duration": "Une fin de semaine",
+        "guaranteed": "1 partie garantie",
+        "elimination": "Élimination directe"
+      },
+      "poolsKnockout": {
+        "title": "Poules, puis éliminatoires",
+        "description": "Des groupes d'abord, puis un tableau pour les meilleurs.",
+        "duration": "1 à 3 semaines",
+        "guaranteed": "3+ parties garanties",
+        "elimination": "Élimination en 2e phase"
+      },
+      "sessionLeague": {
+        "title": "Ligue à séances",
+        "description": "Une saison de séances planifiées, avec un classement.",
+        "duration": "Une saison",
+        "guaranteed": "1 partie par séance",
+        "elimination": "Sans élimination"
+      }
     }
   },
   "leagueCreation": {
@@ -4847,16 +5102,16 @@
       "eligibility": "Admissibilité"
     },
     "step1Title": "Détails",
-    "step1Description": "Nommez votre ligue et ajoutez une description (optionnel)",
+    "step1Description": "Nomme ta ligue et ajoute une description (optionnel)",
     "visibilityStepTitle": "Visibilité",
-    "visibilityStepDescription": "Qui peut trouver et rejoindre votre ligue?",
+    "visibilityStepDescription": "Qui peut trouver et rejoindre ta ligue?",
     "eligibilityStepTitle": "Admissibilité",
-    "eligibilityStepDescription": "Restreignez l'accès selon la cote, si vous le souhaitez",
+    "eligibilityStepDescription": "Restreins l'accès selon la cote, si tu veux",
     "next": "Suivant",
     "createLeague": "Créer la ligue",
     "creating": "Création...",
     "success": "Ligue créée!",
-    "successDescription": "Invitez des joueurs et créez votre première saison quand vous serez prêt.",
+    "successDescription": "Invite des joueurs et crée ta première saison quand tu es prêt.",
     "viewLeague": "Voir la ligue",
     "createAnother": "Créer une autre",
     "fields": {
@@ -4867,28 +5122,35 @@
       "name": "Nom",
       "namePlaceholder": "p. ex., Ligue d'été de Montréal",
       "description": "Description",
-      "descriptionPlaceholder": "Décrivez la ligue (optionnel)",
+      "descriptionPlaceholder": "Décris la ligue (optionnel)",
       "visibility": "Visibilité",
       "visibilityPrivate": "Privée",
       "visibilityPrivateDescription": "Seules les personnes invitées peuvent trouver cette ligue",
       "visibilityPublic": "Publique",
-      "visibilityPublicDescription": "Tous les joueurs de votre sport peuvent la trouver et demander à rejoindre",
+      "visibilityPublicDescription": "Tous les joueurs de ton sport peuvent la trouver et demander à rejoindre",
       "joinMode": "Mode d'adhésion",
       "joinModeOpen": "Ouverte",
       "joinModeOpenDescription": "Les joueurs rejoignent immédiatement",
       "joinModeApproval": "Approbation",
-      "joinModeApprovalDescription": "Vous approuvez chaque demande",
+      "joinModeApprovalDescription": "Tu approuves chaque demande",
       "joinModeInviteOnly": "Sur invitation",
       "joinModeInviteOnlyDescription": "Seuls les joueurs que tu invites peuvent rejoindre",
       "minRating": "Cote minimale",
       "minRatingNone": "Aucun minimum",
       "maxRating": "Cote maximale",
       "maxRatingNone": "Aucun maximum",
-      "ratingGateHint": "Les joueurs hors de cette plage ne peuvent pas rejoindre : c'est automatique, vous n'avez rien à approuver.",
+      "ratingGateHint": "Les joueurs hors de cette plage ne peuvent pas rejoindre : c'est automatique, tu n'as rien à approuver.",
       "ratingGateUnavailable": "L'admissibilité par cote n'est pas encore offerte pour ce sport.",
       "memberCapacity": "Limite de membres",
       "memberCapacityPlaceholder": "Illimité",
-      "memberCapacityHint": "Nombre de joueurs qui peuvent avoir une place, vous compris. Laissez vide pour aucune limite.",
+      "memberCapacityHint": "Nombre de joueurs qui peuvent avoir une place, toi compris. Laisse vide pour aucune limite.",
+      "pointsTitle": "Système de pointage",
+      "points": {
+        "pointWin": "Victoire",
+        "pointLoss": "Défaite",
+        "pointBye": "Bye"
+      },
+      "pointsHint": "Ce que chaque résultat vaut au classement. Les saisons gardent les valeurs qu'elles avaient à leur création.",
       "waitlistTitle": "Liste d'attente",
       "waitlistDescription": "Quand la ligue est pleine, les nouveaux se placent en file et entrent automatiquement dès qu'une place se libère."
     },
@@ -4896,14 +5158,15 @@
       "nameRequired": "Le nom de la ligue est requis",
       "nameTooLong": "Le nom doit contenir 100 caractères ou moins",
       "ratingRangeInvalid": "La cote maximale doit être égale ou supérieure à la minimale",
-      "capacityInvalid": "Entrez un nombre de 1 ou plus"
+      "capacityInvalid": "Entre un nombre de 1 ou plus",
+      "pointsInvalid": "Les points doivent être des nombres entiers entre -100 et 100"
     },
     "errors": {
-      "sportMismatch": "Activez ce sport sur votre profil avant de créer une ligue",
-      "rateLimited": "Vous pouvez créer jusqu'à 5 ligues par jour",
-      "generic": "Impossible de créer la ligue. Réessayez.",
+      "sportMismatch": "Active ce sport sur ton profil avant de créer une ligue",
+      "rateLimited": "Tu peux créer jusqu'à 5 ligues par jour",
+      "generic": "Impossible de créer la ligue. Réessaie.",
       "coverUploadFailedTitle": "Échec du téléversement",
-      "coverUploadFailed": "Impossible de téléverser l'image de couverture. Réessayez."
+      "coverUploadFailed": "Impossible de téléverser l'image de couverture. Réessaie."
     }
   },
   "tournamentList": {
@@ -4911,7 +5174,7 @@
     "loadError": "Impossible de charger les tournois",
     "retry": "Réessayer",
     "empty": "Aucun tournoi public pour le moment",
-    "emptyDescription": "Revenez bientôt, ou créez le vôtre depuis le menu d'actions.",
+    "emptyDescription": "Reviens bientôt, ou crée le tien depuis le menu d'actions",
     "myTournaments": "Mes tournois",
     "create": "Créer un tournoi",
     "createSubtitle": "Crée ton tableau et invite des joueurs",
@@ -4929,7 +5192,7 @@
     },
     "emptySearch": {
       "title": "Aucun tournoi trouvé",
-      "description": "Essayez d'ajuster votre recherche ou vos filtres."
+      "description": "Essaie d'ajuster ta recherche ou tes filtres"
     },
     "sectionOpen": "Inscriptions ouvertes",
     "sectionInProgress": "En cours",
@@ -4945,11 +5208,11 @@
     },
     "emptyUpcoming": {
       "title": "Aucun tournoi à venir",
-      "description": "Les tournois que vous rejoignez ou organisez apparaîtront ici."
+      "description": "Les tournois que tu rejoins ou organises apparaîtront ici"
     },
     "emptyPast": {
       "title": "Aucun tournoi passé",
-      "description": "Vos tournois terminés et annulés apparaîtront ici."
+      "description": "Tes tournois terminés et annulés apparaîtront ici"
     },
     "emptyFiltered": {
       "title": "Aucun tournoi trouvé",
@@ -4970,7 +5233,8 @@
     "publish": "Publier le tableau aux joueurs",
     "confirmTitle": "Publier ce tableau ?",
     "confirmMessage": "Les joueurs sont avisés et le tableau devient officiel. Tu ne pourras plus réorganiser les têtes de série après.",
-    "confirmCta": "Publier"
+    "confirmCta": "Publier",
+    "poolTitle": "Poule {letter}"
   },
   "tournamentDetail": {
     "title": "Tournoi",
@@ -4996,7 +5260,8 @@
       "breakdownServiceFee": "Frais de service : {amount}",
       "breakdownFeeTax": "TPS + TVQ sur les frais de service : {amount}",
       "breakdownTotal": "Total : {amount}",
-      "feeCoveredByOrganizer": "L'organisateur assume les frais de service Rallia : tu paies le prix d'entrée, rien de plus.",
+      "breakdownTotalTaxesIncluded": "Total : {amount} (taxes incluses)",
+      "feeCoveredByOrganizer": "Frais de service Rallia et taxes : assumés par l'organisateur, rien ne s'ajoute pour toi.",
       "confirmFeeNonRefundable": "Les frais de service ne sont pas remboursables.",
       "liabilityNotice": "Rallia facilite l'organisation des tournois. L'organisateur est responsable de l'événement, pas Rallia.",
       "confirmPay": "Payer",
@@ -5024,7 +5289,7 @@
     },
     "loading": "Chargement du tournoi...",
     "notFound": "Tournoi introuvable",
-    "notFoundDescription": "Ce tournoi a peut-être été supprimé ou vous n'avez pas la permission de le voir.",
+    "notFoundDescription": "Ce tournoi a peut-être été supprimé ou tu n'as pas la permission de le voir.",
     "loadError": "Impossible de charger le tournoi",
     "retry": "Réessayer",
     "chat": {
@@ -5095,17 +5360,18 @@
         "registered": "Inscrits",
         "games": "Parties",
         "start": "Début",
+        "end": "Fin",
         "startsToday": "Aujourd'hui",
         "live": "En cours",
         "ended": "Terminé",
         "deadline": "Date limite"
       },
       "nextStep": {
-        "draftDescription": "Ouvrez les inscriptions pour que les joueurs puissent trouver et rejoindre votre tournoi.",
+        "draftDescription": "Ouvre les inscriptions pour que les joueurs puissent trouver et rejoindre ton tournoi.",
         "openDescription": "{count} places sur {max} sont prises.",
-        "closedDescription": "{count} joueurs sont inscrits. Générez le tableau pour commencer.",
+        "closedDescription": "{count} joueurs sont inscrits. Génère le tableau pour commencer.",
         "liveTitle": "Tournoi en cours",
-        "liveDescription": "{done} parties jouées sur {total}. Touchez une partie en attente dans le tableau pour enregistrer son résultat."
+        "liveDescription": "{done} parties jouées sur {total}. Touche une partie en attente dans le tableau pour enregistrer son résultat."
       },
       "registerCta": {
         "full": "Tournoi complet",
@@ -5126,18 +5392,18 @@
       },
       "pendingRequestsCta": {
         "title": "Demandes en attente",
-        "description": "{count} joueur(s) attendent votre approbation.",
+        "description": "{count} joueur(s) attendent ton approbation.",
         "review": "Voir les demandes"
       },
       "myMatch": {
-        "title": "Votre prochaine partie",
+        "title": "Ta prochaine partie",
         "vs": "contre {name}",
-        "hint": "Touchez pour lier votre partie jouée",
+        "hint": "Touche pour lier ta partie jouée",
         "organize": "Organise ta partie",
         "organizeError": "Impossible d'ouvrir le chat de la partie. Réessaie.",
-        "waiting": "En attente de votre prochain adversaire",
-        "eliminated": "Vous avez été éliminé. Belle performance!",
-        "champion": "Vous avez gagné le tournoi!"
+        "waiting": "En attente de ton prochain adversaire",
+        "eliminated": "Tu as été éliminé. Belle performance!",
+        "champion": "Tu as gagné le tournoi!"
       },
       "participants": {
         "title": "Participants",
@@ -5205,7 +5471,8 @@
       "community": "Communauté",
       "open": "Ouvert",
       "approval": "Approbation requise",
-      "inviteOnly": "Sur invitation"
+      "inviteOnly": "Sur invitation",
+      "poolKnockout": "Poules + éliminatoires"
     },
     "actions": {
       "openRegistration": "Ouvrir les inscriptions",
@@ -5223,7 +5490,7 @@
       "closing": "Fermeture...",
       "registrationPendingLabel": "Inscription en attente d'approbation",
       "invitePendingLabel": "Invitation en attente",
-      "registeredLabel": "Vous êtes inscrit",
+      "registeredLabel": "Tu es inscrit",
       "registeredWithPartnerLabel": "T'es inscrit avec {name}",
       "generateBracket": "Générer le tableau",
       "generating": "Génération du tableau...",
@@ -5256,15 +5523,15 @@
       "shareCta": "Inviter des amis",
       "description": "Toute personne avec ce lien peut s'inscrire au tournoi, même s'il est privé.",
       "descriptionPlayer": "Invite des amis à ce tournoi. Ils s'inscrivent selon les mêmes règles que toi.",
-      "generating": "Préparation de votre lien d'invitation...",
-      "scanToRegister": "Balayez pour vous inscrire au tournoi",
+      "generating": "Préparation de ton lien d'invitation...",
+      "scanToRegister": "Balaie pour t'inscrire au tournoi",
       "share": "Partager le lien d'invitation",
-      "shareTitle": "Rejoignez {name} sur Rallia",
-      "shareMessage": "Vous êtes invité à mon tournoi {name} sur Rallia. Inscrivez-vous ici : {link}",
+      "shareTitle": "Rejoins {name} sur Rallia",
+      "shareMessage": "Tu es invité à mon tournoi {name} sur Rallia. Inscris-toi ici : {link}",
       "resetLink": "Réinitialiser le lien",
       "resetWarning": "Le lien actuel cessera de fonctionner. Les joueurs déjà inscrits gardent leur place.",
       "resetDone": "Nouveau lien d'invitation prêt",
-      "resetFailed": "Impossible de réinitialiser le lien. Veuillez réessayer.",
+      "resetFailed": "Impossible de réinitialiser le lien. Réessaie.",
       "linkInfo": "Toute personne qui utilise ce lien est inscrite immédiatement, même si les inscriptions demandent normalement une approbation.",
       "linkInfoPlayer": "Toute personne qui s'inscrit avec ton lien t'est créditée.",
       "errors": {
@@ -5273,13 +5540,13 @@
         "terminal": "Ce tournoi est annulé ou archivé, donc son lien d'invitation est fermé.",
         "notFound": "Ce tournoi est introuvable.",
         "sharingUnavailable": "Ce tournoi ne peut pas être partagé par les joueurs. Demande une invitation à l'organisateur.",
-        "generic": "Impossible de préparer le lien d'invitation. Veuillez réessayer."
+        "generic": "Impossible de préparer le lien d'invitation. Réessaie."
       }
     },
     "inviteLanding": {
       "invalidTitle": "Lien d'invitation non valide",
-      "invalidDescription": "Ce lien a été réinitialisé ou a expiré. Demandez un nouveau lien à l'organisateur.",
-      "joinedToast": "Vous êtes inscrit! On se voit au tournoi."
+      "invalidDescription": "Ce lien a été réinitialisé ou a expiré. Demande un nouveau lien à l'organisateur.",
+      "joinedToast": "Tu es inscrit! On se voit au tournoi."
     },
     "editModal": {
       "title": "Modifier le tournoi",
@@ -5297,8 +5564,8 @@
       "saving": "Enregistrement...",
       "saved": "Tournoi mis à jour",
       "errors": {
-        "notEditable": "Un de ces champs ne peut plus être modifié. Actualisez et réessayez.",
-        "generic": "Impossible d'enregistrer les modifications. Veuillez réessayer."
+        "notEditable": "Un de ces champs ne peut plus être modifié. Actualise et réessaie.",
+        "generic": "Impossible d'enregistrer les modifications. Réessaie."
       }
     },
     "cancelModal": {
@@ -5307,9 +5574,9 @@
       "reasonPlaceholder": "Optionnel : courte raison communiquée aux participants",
       "confirm": "Annuler",
       "keepIt": "Garder",
-      "errorGeneric": "Impossible d'annuler le tournoi. Veuillez réessayer.",
+      "errorGeneric": "Impossible d'annuler le tournoi. Réessaie.",
       "errorNotCancellable": "Ce tournoi ne peut pas être annulé dans son état actuel.",
-      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
+      "errorLockConflict": "Quelqu'un a modifié le tournoi. Actualise et réessaie.",
       "paidRefundWarning": "{count} inscription(s) payée(s) seront remboursées, {amount} au total. Les frais de service Rallia ne sont pas remboursés."
     },
     "archiveModal": {
@@ -5317,10 +5584,10 @@
       "description": "Les tournois archivés sont retirés des flux actifs mais restent accessibles par lien direct.",
       "confirm": "Archiver",
       "keepIt": "Annuler",
-      "errorGeneric": "Impossible d'archiver le tournoi. Veuillez réessayer.",
+      "errorGeneric": "Impossible d'archiver le tournoi. Réessaie.",
       "errorNotArchivable": "Ce tournoi ne peut pas encore être archivé.",
       "errorSettlementPending": "Les remboursements ou versements sont encore en traitement. Tu pourras archiver une fois que c'est fait.",
-      "errorLockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
+      "errorLockConflict": "Quelqu'un a modifié le tournoi. Actualise et réessaie.",
       "restoredToast": "Tournoi restauré"
     },
     "removeModal": {
@@ -5337,6 +5604,14 @@
       "confirm": "Refuser",
       "keepIt": "Annuler",
       "success": "Demande refusée"
+    },
+    "forfeitModal": {
+      "title": "Retirer ce joueur des poules ?",
+      "message": "{name} sort du tournoi. Chacune de ses parties de poule pas encore jouée devient une victoire par forfait pour son adversaire, le classement change tout de suite, et cette personne ne peut plus se qualifier. C'est irréversible.",
+      "messagePaid": "{name} sort du tournoi. Chacune de ses parties de poule pas encore jouée devient une victoire par forfait pour son adversaire, le classement change tout de suite, et cette personne ne peut plus se qualifier. Ses frais d'inscription ne sont pas remboursés : elle a eu sa chance de jouer. C'est irréversible.",
+      "confirm": "Retirer",
+      "keepIt": "Annuler",
+      "success": "Joueur retiré. Ses adversaires ont été avisés de leur forfait."
     },
     "cancelledNotice": {
       "title": "Tournoi annulé",
@@ -5355,6 +5630,7 @@
       "linkMatch": "Lier une partie jouée à ce slot",
       "overrideMatch": "Inscrire le résultat (organisateur)",
       "recordResult": "Inscrire le résultat",
+      "correctResult": "Corriger le résultat",
       "addResult": "Ajouter ton résultat",
       "live": "En direct",
       "disputed": "Contesté",
@@ -5363,10 +5639,16 @@
     "linkPicker": {
       "title": "Lier une partie jouée",
       "empty": "Aucune partie trouvée",
-      "emptyHint": "Créez une partie avec votre adversaire du tableau, soumettez un score confirmé, puis revenez ici pour la lier.",
+      "emptyHint": "Crée une partie avec ton adversaire du tableau, entre le score, puis reviens ici pour la lier.",
       "emptyHintDoubles": "Joue une partie en double avec les quatre joueurs, confirme le score, puis reviens ici pour la lier.",
       "attachFailed": "Impossible de lier la partie",
       "linkCta": "Lier cette partie",
+      "blocked": {
+        "noScoreChip": "Sans score",
+        "unconfirmedChip": "À confirmer",
+        "awaitingScore": "Entre le score de cette partie pour pouvoir la lier.",
+        "awaitingConfirmation": "Ton adversaire doit confirmer le score avant que tu puisses lier cette partie."
+      },
       "errors": {
         "alreadyLinked": "Une partie est déjà liée à ce duel.",
         "notPending": "Ce duel est déjà réglé.",
@@ -5399,48 +5681,50 @@
     },
     "override": {
       "title": "Inscrire le résultat",
-      "subtitle": "Entrez le score final. Le gagnant est déterminé automatiquement.",
+      "subtitle": "Entre le score final. Le gagnant est déterminé automatiquement.",
       "confirm": "Enregistrer le résultat",
       "confirmFinal": {
         "title": "Confirmer le résultat de la finale",
-        "message": "{champion} gagne {score} et devient le champion. Les points de classement sont attribués tout de suite. Vous pouvez encore corriger pendant 24 heures.",
+        "message": "{champion} gagne {score} et devient le champion. Les points de classement sont attribués tout de suite. Tu peux encore corriger pendant 24 heures.",
         "cta": "Confirmer le champion"
       },
       "errors": {
         "notOverridable": "Cette partie ne peut plus être modifiée.",
-        "nextMatchPlayed": "Vous ne pouvez plus modifier ce score. La prochaine partie a déjà été jouée.",
-        "winnerNotInMatch": "Choisissez un des deux joueurs de cette partie.",
+        "nextMatchPlayed": "Tu ne peux plus modifier ce score. La prochaine partie a déjà été jouée.",
+        "winnerNotInMatch": "Choisis un des deux joueurs de cette partie.",
         "notInProgress": "Le tournoi n'est pas en cours.",
         "slotsIncomplete": "Les deux joueurs ne sont pas encore définis pour cette partie.",
-        "correctionWindowClosed": "La période de 24 heures pour corriger ce résultat est terminée. Demandez l'aide d'un admin.",
-        "generic": "Impossible d'enregistrer le résultat. Veuillez réessayer."
+        "correctionWindowClosed": "La période de 24 heures pour corriger ce résultat est terminée. Demande l'aide d'un admin.",
+        "generic": "Impossible d'enregistrer le résultat. Réessaie."
       }
     },
     "generateBracketErrors": {
       "insufficientParticipants": "Au moins 2 joueurs doivent être inscrits.",
       "alreadyGenerated": "Le tableau existe déjà.",
-      "wrongStatus": "Fermez les inscriptions avant de générer le tableau.",
-      "generic": "Impossible de générer le tableau. Veuillez réessayer."
+      "wrongStatus": "Ferme les inscriptions avant de générer le tableau.",
+      "generic": "Impossible de générer le tableau. Réessaie."
     },
     "errors": {
-      "openFailed": "Impossible d'ouvrir les inscriptions. Veuillez réessayer.",
-      "closeFailed": "Impossible de fermer les inscriptions. Veuillez réessayer.",
-      "reopenFailed": "Impossible de rouvrir les inscriptions. Veuillez réessayer.",
-      "registerFailed": "Impossible de finaliser l'inscription. Veuillez réessayer.",
-      "withdrawFailed": "Impossible de se retirer. Veuillez réessayer.",
-      "acceptInviteFailed": "Impossible d'accepter l'invitation. Veuillez réessayer.",
-      "invitePlayersFailed": "Impossible d'envoyer les invitations. Veuillez réessayer.",
-      "revokeInviteFailed": "Impossible de retirer l'invitation. Veuillez réessayer.",
+      "openFailed": "Impossible d'ouvrir les inscriptions. Réessaie.",
+      "closeFailed": "Impossible de fermer les inscriptions. Réessaie.",
+      "reopenFailed": "Impossible de rouvrir les inscriptions. Réessaie.",
+      "registerFailed": "Impossible de finaliser l'inscription. Réessaie.",
+      "withdrawFailed": "Impossible de se retirer. Réessaie.",
+      "acceptInviteFailed": "Impossible d'accepter l'invitation. Réessaie.",
+      "invitePlayersFailed": "Impossible d'envoyer les invitations. Réessaie.",
+      "revokeInviteFailed": "Impossible de retirer l'invitation. Réessaie.",
       "withdrawClosed": "Les inscriptions sont fermées, tu peux plus te retirer.",
       "tournamentFull": "Ce tournoi est complet.",
-      "alreadyRegistered": "Vous êtes déjà inscrit à ce tournoi.",
-      "sportMismatch": "Vous n'avez pas ce sport actif sur votre profil.",
+      "alreadyRegistered": "Tu es déjà inscrit à ce tournoi.",
+      "sportMismatch": "Tu n'as pas ce sport actif sur ton profil.",
       "regClosed": "Les inscriptions ne sont plus ouvertes.",
-      "startPassed": "La date de début est passée. Modifiez les dates avant d'ouvrir les inscriptions.",
-      "notInvited": "Ce tournoi est sur invitation et vous n'avez pas été invité.",
-      "lockConflict": "Quelqu'un a modifié le tournoi — veuillez actualiser et réessayer.",
-      "removeFailed": "Impossible de retirer le joueur. Veuillez réessayer.",
+      "startPassed": "La date de début est passée. Modifie les dates avant d'ouvrir les inscriptions.",
+      "notInvited": "Ce tournoi est sur invitation et tu n'as pas été invité.",
+      "lockConflict": "Quelqu'un a modifié le tournoi. Actualise et réessaie.",
+      "removeFailed": "Impossible de retirer le joueur. Réessaie.",
       "removeNotAllowed": "Les joueurs ne peuvent plus être retirés une fois le tableau créé.",
+      "forfeitFailed": "Impossible de retirer le joueur des poules. Réessaie.",
+      "forfeitNotAllowed": "On peut retirer un joueur pendant les poules seulement, avant le début des éliminatoires.",
       "approveFailed": "Impossible d'accepter la demande. Réessaie.",
       "approveNotAllowed": "On ne peut plus accepter de demandes une fois le tableau créé.",
       "declineFailed": "Impossible de refuser la demande. Réessaie.",
@@ -5473,6 +5757,28 @@
       "releasedLine": "Déjà versé sur ton compte Stripe : {count} paiement(s)",
       "none": "Aucun paiement reçu pour le moment.",
       "close": "Fermer"
+    },
+    "pools": {
+      "poolTitle": "Poule {letter}",
+      "qualifyHint": "Les {count} premiers se qualifient",
+      "qualifyHintOne": "Seul le premier se qualifie",
+      "linkedGame": "Rattachée à une partie Rallia",
+      "walkover": "Forfait",
+      "cancelled": "Annulée",
+      "toPlay": "À jouer",
+      "launchKnockout": "Lancer la phase éliminatoire",
+      "launchKnockoutWaiting": "Les éliminatoires ouvrent quand toutes les parties de poules sont réglées",
+      "launchKnockoutReady": "Poules terminées. L'organisateur peut maintenant lancer les éliminatoires.",
+      "poolGame": "Partie de poule",
+      "knockoutTitle": "Éliminatoires",
+      "headerRecord": "V-D",
+      "headerSets": "Sets",
+      "vs": "vs"
+    },
+    "deadlines": {
+      "playBy": "à jouer avant le {date}",
+      "hoursLeft": "{hours} h pour jouer",
+      "phaseDeadline": "Phase en cours : {when}"
     }
   },
   "tournamentCreation": {
@@ -5534,7 +5840,7 @@
     "createTournament": "Créer le tournoi",
     "creating": "Création...",
     "success": "Tournoi créé!",
-    "successDescription": "Votre brouillon de tournoi est prêt. Ouvrez les inscriptions quand vous voulez inviter des joueurs.",
+    "successDescription": "Ton brouillon de tournoi est prêt. Ouvre les inscriptions quand tu veux inviter des joueurs.",
     "viewTournament": "Voir le tournoi",
     "shareInvite": "Partager le lien d'invitation",
     "createAnother": "En créer un autre",
@@ -5588,23 +5894,41 @@
       "endDatePlaceholder": "Choisir une date",
       "visibility": "Visibilité",
       "visibilityPrivate": "Privé",
-      "visibilityPrivateDescription": "Seules les personnes que vous invitez le voient",
+      "visibilityPrivateDescription": "Seules les personnes que tu invites le voient",
       "visibilityPublic": "Public",
-      "visibilityPublicDescription": "Toute personne dans votre sport peut le trouver et s'inscrire",
+      "visibilityPublicDescription": "Toute personne dans ton sport peut le trouver et s'inscrire",
       "visibilityCommunity": "Communauté",
-      "visibilityCommunityDescription": "Visible aux membres d'une communauté que vous choisissez",
+      "visibilityCommunityDescription": "Visible aux membres d'une communauté que tu choisis",
       "registrationMode": "Mode d'inscription",
       "registrationModeOpen": "Ouvert",
       "registrationModeOpenDescription": "Toute personne qui voit le tournoi peut s'inscrire",
       "registrationModeApproval": "Approbation",
-      "registrationModeApprovalDescription": "Vous approuvez chaque inscription",
+      "registrationModeApprovalDescription": "Tu approuves chaque inscription",
       "registrationModeInviteOnly": "Sur invitation",
       "registrationModeInviteOnlyDescription": "Seules les personnes invitées peuvent s'inscrire",
       "matchFormatOneGame": "1 partie",
       "matchFormatTwoOfThreeGames": "2 de 3",
       "matchFormatThreeOfFiveGames": "3 de 5",
       "pointsPerGame": "Points par partie",
-      "pointsPerGameHint": "Points pour gagner une partie, 2 points d'écart"
+      "pointsPerGameHint": "Points pour gagner une partie, 2 points d'écart",
+      "structure": "Structure",
+      "structureSingle": "Élimination simple",
+      "structurePool": "Poules + éliminatoires",
+      "structurePoolHint": "Deux phases : des poules où tout le monde joue plusieurs parties, puis un tableau éliminatoire pour les meilleurs.",
+      "poolSize": "Taille des poules",
+      "qualifiersPerPool": "Qualifiés par poule",
+      "poolPreviewGroupOne": "1 poule de {size}",
+      "poolPreviewGroupMany": "{count} poules de {size}",
+      "poolPreviewJoin": " et ",
+      "poolPreviewOne": "{field} joueurs : {layout}. Le premier de chaque poule passe {round}. Chaque joueur joue au moins {games} parties.",
+      "poolPreviewTwo": "{field} joueurs : {layout}. Les 2 premiers de chaque poule passent {round}. Chaque joueur joue au moins {games} parties.",
+      "poolPreviewTeamsOne": "{field} équipes : {layout}. La première de chaque poule passe {round}. Chaque équipe joue au moins {games} parties.",
+      "poolPreviewTeamsTwo": "{field} équipes : {layout}. Les 2 premières de chaque poule passent {round}. Chaque équipe joue au moins {games} parties.",
+      "poolRoundFinal": "en finale",
+      "poolRoundSemis": "en demi-finales",
+      "poolRoundQuarters": "en quarts de finale",
+      "poolRoundOf16": "au tableau de 16",
+      "poolRoundOf32": "au tableau de 32"
     },
     "validation": {
       "nameRequired": "Le nom du tournoi est requis",
@@ -5616,18 +5940,24 @@
       "refundPctRange": "Entre un pourcentage de remboursement entre 1 et 100"
     },
     "errors": {
-      "sportMismatch": "Vous n'avez pas ce sport actif sur votre profil",
-      "rateLimited": "Vous avez créé trop de tournois récemment. Réessayez plus tard.",
+      "sportMismatch": "Tu n'as pas ce sport actif sur ton profil",
+      "rateLimited": "Tu as créé trop de tournois récemment. Réessaie plus tard.",
       "posterUploadFailedTitle": "Échec du téléversement",
-      "posterUploadFailed": "Impossible de téléverser l'affiche. Veuillez réessayer.",
-      "generic": "Impossible de créer le tournoi. Veuillez réessayer."
+      "posterUploadFailed": "Impossible de téléverser l'affiche. Réessaie.",
+      "generic": "Impossible de créer le tournoi. Réessaie."
     }
   },
   "home": {
     "welcomeBack": "Bon retour! 👋",
     "yourMatches": "Vos parties",
-    "signInPrompt": "Veuillez vous connecter pour créer et gérer à vos parties",
-    "onboardingPrompt": "Complétez votre profil pour créer et accéder à vos parties",
+    "signInEmpty": {
+      "title": "Aucune partie à afficher",
+      "description": "Connecte-toi pour créer et gérer tes parties"
+    },
+    "onboardingEmpty": {
+      "title": "Encore une étape",
+      "description": "Complète ton profil pour créer et accéder à tes parties"
+    },
     "completeProfile": "Compléter le profil",
     "user": "Utilisateur",
     "subtitle": "La meilleure façon de trouver votre prochain partenaire de tennis ou de pickleball",
@@ -5651,7 +5981,7 @@
       "nearbyTitle": "Des terrains près de toi",
       "subtitle": "Des disponibilités en temps réel",
       "empty": {
-        "title": "Aucune disponibilité pour l'instant",
+        "title": "Aucune disponibilité pour le moment",
         "description": "Explore les terrains pour des disponibilités en ville",
         "cta": "Voir les terrains"
       }
@@ -5669,12 +5999,20 @@
       "title": "Jouer",
       "findGame": "Trouver une partie",
       "bookCourt": "Réserver un terrain",
-      "tournaments": "Rejoindre un tournoi",
-      "leagues": "Rejoindre une ligue"
-    },
-    "classementsCard": {
-      "challengeNudge": "Une partie ce mois-ci et t'es dans le coup",
-      "circuitNudge": "Fais un tournoi pour te classer"
+      "compete": "Rejoindre un événement",
+      "competeNudge": "Participe pour gagner des points et te classer",
+      "findGameNudge": "Joue des parties pour te classer ce mois-ci",
+      "bookCourtEmpty": "Rien de libre autour de toi en ce moment",
+      "bookCourtNudge": "Des disponibilités en temps réel",
+      "bookCourtStatTitle": "En ce moment",
+      "bookCourtStatCourts": "terrains libres",
+      "bookCourtStatCourts_one": "terrain libre",
+      "bookCourtStatDetail": "à réserver autour de toi",
+      "findGameStatDetail": "{count} parties jouées ce mois-ci",
+      "findGameStatDetail_one": "{count} partie jouée ce mois-ci",
+      "competeStatDetail": "{points} pts en {count} événements",
+      "competeStatDetail_one": "{points} pts en {count} événement",
+      "rankPrefix": "Tu es"
     },
     "leaderboardCard": {
       "title": "Défi du mois",
@@ -5697,11 +6035,11 @@
     },
     "myMatchesEmpty": {
       "title": "Aucune partie à venir",
-      "description": "Créez une partie ou rejoignez-en une pour la voir ici"
+      "description": "Crée une partie ou rejoins-en une pour la voir ici"
     },
     "nearbyEmpty": {
       "title": "Aucune partie à proximité",
-      "description": "Il n'y a pas de parties à venir dans votre rayon de {distance} km.",
+      "description": "Il n'y a pas de parties à venir dans ton rayon de {distance} km",
       "suggestion": "Essayez d'augmenter votre distance maximale de déplacement dans votre profil pour voir plus de parties.",
       "updateSettings": "Modifier les paramètres",
       "guestDescription": "Connectez-vous pour voir les parties près de chez vous."
@@ -6063,11 +6401,11 @@
     },
     "emptyUpcoming": {
       "title": "Aucune partie à venir",
-      "description": "Créez une nouvelle partie ou parcourez les parties publiques pour commencer"
+      "description": "Crée une nouvelle partie ou parcours les parties publiques pour commencer"
     },
     "emptyPast": {
       "title": "Aucune partie passée",
-      "description": "Vos parties terminées apparaîtront ici"
+      "description": "Tes parties terminées apparaîtront ici"
     },
     "emptyFiltered": {
       "title": "Aucune partie trouvée",
@@ -6180,6 +6518,7 @@
         "3": "3 places",
         "label": "Places",
         "all": "Toutes",
+        "any": "Places libres",
         "undefined": "Toutes"
       },
       "favorites": {
@@ -6199,15 +6538,31 @@
     },
     "empty": {
       "title": "Aucune partie trouvée",
-      "description": "Essayez d'ajuster vos filtres ou revenez plus tard",
+      "description": "Essaie d'ajuster tes filtres ou reviens plus tard",
+      "helper": "Crée la tienne et on t'aidera à la remplir 💪",
       "noFilters": {
         "title": "Aucune partie publique à proximité",
-        "description": "Soyez le premier à créer une partie dans votre région!"
+        "description": "Sois la première personne à créer une partie dans ta région!"
       }
+    },
+    "endOfList": {
+      "title": "Aucune de ces parties ne vous convient?"
+    },
+    "cancelledBanner": {
+      "title": "Votre partie a été annulée",
+      "description": "Voici d'autres parties ouvertes que vous pourriez rejoindre."
+    },
+    "unfilledBanner": {
+      "title": "Votre partie ne s'est pas remplie",
+      "description": "Rejoignez une partie ouverte ci-dessous, ou créez la prochaine et on vous aidera à la remplir."
     },
     "results": {
       "count": "{count} parties",
       "countSingular": "1 partie"
+    },
+    "createSubtitle": "Choisis un moment, les joueurs embarquent",
+    "tabs": {
+      "games": "Parties"
     }
   },
   "winter": {
@@ -10686,8 +11041,8 @@
     },
     "empty": {
       "title": "Aucun site de jeu trouvé",
-      "description": "Aucun site de jeu ne correspond à votre recherche. Essayez d'ajuster vos filtres.",
-      "noLocation": "Activez la localisation pour trouver des sites de jeu à proximité"
+      "description": "Aucun site de jeu ne correspond à ta recherche. Essaie d'ajuster tes filtres.",
+      "noLocation": "Active la localisation pour trouver des sites de jeu à proximité"
     },
     "results": {
       "count": "{count} sites de jeu",
@@ -11113,11 +11468,11 @@
     },
     "emptyUpcoming": {
       "title": "Aucune réservation à venir",
-      "description": "Réservez un terrain pour commencer"
+      "description": "Réserve un terrain pour commencer"
     },
     "emptyPast": {
       "title": "Aucune réservation passée",
-      "description": "Vos réservations terminées apparaîtront ici"
+      "description": "Tes réservations terminées apparaîtront ici"
     },
     "emptyFiltered": {
       "title": "Aucune réservation trouvée",
@@ -11673,6 +12028,11 @@
     "tournamentInviteTitleGeneric": "Vous êtes invité au tournoi {tournament}!",
     "tournamentInviteHeading": "{name} vous invite au tournoi {tournament}!",
     "tournamentInviteHeadingGeneric": "Vous êtes invité au tournoi {tournament}!",
+    "leagueInviteTitle": "{name} vous invite à la ligue {league}!",
+    "leagueInviteTitleGeneric": "Vous êtes invité à la ligue {league}!",
+    "leagueInviteHeading": "{name} vous invite à la ligue {league}!",
+    "leagueInviteHeadingGeneric": "Vous êtes invité à la ligue {league}!",
+    "leagueSessionLine": "Séance le {date}",
     "at": "à",
     "scanQr": "Scannez ce code QR avec votre téléphone pour commencer.",
     "appStore": "Télécharger sur l'App Store",
@@ -12271,6 +12631,33 @@
       "acceptError": "On n'a pas pu enregistrer ton acceptation. Vérifie ta connexion et réessaie.",
       "signOutConfirmTitle": "Se déconnecter?",
       "signOutConfirmMessage": "Tu devras accepter la politique mise à jour lors de ta prochaine connexion."
+    }
+  },
+  "phoneVerification": {
+    "verify": "Vérifier",
+    "enterCode": "Entre le code à 6 chiffres qu'on t'a texté au {phone}",
+    "resend": "Renvoyer le code",
+    "resendIn": "Renvoyer dans {seconds}s",
+    "success": "Numéro de téléphone vérifié",
+    "consentNotice": "En vérifiant ton numéro, tu acceptes que Rallia puisse te texter à propos de tes parties. Des frais de messagerie peuvent s'appliquer. Réponds STOP en tout temps pour te désinscrire.",
+    "errors": {
+      "invalidPhone": "Entre un numéro de téléphone valide",
+      "incorrectCode": "Ce code n'est pas bon. Réessaie.",
+      "codeExpired": "Ce code est expiré. Demandes-en un nouveau.",
+      "rateLimited": "Trop d'essais. Attends quelques minutes.",
+      "sessionExpired": "Ta session est expirée. Reconnecte-toi pour vérifier ton numéro.",
+      "generic": "Une erreur est survenue. Réessaie."
+    }
+  },
+  "availabilityOverlay": {
+    "legend": {
+      "mine": "Tu es dispo",
+      "theirs": "{name} est dispo",
+      "theirsGeneric": "Ton adversaire est dispo",
+      "both": "Vous êtes tous les deux dispo"
+    },
+    "systemNote": {
+      "updated": "{name} a mis à jour ses dispos"
     }
   }
 }

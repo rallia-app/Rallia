@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Button } from '@rallia/shared-components';
+import { Text, Button, EmptyState } from '@rallia/shared-components';
 
 import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
 import { SearchBar } from '#/components/SearchBar';
@@ -218,14 +218,16 @@ export function ContactPickerModal({
 
     if (filteredContacts.length === 0) {
       return (
-        <View style={styles.centerContainer}>
-          <Ionicons name="people-outline" size={64} color={colors.textMuted} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            {searchQuery
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="people-outline" size={36} color={colors.primary} />}
+          title={
+            searchQuery
               ? t('addScore.contactPicker.noContactsMatch')
-              : t('addScore.contactPicker.noContactsFound')}
-          </Text>
-        </View>
+              : t('addScore.contactPicker.noContactsFound')
+          }
+          style={styles.emptyState}
+        />
       );
     }
 
@@ -321,9 +323,9 @@ const styles = StyleSheet.create({
     marginTop: 24,
     minWidth: 160,
   },
-  emptyText: {
-    marginTop: 16,
-    textAlign: 'center',
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
   },
   listContent: {
     paddingHorizontal: 8,

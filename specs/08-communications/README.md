@@ -8,11 +8,12 @@ The communications system enables players to message each other and receive noti
 
 ## Sub-documents
 
-| Document                               | Description                        |
-| -------------------------------------- | ---------------------------------- |
-| [chat.md](./chat.md)                   | 1:1 and group chat functionality   |
-| [notifications.md](./notifications.md) | Push, email, and SMS notifications |
-| [moderation.md](./moderation.md)       | Content moderation and safety      |
+| Document                                                                     | Description                                              |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------- |
+| [chat.md](./chat.md)                                                         | 1:1 and group chat functionality                         |
+| [match-organizer-live-suggestions.md](./match-organizer-live-suggestions.md) | Auto-posted, self-refreshing time/place suggestion cards |
+| [notifications.md](./notifications.md)                                       | Push, email, and SMS notifications                       |
+| [moderation.md](./moderation.md)                                             | Content moderation and safety                            |
 
 ## User Stories
 

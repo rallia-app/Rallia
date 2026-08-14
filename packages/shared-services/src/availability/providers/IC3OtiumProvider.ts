@@ -43,6 +43,22 @@ function extractCourtNumber(name: string | undefined | null): number | undefined
   return undefined;
 }
 
+/**
+ * Canonical IC3 search path: always trailing-slashed.
+ *
+ * IC3 hosts canonicalize the search endpoint to a trailing slash and 301 the
+ * slash-less form. A redirected POST is re-issued as a GET and answered with
+ * 405, so ask for the canonical form directly. Every municipality accepts it
+ * (verified against Montréal, Boucherville, Blainville).
+ *
+ * Keep in sync with normalizeIC3SearchPath in
+ * supabase/functions/refresh-facility-availability/providers.ts.
+ */
+export function normalizeIC3SearchPath(configured: string | undefined | null): string {
+  const path = configured && configured.length > 0 ? configured : '/public/search';
+  return path.endsWith('/') ? path : `${path}/`;
+}
+
 export class IC3OtiumProvider extends BaseAvailabilityProvider {
   readonly providerType = 'ic3_otium';
 
@@ -53,7 +69,7 @@ export class IC3OtiumProvider extends BaseAvailabilityProvider {
    * @returns Array of normalized availability slots
    */
   async fetchAvailability(params: FetchAvailabilityParams): Promise<AvailabilitySlot[]> {
-    const searchPath = this.getConfigValue('searchPath', '/public/search');
+    const searchPath = normalizeIC3SearchPath(this.getConfigValue('searchPath', '/public/search'));
     const defaultLimit = this.getConfigValue('defaultLimit', 500);
 
     // Build the URL with cache-busting timestamp

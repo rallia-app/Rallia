@@ -34,7 +34,7 @@ import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
 import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import * as Analytics from '#/services/analytics';
 
-import { SheetDateField } from './SheetDateField';
+import { SheetDateField } from '#/components/SheetDateField';
 
 const SHEET_ID = 'create-season';
 
@@ -42,6 +42,33 @@ type RefundKind = Enums<'refund_policy_kind_enum'>;
 type SeasonFormat = Enums<'entry_format'>;
 
 const SEASON_FORMATS: SeasonFormat[] = ['singles', 'doubles', 'mixed_doubles'];
+
+/**
+ * The four seasons of the year, as calendar quarters. Tapping one fills the name
+ * and the dates; everything stays editable afterwards, here and through
+ * season_update while the season is still a draft.
+ */
+const CALENDAR_SEASONS = ['winter', 'spring', 'summer', 'fall'] as const;
+type CalendarSeason = (typeof CALENDAR_SEASONS)[number];
+
+const SEASON_MONTHS: Record<CalendarSeason, { startMonth: number; endMonth: number }> = {
+  winter: { startMonth: 0, endMonth: 2 },
+  spring: { startMonth: 3, endMonth: 5 },
+  summer: { startMonth: 6, endMonth: 8 },
+  fall: { startMonth: 9, endMonth: 11 },
+};
+
+/** The next occurrence of that quarter: this year's if it hasn't ended, else next. */
+function presetRange(season: CalendarSeason, today: Date): { start: Date; end: Date } {
+  const { startMonth, endMonth } = SEASON_MONTHS[season];
+  const year = today.getFullYear();
+  const endThisYear = new Date(year, endMonth + 1, 0);
+  const useYear = endThisYear < today ? year + 1 : year;
+  return {
+    start: new Date(useYear, startMonth, 1),
+    end: new Date(useYear, endMonth + 1, 0),
+  };
+}
 
 /** Dollars string → integer cents. Tolerates "", "12", "12.5", "12.50". */
 function dollarsToCents(input: string): number {
@@ -68,6 +95,10 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
   // Play format, frozen into the season's rules at creation: the sheet
   // generator pairs 1v1 for singles and 2v2 for doubles/mixed.
   const [format, setFormat] = useState<SeasonFormat>('singles');
+
+  // Games each player plays per session. Asked once here rather than at every
+  // session; the create-session sheet opens on this and can still override it.
+  const [gamesPerPlayer, setGamesPerPlayer] = useState(1);
 
   // Fee settings. Empty/0 = free season, which is the default.
   const [entryFee, setEntryFee] = useState('');
@@ -127,6 +158,20 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
     void SheetManager.hide(SHEET_ID);
   }, []);
 
+  const applyPreset = useCallback(
+    (season: CalendarSeason) => {
+      lightHaptic();
+      const { start, end } = presetRange(season, new Date());
+      setName(
+        `${t(`leagueDetail.createSeason.presets.${season}` as TranslationKey)} ${start.getFullYear()}`
+      );
+      setStartDate(start);
+      setEndDate(end);
+      setRefundCutoff(prev => (prev > start ? start : prev));
+    },
+    [t]
+  );
+
   const handleStartChange = useCallback((date: Date) => {
     setStartDate(date);
     setEndDate(prev => (prev < date ? date : prev));
@@ -159,9 +204,15 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
       name: trimmed,
       startDate: startDate.toISOString().slice(0, 10),
       endDate: endDate.toISOString().slice(0, 10),
-      // Only a non-default format needs an override; the league's default
-      // rules already say singles.
-      rulesOverride: format !== 'singles' ? { formatsAllowed: [format] } : undefined,
+      // Only non-default choices need an override; the league's default rules
+      // already say singles, and one game per player is the server default.
+      rulesOverride:
+        format !== 'singles' || gamesPerPlayer > 1
+          ? {
+              ...(format !== 'singles' ? { formatsAllowed: [format] } : {}),
+              ...(gamesPerPlayer > 1 ? { gamesPerPlayer } : {}),
+            }
+          : undefined,
       entryFeeCents,
       feePayer: isPaid ? feePayer : 'player_pays',
       refundPolicyKind: isPaid ? refundKind : 'none',
@@ -173,6 +224,7 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
     startDate,
     endDate,
     format,
+    gamesPerPlayer,
     createSeason,
     toast,
     t,
@@ -207,6 +259,25 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
       }
     >
       <View style={styles.body}>
+        <View style={styles.fieldGroup}>
+          <Text size="xs" color={colors.textMuted}>
+            {t('leagueDetail.createSeason.presets.hint')}
+          </Text>
+          <View style={styles.presetRow}>
+            {CALENDAR_SEASONS.map(s => (
+              <TouchableOpacity
+                key={s}
+                onPress={() => applyPreset(s)}
+                testID={`season-preset-${s}`}
+                style={[styles.presetChip, { borderColor: colors.border }]}
+              >
+                <Text size="xs" weight="semibold" color={colors.text}>
+                  {t(`leagueDetail.createSeason.presets.${s}` as TranslationKey)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
         <TextInput
           value={name}
           onChangeText={setName}
@@ -262,6 +333,41 @@ export function CreateSeasonActionSheet({ payload }: SheetProps<'create-season'>
               testID={`season-format-${f}`}
             />
           ))}
+        </View>
+
+        <View style={styles.fieldGroup}>
+          <Text size="sm" weight="semibold" color={colors.text}>
+            {t('leagueDetail.createSeason.gamesPerPlayerLabel')}
+          </Text>
+          <Text size="xs" color={colors.textMuted}>
+            {t('leagueDetail.createSeason.gamesPerPlayerHint')}
+          </Text>
+          <View style={styles.presetRow}>
+            {[1, 2, 3, 4].map(n => (
+              <TouchableOpacity
+                key={n}
+                onPress={() => {
+                  lightHaptic();
+                  setGamesPerPlayer(n);
+                }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: gamesPerPlayer === n }}
+                testID={`season-games-per-player-${n}`}
+                style={[
+                  styles.presetChip,
+                  { borderColor: gamesPerPlayer === n ? colors.primary : colors.border },
+                ]}
+              >
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={gamesPerPlayer === n ? colors.primary : colors.text}
+                >
+                  {String(n)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* Entry & payments. Leaving the fee empty keeps the season free, which
@@ -530,6 +636,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radiusPixels.lg,
     paddingHorizontal: spacingPixels[4],
+  },
+  presetRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+  },
+  presetChip: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.full,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
   },
   priceInput: {
     flex: 1,

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton } from '@rallia/shared-components';
+import { EmptyState, Text, Skeleton } from '@rallia/shared-components';
 import { useTheme, useMatch, useNotificationsWithActions } from '@rallia/shared-hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import {
@@ -30,7 +30,6 @@ import {
   lightTheme,
   darkTheme,
   spacingPixels,
-  fontSizePixels,
   radiusPixels,
   primary,
   neutral,
@@ -40,6 +39,7 @@ import { useAuth, useRequireOnboarding, useScrollBottomInset } from '#/hooks';
 import { useTranslation, type TranslationOptions } from '#/hooks/useTranslation';
 import { useActionsSheet, useMatchDetailSheet, useSport } from '#/context';
 import { useCommunityNavigation, useAppNavigation } from '#/navigation/hooks';
+import { navigateFromOutside } from '#/navigation/navigationRef';
 import SignInPrompt from '#/components/SignInPrompt';
 import { SportIcon } from '#/components/SportIcon';
 import { renderNearbyMatchCard } from './nearbyNotificationCard';
@@ -52,6 +52,7 @@ const BASE_WHITE = '#ffffff';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 
 import * as Analytics from '#/services/analytics';
+import { buildRecoveryFilters } from '#/utils/recoveryFilters';
 
 // Helper function to format relative time
 function formatRelativeTime(
@@ -369,6 +370,7 @@ const Notifications: React.FC = () => {
       textMuted: themeColors.mutedForeground,
       icon: themeColors.foreground,
       iconMuted: themeColors.mutedForeground,
+      primary: isDark ? primary[500] : primary[600],
       buttonActive: isDark ? primary[500] : primary[600],
       buttonTextActive: BASE_WHITE,
       border: themeColors.border,
@@ -432,6 +434,35 @@ const Notifications: React.FC = () => {
 
       // Navigate to target based on notification type and target_id
       if (notification.target_id && notification.type) {
+        // Cancelled/unfilled games recover to Public Games with context instead
+        // of the dead detail sheet (every action is disabled on those matches).
+        if (
+          notification.type === 'match_cancelled' ||
+          notification.type === 'match_unfilled_recovery'
+        ) {
+          const payload = notification.payload as Record<string, unknown> | null;
+          Logger.logUserAction('notification_match_cancelled_redirect', {
+            notificationId: notification.id,
+            matchId: notification.target_id,
+            type: notification.type,
+          });
+          navigateFromOutside('PublicMatches', {
+            cancelledContext: {
+              matchId: notification.target_id,
+              matchDate: payload?.matchDate as string | undefined,
+              startTime: payload?.startTime as string | undefined,
+              sportName: payload?.sportName as string | undefined,
+              reason: notification.type === 'match_cancelled' ? 'cancelled' : 'unfilled',
+            },
+            // Only the recovery push counts a set of games, so only it carries
+            // the filters that reproduce them.
+            ...(notification.type === 'match_unfilled_recovery'
+              ? { initialFilters: buildRecoveryFilters(payload) }
+              : {}),
+          });
+          return;
+        }
+
         const isMatchNotification = MATCH_NOTIFICATION_TYPES.includes(notification.type);
 
         if (isMatchNotification) {
@@ -593,15 +624,11 @@ const Notifications: React.FC = () => {
   );
 
   const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons name="notifications-off-outline" size={64} color={colors.iconMuted} />
-      <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-        {t('notifications.empty')}
-      </Text>
-      <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-        {t('notifications.emptyDescription')}
-      </Text>
-    </View>
+    <EmptyState
+      icon={<Ionicons name="notifications-off-outline" size={64} color={colors.primary} />}
+      title={t('notifications.empty')}
+      description={t('notifications.emptyDescription')}
+    />
   );
 
   const renderFooter = () => {
@@ -915,21 +942,6 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: spacingPixels[2],
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[8],
-    paddingVertical: spacingPixels[14],
-  },
-  emptyTitle: {
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-  },
-  emptyDescription: {
-    textAlign: 'center',
-    lineHeight: fontSizePixels.sm * 1.5,
   },
   footerLoader: {
     alignItems: 'center',

@@ -435,10 +435,26 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     fetchSelectedSports();
   }, [currentStepId, formData.selectedSportIds]);
 
-  // Advance from success step to suggestions step
+  // Advance from success step to suggestions step. When there is nothing
+  // joinable to show (no declared availability, or the prefetch settled
+  // empty), finish onboarding directly instead of landing on an empty step.
   const handleAdvanceToSuggestions = useCallback(() => {
+    if (
+      opportunitySlots.length === 0 ||
+      (!opportunitiesLoading && matchOpportunities.length === 0)
+    ) {
+      Analytics.onboardingStepCompleted({ step_name: 'suggestions_skipped_empty', step_index: -1 });
+      onComplete();
+      return;
+    }
     goToNextStep();
-  }, [goToNextStep]);
+  }, [
+    opportunitySlots.length,
+    opportunitiesLoading,
+    matchOpportunities.length,
+    onComplete,
+    goToNextStep,
+  ]);
 
   // Refresh the "Games for you" list — delegates to the query's refetch
   const handleRefreshSuggestions = useCallback(async () => {
@@ -632,6 +648,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             last_name: formData.lastName,
             birth_date: formattedDate,
             gender: formData.gender as GenderEnum,
+            phone: formData.phoneNumber.trim() || undefined,
             profile_picture_url: uploadedImageUrl,
           });
 
@@ -640,6 +657,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveInfo'));
             setIsSaving(false);
             return false;
+          }
+
+          if (!formData.phoneVerified) {
+            Analytics.phoneCaptureSkipped({
+              source: 'onboarding',
+              had_number: !!formData.phoneNumber.trim(),
+            });
           }
 
           // Silently persist the home location captured in pre-onboarding to the
@@ -1272,6 +1296,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           <SuggestionsStep
             opportunities={matchOpportunities}
             isLoading={opportunitiesLoading}
+            isActive={currentStepId === 'suggestions'}
             onComplete={onComplete}
             onRefresh={handleRefreshSuggestions}
             colors={colors}
@@ -1322,6 +1347,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           <SuggestionsStep
             opportunities={matchOpportunities}
             isLoading={opportunitiesLoading}
+            isActive
             onComplete={onComplete}
             onRefresh={handleRefreshSuggestions}
             colors={colors}

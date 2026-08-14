@@ -15,6 +15,24 @@
 
 BEGIN;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 -- --------------------------------------------------------------------------
 -- 1. Partner registration: validations, withdraw, re-register, notifications
 -- --------------------------------------------------------------------------
@@ -55,6 +73,7 @@ BEGIN
      LIMIT 1;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Doubles Open', p_sport_id => v_sport,
         p_max_participants => 4::smallint,
@@ -63,6 +82,7 @@ BEGIN
         p_visibility => 'public', p_registration_mode => 'open',
         p_entry_format => 'doubles'
     );
+    PERFORM pg_temp.staff_off(v_org);
     v_tid := v_t.id; v_ver := v_t.version;
     ASSERT v_t.entry_format = 'doubles', 'expected doubles entry_format';
 
@@ -221,6 +241,7 @@ BEGIN
       ) s;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[1]::text)::text, true);
+    PERFORM pg_temp.staff_on(v_players[1]);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Singles Guard', p_sport_id => v_sport,
         p_max_participants => 4::smallint,
@@ -228,6 +249,7 @@ BEGIN
         p_end_date   => now() + interval '8 days',
         p_registration_mode => 'open'
     );
+    PERFORM pg_temp.staff_off(v_players[1]);
     PERFORM tournament_open_registration(v_t.id, v_t.version);
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[2]::text)::text, true);
@@ -271,6 +293,7 @@ BEGIN
     -- players: 1=A, 2=B, 3=C, 4=D
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Doubles Attach Cup', p_sport_id => v_sport,
         p_max_participants => 4::smallint,
@@ -280,6 +303,7 @@ BEGIN
         p_entry_format => 'doubles',
         p_registration_opens_at => now() - interval '2 days'
     );
+    PERFORM pg_temp.staff_off(v_org);
     v_tid := v_t.id;
     -- start_date is in the past so the bracket can attach an already-played
     -- game; open_registration gates on a future start, so flip status directly.
@@ -349,7 +373,13 @@ BEGIN
     ASSERT v_final.status = 'completed', 'final must complete on attach';
     ASSERT v_final.winner_registration_id = v_reg1.id,
         'winner must be the A+B entry (resolved via partner)';
-    ASSERT v_final.score = '6-3 6-4', 'score must carry over, got ' || coalesce(v_final.score, '∅');
+    -- The score carries over player1-first (20260812210000), so which way round
+    -- it reads depends on the slot the winning pair drew, not on who won: the
+    -- match had them on team 1, the bracket may have them as player2.
+    ASSERT v_final.score = CASE
+             WHEN v_final.winner_registration_id = v_final.player1_registration_id
+               THEN '6-3 6-4' ELSE '3-6 4-6' END,
+        'score must carry over oriented to player1, got ' || coalesce(v_final.score, '∅');
 
     SELECT * INTO v_t FROM tournaments WHERE id = v_tid;
     ASSERT v_t.status = 'completed', 'tournament must complete after the final';
@@ -384,6 +414,7 @@ BEGIN
     v_org := v_players[11];
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Invite Doubles', p_sport_id => v_sport,
         p_max_participants => 4::smallint,
@@ -392,6 +423,7 @@ BEGIN
         p_visibility => 'private', p_registration_mode => 'open',
         p_entry_format => 'doubles'
     );
+    PERFORM pg_temp.staff_off(v_org);
     v_tid := v_t.id;
     PERFORM tournament_open_registration(v_tid, v_t.version);
     SELECT * INTO v_link FROM tournament_invite_get_or_create(v_tid);
@@ -461,6 +493,7 @@ BEGIN
     v_outsider := v_players[4];
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Private Doubles RLS', p_sport_id => v_sport,
         p_max_participants => 4::smallint,
@@ -469,6 +502,7 @@ BEGIN
         p_visibility => 'private', p_registration_mode => 'open',
         p_entry_format => 'doubles'
     );
+    PERFORM pg_temp.staff_off(v_org);
     PERFORM tournament_open_registration(v_t.id, v_t.version);
 
     -- Captain (player 2) registers with partner (player 3).

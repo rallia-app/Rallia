@@ -43,10 +43,10 @@ import { getMatchWithDetails } from '@rallia/shared-services';
 import { useTranslation, type TranslationKey } from '#/hooks';
 import { useActionsSheet, useMatchDetailSheet, useSport } from '#/context';
 import { MatchCreationWizard } from '#/features/matches';
-import { TournamentCreationWizard } from '#/features/tournaments';
-import { LeagueCreationWizard } from '#/features/leagues';
+import { EventCreationWizard } from '#/features/events/components/EventCreationWizard';
+import { eventKindDescriptor, type EventKind } from '#/features/events/eventKinds';
 import { InvitePlayersWizard } from '#/features/referral';
-import { CreateNetworkWizard } from '#/features/groups';
+import { CreateCommunityWizard } from '#/features/communities';
 import { AuthWizard } from '#/features/auth';
 import { OnboardingWizard } from '#/features/onboarding/components/wizard';
 import { navigateFromOutside, navigationRef } from '#/navigation';
@@ -143,12 +143,10 @@ const ActionItem: React.FC<ActionItemProps> = ({
 interface ActionsContentProps {
   onClose: () => void;
   onCreateMatch: () => void;
-  onCreateTournament: () => void;
-  onCreateLeague: () => void;
+  onCreateEvent: () => void;
   onInvitePlayers: () => void;
   onCreateNetwork: () => void;
-  showCreateTournament: boolean;
-  showCreateLeague: boolean;
+  showCreateEvent: boolean;
   colors: ThemeColors;
   t: (key: TranslationKey) => string;
 }
@@ -156,12 +154,10 @@ interface ActionsContentProps {
 const ActionsContent: React.FC<ActionsContentProps> = ({
   onClose,
   onCreateMatch,
-  onCreateTournament,
-  onCreateLeague,
+  onCreateEvent,
   onInvitePlayers,
   onCreateNetwork,
-  showCreateTournament,
-  showCreateLeague,
+  showCreateEvent,
   colors,
   t,
 }) => {
@@ -184,32 +180,21 @@ const ActionsContent: React.FC<ActionsContentProps> = ({
           colors={colors}
         />
 
-        {showCreateTournament && (
+        {showCreateEvent && (
           <ActionItem
             icon="trophy-outline"
-            title={t('actions.createTournament')}
-            description={t('actions.createTournamentDescription')}
-            onPress={onCreateTournament}
+            title={t('actions.createEvent')}
+            description={t('actions.createEventDescription')}
+            onPress={onCreateEvent}
             colors={colors}
-            testID="action-create-tournament"
-          />
-        )}
-
-        {showCreateLeague && (
-          <ActionItem
-            icon="ribbon-outline"
-            title={t('actions.createLeague')}
-            description={t('actions.createLeagueDescription')}
-            onPress={onCreateLeague}
-            colors={colors}
-            testID="action-create-league"
+            testID="action-create-event"
           />
         )}
 
         <ActionItem
-          icon="people-outline"
-          title={t('actions.createNetwork')}
-          description={t('actions.createNetworkDescription')}
+          icon="globe-outline"
+          title={t('actions.createCommunity')}
+          description={t('actions.createCommunityDescription')}
           onPress={onCreateNetwork}
           colors={colors}
         />
@@ -235,11 +220,12 @@ export const ActionsBottomSheet: React.FC = () => {
     editMatchData,
     clearEditMatch,
     shouldOpenMatchCreation,
+    matchCreationSource,
+    matchCreationPrefill,
+    clearMatchCreationPrefill,
     clearMatchCreationFlag,
-    shouldOpenTournamentCreation,
-    clearTournamentCreationFlag,
-    shouldOpenLeagueCreation,
-    clearLeagueCreationFlag,
+    pendingEventCreation,
+    clearEventCreationFlag,
     shouldOpenInvitePlayers,
     clearInvitePlayersFlag,
     initialBookingForWizard,
@@ -250,14 +236,14 @@ export const ActionsBottomSheet: React.FC = () => {
   const { isAdmin } = useAdminStatus();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
-  // Both leagues and tournaments are admin-gated during rollout.
-  const showCreateTournament = isAdmin;
-  const showCreateLeague = isAdmin;
+  // Events (tournaments and leagues alike) are admin-gated during rollout.
+  const showCreateEvent = isAdmin;
 
   // Wizard state for all sliding panels (local, only for slide animation)
   const [showWizard, setShowWizard] = useState(false);
-  const [showTournamentWizard, setShowTournamentWizard] = useState(false);
-  const [showLeagueWizard, setShowLeagueWizard] = useState(false);
+  const [showEventWizard, setShowEventWizard] = useState(false);
+  /** Formats the event wizard should offer; null when it isn't open. */
+  const [eventWizardKinds, setEventWizardKinds] = useState<EventKind[] | null>(null);
   const [showInviteWizard, setShowInviteWizard] = useState(false);
   const [showNetworkWizard, setShowNetworkWizard] = useState(false);
 
@@ -295,6 +281,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Effect to automatically open match creation wizard when flag is set
   useEffect(() => {
     if (shouldOpenMatchCreation && contentMode === 'actions' && !showWizard && !isEditMode) {
+      Analytics.matchCreationStarted({ source: matchCreationSource ?? 'direct' });
       // Clear the flag first
       clearMatchCreationFlag();
       // Then trigger the wizard with a small delay to ensure sheet is fully presented
@@ -305,6 +292,7 @@ export const ActionsBottomSheet: React.FC = () => {
     }
   }, [
     shouldOpenMatchCreation,
+    matchCreationSource,
     contentMode,
     showWizard,
     isEditMode,
@@ -312,55 +300,32 @@ export const ActionsBottomSheet: React.FC = () => {
     slideIn,
   ]);
 
-  // Effect to automatically open tournament creation wizard when flag is set
+  // Effect to automatically open event creation when a request is pending.
+  // showCreateEvent keeps the admin gate: a non-admin who somehow sets the
+  // request lands on the actions menu instead of the wizard.
   useEffect(() => {
     if (
-      showCreateTournament &&
-      shouldOpenTournamentCreation &&
+      showCreateEvent &&
+      pendingEventCreation &&
       contentMode === 'actions' &&
-      !showTournamentWizard &&
+      !showEventWizard &&
       !isEditMode
     ) {
-      clearTournamentCreationFlag();
+      const kinds = pendingEventCreation;
+      clearEventCreationFlag();
       setTimeout(() => {
-        setShowTournamentWizard(true);
+        setEventWizardKinds(kinds);
+        setShowEventWizard(true);
         slideIn();
       }, 100);
     }
   }, [
-    showCreateTournament,
-    shouldOpenTournamentCreation,
+    showCreateEvent,
+    pendingEventCreation,
     contentMode,
-    showTournamentWizard,
+    showEventWizard,
     isEditMode,
-    clearTournamentCreationFlag,
-    slideIn,
-  ]);
-
-  // Effect to automatically open league creation wizard when flag is set.
-  // showCreateLeague keeps the admin gate: a non-admin who somehow sets the flag
-  // lands on the actions menu instead of the wizard.
-  useEffect(() => {
-    if (
-      showCreateLeague &&
-      shouldOpenLeagueCreation &&
-      contentMode === 'actions' &&
-      !showLeagueWizard &&
-      !isEditMode
-    ) {
-      clearLeagueCreationFlag();
-      setTimeout(() => {
-        setShowLeagueWizard(true);
-        slideIn();
-      }, 100);
-    }
-  }, [
-    showCreateLeague,
-    shouldOpenLeagueCreation,
-    contentMode,
-    showLeagueWizard,
-    isEditMode,
-    clearLeagueCreationFlag,
+    clearEventCreationFlag,
     slideIn,
   ]);
 
@@ -443,7 +408,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Handle create match - show wizard with slide animation
   const handleCreateMatch = useCallback(() => {
     lightHaptic();
-    Analytics.matchCreationStarted();
+    Analytics.matchCreationStarted({ source: 'plus_menu' });
     setShowWizard(true);
     slideIn();
   }, [slideIn]);
@@ -464,69 +429,52 @@ export const ActionsBottomSheet: React.FC = () => {
     slideIn();
   }, [slideIn]);
 
-  // Handle create tournament - show tournament wizard with slide animation
-  const handleCreateTournament = useCallback(() => {
+  // Handle create event - show the format picker with slide animation
+  const handleCreateEvent = useCallback(() => {
     lightHaptic();
-    setShowTournamentWizard(true);
+    setEventWizardKinds(null);
+    setShowEventWizard(true);
     slideIn();
   }, [slideIn]);
 
-  const handleCreateLeague = useCallback(() => {
-    lightHaptic();
-    setShowLeagueWizard(true);
-    slideIn();
-  }, [slideIn]);
-
-  const handleTournamentWizardClose = useCallback(() => {
-    slideOut(() => setShowTournamentWizard(false));
+  const handleEventWizardClose = useCallback(() => {
+    slideOut(() => {
+      setShowEventWizard(false);
+      setEventWizardKinds(null);
+    });
   }, [slideOut]);
 
-  // Handle tournament wizard success - close sheet and navigate to detail screen
-  const handleTournamentSuccess = useCallback(
-    (tournamentId: string, openInviteSheet = false) => {
+  /** Close the sheet, then land on the created event's detail screen. */
+  const handleEventSuccess = useCallback(
+    (kind: EventKind, eventId: string, openInviteSheet = false) => {
       successHaptic();
       closeSheet();
-      setShowTournamentWizard(false);
+      setShowEventWizard(false);
+      setEventWizardKinds(null);
       // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
       slideProgress.value = 0;
 
       // Wait for the sheet's close animation before pushing the screen so
       // the navigation transition isn't competing with the sheet collapse.
       setTimeout(() => {
-        if (navigationRef.isReady()) {
-          navigationRef.navigate('TournamentDetail', { tournamentId, openInviteSheet });
+        if (!navigationRef.isReady()) return;
+        if (eventKindDescriptor(kind).engine === 'league') {
+          navigationRef.navigate('LeagueDetail', { leagueId: eventId });
+        } else {
+          navigationRef.navigate('TournamentDetail', { tournamentId: eventId, openInviteSheet });
         }
       }, 300);
     },
     [closeSheet, slideProgress]
   );
 
-  // "Share invite link" on the success screen: same close-and-navigate, but
-  // the detail screen opens the invite sheet on arrival. The actions sheet is
-  // fully closed before any sheet shows, so no sheet-to-sheet transition.
-  const handleTournamentShareInvite = useCallback(
-    (tournamentId: string) => handleTournamentSuccess(tournamentId, true),
-    [handleTournamentSuccess]
-  );
-
-  const handleLeagueWizardClose = useCallback(() => {
-    slideOut(() => setShowLeagueWizard(false));
-  }, [slideOut]);
-
-  const handleLeagueSuccess = useCallback(
-    (leagueId: string) => {
-      successHaptic();
-      closeSheet();
-      setShowLeagueWizard(false);
-      // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
-      slideProgress.value = 0;
-      setTimeout(() => {
-        if (navigationRef.isReady()) {
-          navigationRef.navigate('LeagueDetail', { leagueId });
-        }
-      }, 300);
-    },
-    [closeSheet, slideProgress]
+  // "Share invite link" on the tournament success screen: same
+  // close-and-navigate, but the detail screen opens the invite sheet on
+  // arrival. The actions sheet is fully closed before any sheet shows, so no
+  // sheet-to-sheet transition.
+  const handleEventShareInvite = useCallback(
+    (kind: EventKind, tournamentId: string) => handleEventSuccess(kind, tournamentId, true),
+    [handleEventSuccess]
   );
 
   // Handle invite wizard close - slide back to actions list
@@ -585,23 +533,17 @@ export const ActionsBottomSheet: React.FC = () => {
     [closeSheet, slideProgress, openMatchDetail, clearEditMatch]
   );
 
-  // Handle network wizard success - navigate to created group or community
+  // Handle community wizard success - navigate to the created community
   const handleNetworkSuccess = useCallback(
-    (type: 'group' | 'community', id: string) => {
+    (id: string) => {
       successHaptic();
       closeSheet();
       setShowNetworkWizard(false);
       // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
       slideProgress.value = 0;
 
-      if (type === 'group') {
-        if (navigationRef.isReady()) {
-          navigationRef.navigate('GroupDetail', { groupId: id });
-        }
-      } else {
-        if (navigationRef.isReady()) {
-          navigationRef.navigate('CommunityDetail', { communityId: id });
-        }
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('CommunityDetail', { communityId: id });
       }
     },
     [closeSheet, slideProgress]
@@ -610,7 +552,8 @@ export const ActionsBottomSheet: React.FC = () => {
   // Handle sheet dismiss - just reset local wizard state
   const handleSheetDismiss = useCallback(() => {
     setShowWizard(false);
-    setShowTournamentWizard(false);
+    setShowEventWizard(false);
+    setEventWizardKinds(null);
     setShowInviteWizard(false);
     setInviteInitialTab(undefined);
     setShowNetworkWizard(false);
@@ -646,7 +589,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Determine which content to show based on contentMode from context
   const renderContent = () => {
     if (contentMode === 'loading') {
-      const ACTION_ITEMS_COUNT = 3 + (showCreateTournament ? 1 : 0) + (showCreateLeague ? 1 : 0);
+      const ACTION_ITEMS_COUNT = 3 + (showCreateEvent ? 1 : 0);
       const iconSize = spacingPixels[11];
       return (
         <View style={[styles.contentContainer, { paddingBottom: spacingPixels[4] }]}>
@@ -732,12 +675,10 @@ export const ActionsBottomSheet: React.FC = () => {
           <ActionsContent
             onClose={closeSheet}
             onCreateMatch={handleCreateMatch}
-            onCreateTournament={handleCreateTournament}
-            onCreateLeague={handleCreateLeague}
+            onCreateEvent={handleCreateEvent}
             onInvitePlayers={handleInvitePlayers}
             onCreateNetwork={handleCreateNetwork}
-            showCreateTournament={showCreateTournament}
-            showCreateLeague={showCreateLeague}
+            showCreateEvent={showCreateEvent}
             colors={colors}
             t={t}
           />
@@ -752,28 +693,21 @@ export const ActionsBottomSheet: React.FC = () => {
               onSuccess={handleWizardSuccess}
               initialBookingForWizard={initialBookingForWizard}
               onConsumeInitialBooking={clearInitialBookingFlag}
+              matchCreationPrefill={matchCreationPrefill}
+              onConsumePrefill={clearMatchCreationPrefill}
             />
           </Animated.View>
         )}
 
-        {/* Tournament creation wizard */}
-        {showTournamentWizard && (
+        {/* Event creation: format picker, then that format's wizard */}
+        {showEventWizard && (
           <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
-            <TournamentCreationWizard
+            <EventCreationWizard
               onClose={closeSheet}
-              onBackToLanding={handleTournamentWizardClose}
-              onSuccess={handleTournamentSuccess}
-              onShareInvite={handleTournamentShareInvite}
-            />
-          </Animated.View>
-        )}
-
-        {showLeagueWizard && (
-          <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
-            <LeagueCreationWizard
-              onClose={closeSheet}
-              onBackToLanding={handleLeagueWizardClose}
-              onSuccess={handleLeagueSuccess}
+              onBackToLanding={handleEventWizardClose}
+              onSuccess={handleEventSuccess}
+              onShareInvite={handleEventShareInvite}
+              kinds={eventWizardKinds ?? undefined}
             />
           </Animated.View>
         )}
@@ -789,10 +723,10 @@ export const ActionsBottomSheet: React.FC = () => {
           </Animated.View>
         )}
 
-        {/* Network wizard (Group / Community) */}
+        {/* Community wizard */}
         {showNetworkWizard && (
           <Animated.View style={[styles.slidePanel, styles.wizardPanel, wizardAnimatedStyle]}>
-            <CreateNetworkWizard
+            <CreateCommunityWizard
               onClose={closeSheet}
               onBackToLanding={handleNetworkWizardClose}
               onSuccess={handleNetworkSuccess}
@@ -807,8 +741,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Auth is deliberately NOT in this list — it sizes to content.
   const isFullHeight =
     showWizard ||
-    showTournamentWizard ||
-    showLeagueWizard ||
+    showEventWizard ||
     showInviteWizard ||
     showNetworkWizard ||
     isEditMode ||

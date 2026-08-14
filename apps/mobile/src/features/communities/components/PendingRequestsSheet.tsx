@@ -2,7 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, EmptyState } from '@rallia/shared-components';
 import { spacingPixels } from '@rallia/design-system';
 import { mediumHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
 import {
@@ -168,10 +168,11 @@ export function PendingRequestsActionSheet({ payload }: SheetProps<'pending-requ
           );
         })
       ) : (
-        <View style={styles.empty}>
-          <Ionicons name="checkmark-circle-outline" size={48} color={colors.textMuted} />
-          <Text style={{ color: colors.textSecondary, marginTop: 12 }}>No pending requests</Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="checkmark-circle-outline" size={36} color={colors.primary} />}
+          title={t('community.pendingRequests.noRequests')}
+        />
       )}
     </BaseActionSheet>
   );
@@ -217,10 +218,6 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  empty: {
-    padding: spacingPixels[10],
     alignItems: 'center',
   },
 });

@@ -15,7 +15,7 @@ import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-nat
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { useQueryClient } from '@tanstack/react-query';
-import { Text } from '@rallia/shared-components';
+import { Text, EmptyState } from '@rallia/shared-components';
 import { useFacilitySearch, facilityKeys } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
 import {
@@ -279,36 +279,35 @@ export function FavoriteFacilitiesActionSheet({ payload }: SheetProps<'favorite-
 
     if (latitude === null || longitude === null) {
       return (
-        <View style={styles.emptyState}>
-          <Ionicons name="location-outline" size={48} color={colors.textMuted} />
-          <Text style={[styles.emptyStateText, { color: colors.textMuted }]}>
-            {t('profile.preferences.locationRequired')}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="location-outline" size={36} color={colors.primary} />}
+          title={t('profile.preferences.locationRequired')}
+        />
       );
     }
 
     if (searchQuery && filteredResults.length === 0) {
       return (
-        <View style={styles.emptyState}>
-          <Ionicons name="search-outline" size={48} color={colors.textMuted} />
-          <Text style={[styles.emptyStateText, { color: colors.textMuted }]}>
-            {t('profile.preferences.noFacilitiesFound')}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="search-outline" size={36} color={colors.primary} />}
+          title={t('profile.preferences.noFacilitiesFound')}
+        />
       );
     }
 
     if (filteredResults.length === 0) {
       return (
-        <View style={styles.emptyState}>
-          <View style={{ transform: [{ rotate: '90deg' }] }}>
-            <TennisCourtIcon width={48} height={48} stroke={colors.textMuted} />
-          </View>
-          <Text style={[styles.emptyStateText, { color: colors.textMuted }]}>
-            {t('profile.preferences.noFacilitiesFound')}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={
+            <View style={{ transform: [{ rotate: '90deg' }] }}>
+              <TennisCourtIcon width={40} height={40} stroke={colors.primary} />
+            </View>
+          }
+          title={t('profile.preferences.noFacilitiesFound')}
+        />
       );
     }
 
@@ -549,11 +548,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacingPixels[10],
-  },
-  emptyStateText: {
-    marginTop: spacingPixels[4],
-    textAlign: 'center',
-    fontSize: 14,
   },
   footerLoader: {
     paddingVertical: spacingPixels[4],

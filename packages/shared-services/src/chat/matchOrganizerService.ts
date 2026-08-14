@@ -34,6 +34,10 @@ function toOption(row: {
   court_confirmed: boolean;
   tier: string;
   distance_km: number | null;
+  free_count?: number | null;
+  option_key?: string | null;
+  court_state?: string | null;
+  fav_count?: number | null;
 }): MatchOrganizerOption {
   return {
     slot_start: row.slot_start,
@@ -47,6 +51,14 @@ function toOption(row: {
     court_confirmed: row.court_confirmed,
     tier: row.tier === 'bookable' ? 'bookable' : 'usually_free',
     distance_km: row.distance_km,
+    ...(row.free_count != null ? { free_count: row.free_count } : {}),
+    ...(row.option_key ? { option_key: row.option_key } : {}),
+    // Carried through so a player-posted card explains a missing court the same
+    // way an auto-posted one does.
+    ...(row.court_state
+      ? { court_state: row.court_state as MatchOrganizerOption['court_state'] }
+      : {}),
+    ...(row.fav_count != null ? { fav_count: row.fav_count } : {}),
   };
 }
 
@@ -71,14 +83,12 @@ export async function getMatchOrganizerOptions(
     throw error;
   }
 
-  // Graceful degradation: keep both tiers. Confirmed-court slots lead (each tier
-  // chronological), with usually-free favorite-facility slots as the fallback so
-  // shared times still get suggested when no court feed reaches that far out.
+  // Graceful degradation: keep both tiers, so shared times are still suggested
+  // when no court feed reaches that far out. Ordered chronologically, matching
+  // the card: a bookable court next week must not jump above a free hour
+  // tomorrow, and its green court chip already marks it out.
   const mapped: MatchOrganizerOption[] = (data ?? []).map(toOption);
-  return mapped.sort((a, b) => {
-    if (a.court_confirmed !== b.court_confirmed) return a.court_confirmed ? -1 : 1;
-    return new Date(a.slot_start).getTime() - new Date(b.slot_start).getTime();
-  });
+  return mapped.sort((a, b) => new Date(a.slot_start).getTime() - new Date(b.slot_start).getTime());
 }
 
 // ============================================================================
@@ -196,6 +206,66 @@ export async function getSessionMatchSportId(sessionMatchId: string): Promise<st
   return row?.sessions?.seasons?.leagues?.sport_id ?? null;
 }
 
+/**
+ * Re-run the suggestion engine for a pairing's auto-posted card and rewrite it
+ * in place. Called after a player edits their availability from the round chat,
+ * so widening your hours immediately turns "no shared times" into real options.
+ *
+ * Votes follow their time slot (re-anchored on option_key); a voted option the
+ * engine no longer returns is kept and flagged stale rather than dropped. Cards
+ * that already produced a game are left alone. Returns the card's message id, or
+ * null when the pairing has no system card.
+ */
+export async function regenerateRoundChatSuggestions(
+  tournamentMatchId: string,
+  actorId: string
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc('lt_regenerate_system_organizer_card', {
+    p_tournament_match_id: tournamentMatchId,
+    p_actor_id: actorId,
+  });
+
+  if (error) {
+    console.error('Error regenerating organizer card:', error);
+    throw error;
+  }
+
+  return (data as string | null) ?? null;
+}
+
+/**
+ * Propose your own time (and optionally a place) on a card. This is the
+ * degradation floor: when the engine has nothing to offer because two players
+ * share no free hours, or neither has a facility the app knows, a participant
+ * can still put a slot on the card and the normal vote/create flow takes over.
+ *
+ * Proposing counts as agreeing, so the proposer is voted onto it. Proposing a
+ * slot that already exists on the card just records the vote. Returns the
+ * option's index.
+ */
+export async function addCustomOrganizerOption(params: {
+  messageId: string;
+  /** ISO instant of the proposed start. */
+  slotStart: string;
+  facilityId?: string | null;
+  /** Free-text place, used when no facility is picked. Both may be omitted. */
+  placeName?: string | null;
+}): Promise<number> {
+  const { data, error } = await supabase.rpc('match_organizer_add_custom_option', {
+    p_message_id: params.messageId,
+    p_slot_start: params.slotStart,
+    ...(params.facilityId ? { p_facility_id: params.facilityId } : {}),
+    ...(params.placeName ? { p_place_name: params.placeName } : {}),
+  });
+
+  if (error) {
+    console.error('Error proposing a custom organizer option:', error);
+    throw error;
+  }
+
+  return data as number;
+}
+
 // ============================================================================
 // CARD POSTING
 // ============================================================================
@@ -222,6 +292,7 @@ export async function postMatchOrganizerCard(params: {
     format: params.format,
     participant_ids: Array.from(new Set(params.participantIds)),
     organizer_id: params.organizerId,
+    posted_by: 'player',
     options: params.options,
     created_match_id: null,
     confirmed_option_index: null,
@@ -347,6 +418,8 @@ export async function createCasualMatch(params: {
   durationMinutes?: number;
   sourceMessageId?: string;
   optionIndex?: number;
+  /** Free-text place from a custom option (ignored when a facility is chosen). */
+  locationName?: string | null;
 }): Promise<string> {
   const { data, error } = await supabase.rpc('create_casual_match', {
     p_sport_id: params.sportId,
@@ -357,6 +430,7 @@ export async function createCasualMatch(params: {
     ...(params.facilityId ? { p_facility_id: params.facilityId } : {}),
     ...(params.sourceMessageId ? { p_source_message_id: params.sourceMessageId } : {}),
     ...(params.optionIndex != null ? { p_option_index: params.optionIndex } : {}),
+    ...(params.locationName ? { p_location_name: params.locationName } : {}),
   });
 
   if (error) {

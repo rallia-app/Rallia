@@ -20,6 +20,24 @@
 
 BEGIN;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 -- --------------------------------------------------------------------------
 -- 1. Full happy path: create → register → close → bracket → override → done
 -- --------------------------------------------------------------------------
@@ -53,6 +71,7 @@ BEGIN
     -- Act as the organizer.
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
 
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Audit Cup', p_sport_id => v_sport,
         p_max_participants => 8::smallint,
@@ -60,6 +79,7 @@ BEGIN
         p_end_date   => now() + interval '8 days',
         p_visibility => 'public', p_registration_mode => 'open'
     );
+    PERFORM pg_temp.staff_off(v_org);
     v_tid := v_t.id; v_ver := v_t.version;
     ASSERT v_t.status = 'draft', 'expected draft, got ' || v_t.status;
 
@@ -149,12 +169,14 @@ BEGIN
       WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id) ORDER BY player_id LIMIT 1;
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
 
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Lock Test', p_sport_id => v_sport,
         p_max_participants => 4::smallint,
         p_start_date => now() + interval '7 days',
         p_end_date   => now() + interval '8 days'
     );
+    PERFORM pg_temp.staff_off(v_org);
 
     BEGIN
         -- version is 1; pass a stale value.
@@ -182,6 +204,7 @@ BEGIN
       WHERE sport_id = v_sport AND is_active = true AND NOT public.is_admin(player_id) ORDER BY player_id LIMIT 1;
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
 
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Doubles Cup', p_sport_id => v_sport,
         p_max_participants => 8::smallint,
@@ -189,6 +212,7 @@ BEGIN
         p_end_date   => now() + interval '8 days',
         p_entry_format => 'doubles'
     );
+    PERFORM pg_temp.staff_off(v_org);
     ASSERT v_t.entry_format = 'doubles', 'expected doubles entry_format';
 
     RAISE NOTICE 'PASS 3: doubles tournament accepted at creation';
@@ -216,6 +240,7 @@ BEGIN
     v_org := v_players[1];
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Capacity Cup', p_sport_id => v_sport,
         p_max_participants => 4::smallint,
@@ -223,6 +248,7 @@ BEGIN
         p_end_date   => now() + interval '8 days',
         p_registration_mode => 'open'
     );
+    PERFORM pg_temp.staff_off(v_org);
     PERFORM tournament_open_registration(v_t.id, v_t.version);
 
     -- Fill all 4 slots with players 2..5.
@@ -264,6 +290,7 @@ BEGIN
       ORDER BY player_id LIMIT 1;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Private RLS', p_sport_id => v_sport,
         p_max_participants => 4::smallint,
@@ -271,6 +298,7 @@ BEGIN
         p_end_date   => now() + interval '8 days',
         p_visibility => 'private'
     );
+    PERFORM pg_temp.staff_off(v_org);
 
     -- Enforce RLS from here on.
     PERFORM set_config('role', 'authenticated', true);

@@ -87,8 +87,8 @@ export const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({
 
   // Match Chat List tabs color scheme
   const themeColors = {
-    containerBackground: isDark ? '#1C1C1E' : '#F2F2F7',
-    activeBackground: colors.cardBackground || (isDark ? neutral[800] : '#FFFFFF'),
+    containerBackground: colors.segmentTrack ?? (isDark ? neutral[800] : neutral[100]),
+    activeBackground: colors.segmentActive ?? (isDark ? neutral[700] : '#FFFFFF'),
     text: colors.textMuted || (isDark ? neutral[400] : neutral[500]),
     activeText: colors.primary || primary[500],
   };

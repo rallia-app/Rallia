@@ -253,48 +253,56 @@ export type {
 // LEGACY COMPATIBILITY
 // ============================================================================
 
+import {
+  primary as primaryScale,
+  secondary as secondaryScale,
+  neutral as neutralScale,
+  status as statusColors,
+} from './tokens/colors';
+
 /**
  * @deprecated Use individual exports instead
- * Legacy COLORS export for backwards compatibility with shared-constants
+ * Legacy COLORS export for backwards compatibility with shared-constants.
+ * Values derive from the token scales so legacy call sites follow theme v2.
  */
 export const COLORS = {
   // Primary colors
-  primary: '#14b8a6',
-  primaryLight: '#ccfbf1',
-  primaryDark: '#0f766e',
+  primary: primaryScale[600],
+  primaryLight: primaryScale[100],
+  primaryDark: primaryScale[700],
 
   // Accent colors (using secondary as accent for legacy compat)
-  accent: '#ed6a6d',
-  accentLight: '#f4a6a7',
-  accentLighter: '#fbe1e2',
+  accent: secondaryScale[500],
+  accentLight: secondaryScale[300],
+  accentLighter: secondaryScale[100],
 
   // Neutral colors
   white: '#ffffff',
   black: '#000000',
-  dark: '#171717',
-  darkGray: '#525252',
-  gray: '#737373',
-  lightGray: '#e5e5e5',
-  veryLightGray: '#f5f5f5',
+  dark: neutralScale[900],
+  darkGray: neutralScale[600],
+  gray: neutralScale[500],
+  lightGray: neutralScale[200],
+  veryLightGray: neutralScale[100],
 
   // Background colors
   background: '#ffffff',
-  backgroundLight: '#f0fdfa',
-  backgroundGray: '#f5f5f5',
+  backgroundLight: primaryScale[50],
+  backgroundGray: neutralScale[100],
 
   // Overlay colors
-  overlayDark: '#262626',
+  overlayDark: neutralScale[800],
   overlayBackdrop: 'rgba(0, 0, 0, 0.5)',
 
   // Button colors
-  buttonPrimary: '#ed6a6d',
-  buttonDisabled: '#d4d4d4',
+  buttonPrimary: secondaryScale[500],
+  buttonDisabled: neutralScale[300],
 
   // Status colors
-  success: '#059669',
-  error: '#ef4444',
-  warning: '#f59e0b',
-  info: '#0ea5e9',
+  success: statusColors.success.DEFAULT,
+  error: statusColors.error.DEFAULT,
+  warning: statusColors.warning.DEFAULT,
+  info: statusColors.info.DEFAULT,
 } as const;
 
 /**

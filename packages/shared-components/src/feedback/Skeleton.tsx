@@ -6,7 +6,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, ViewStyle, Easing, DimensionValue } from 'react-native';
 
-import { typography } from '../theme';
+import { typography, spacing } from '../theme';
 
 export interface SkeletonProps {
   /**
@@ -496,7 +496,7 @@ export interface SkeletonMyMatchCardProps {
 }
 
 /**
- * Compact match card skeleton matching the MyMatchCard layout (160px wide):
+ * Compact match card skeleton matching the MyMatchCard layout (240px wide):
  * day label, time, location row, player avatars.
  */
 export function SkeletonMyMatchCard({
@@ -604,6 +604,8 @@ export function SkeletonPlayerCard({
 }
 
 export interface SkeletonConversationProps {
+  /** Row position, used to vary bar widths so the list looks organic */
+  index?: number;
   /** Custom style */
   style?: ViewStyle;
   /** Theme colors */
@@ -611,40 +613,158 @@ export interface SkeletonConversationProps {
   highlightColor?: string;
 }
 
+// Deterministic width variation so rows read as real conversations, not a grid.
+const CONVERSATION_NAME_WIDTHS = ['46%', '58%', '38%', '52%', '64%', '42%'];
+const CONVERSATION_PREVIEW_WIDTHS = ['72%', '54%', '84%', '62%', '44%', '76%'];
+const CONVERSATION_TIME_WIDTHS = [36, 48, 40, 32, 44, 38];
+
 /**
- * Conversation list item skeleton for chat
+ * Conversation list item skeleton for chat.
+ * Mirrors ConversationItem 1:1 (50px avatar, name/time top row, preview line)
+ * so the list doesn't shift when real conversations load in.
  */
 export function SkeletonConversation({
+  index = 0,
   style,
   backgroundColor,
   highlightColor,
 }: SkeletonConversationProps) {
+  const nameWidth = CONVERSATION_NAME_WIDTHS[index % CONVERSATION_NAME_WIDTHS.length];
+  const previewWidth = CONVERSATION_PREVIEW_WIDTHS[index % CONVERSATION_PREVIEW_WIDTHS.length];
+  const timeWidth = CONVERSATION_TIME_WIDTHS[index % CONVERSATION_TIME_WIDTHS.length];
   return (
     <View style={[styles.conversation, style]}>
       <SkeletonAvatar size={50} backgroundColor={backgroundColor} highlightColor={highlightColor} />
       <View style={styles.conversationContent}>
         <View style={styles.conversationHeader}>
-          <Skeleton
-            width="40%"
-            height={16}
-            backgroundColor={backgroundColor}
-            highlightColor={highlightColor}
-          />
-          <Skeleton
-            width={40}
-            height={12}
+          <View style={styles.conversationName}>
+            <SkeletonTextLine
+              size="base"
+              width={nameWidth}
+              backgroundColor={backgroundColor}
+              highlightColor={highlightColor}
+            />
+          </View>
+          <SkeletonTextLine
+            size="sm"
+            width={timeWidth}
             backgroundColor={backgroundColor}
             highlightColor={highlightColor}
           />
         </View>
-        <Skeleton
-          width="70%"
-          height={14}
+        <View style={styles.conversationPreviewRow}>
+          <SkeletonTextLine
+            size="sm"
+            width={previewWidth}
+            backgroundColor={backgroundColor}
+            highlightColor={highlightColor}
+          />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+export interface SkeletonMessageBubbleProps {
+  /** Right-aligned own message (no avatar, mirrored layout) */
+  isOwn?: boolean;
+  /** Incoming only: render the 32px avatar (first bubble of a group); false keeps the aligned spacer */
+  showAvatar?: boolean;
+  /** Bubble width (number or percentage of the row) */
+  width?: number | string;
+  /** How many text lines the bubble stands in for (drives bubble height) */
+  lines?: number;
+  /** Custom style applied to the row */
+  style?: ViewStyle;
+  /** Theme colors */
+  backgroundColor?: string;
+  highlightColor?: string;
+}
+
+/**
+ * One chat message bubble skeleton. Mirrors MessageBubble's row metrics:
+ * 32px avatar (or matching spacer for grouped bubbles), 16px bubble radius,
+ * height derived from the real line height + padding + timestamp row.
+ */
+export function SkeletonMessageBubble({
+  isOwn = false,
+  showAvatar = false,
+  width = '55%',
+  lines = 1,
+  style,
+  backgroundColor,
+  highlightColor,
+}: SkeletonMessageBubbleProps) {
+  // 22px per text line + vertical padding + timestamp row, as in MessageBubble.
+  const bubbleHeight = lines * 22 + 36;
+  return (
+    <View style={[styles.messageRow, isOwn && styles.messageRowOwn, style]}>
+      {!isOwn &&
+        (showAvatar ? (
+          <SkeletonAvatar
+            size={32}
+            backgroundColor={backgroundColor}
+            highlightColor={highlightColor}
+            style={styles.messageAvatar}
+          />
+        ) : (
+          <View style={styles.messageAvatarSpacer} />
+        ))}
+      <Skeleton
+        width={width}
+        height={bubbleHeight}
+        borderRadius={16}
+        backgroundColor={backgroundColor}
+        highlightColor={highlightColor}
+      />
+    </View>
+  );
+}
+
+export interface SkeletonChatMessagesProps {
+  /** Custom style applied to the container */
+  style?: ViewStyle;
+  /** Theme colors */
+  backgroundColor?: string;
+  highlightColor?: string;
+}
+
+// A realistic exchange: grouped incoming bubbles (avatar on the first of each
+// group) alternating with own replies, varied widths and line counts.
+const CHAT_MESSAGE_PATTERN = [
+  { isOwn: false, showAvatar: true, width: '58%', lines: 2, groupStart: true },
+  { isOwn: true, showAvatar: false, width: '46%', lines: 1, groupStart: true },
+  { isOwn: false, showAvatar: true, width: '64%', lines: 2, groupStart: true },
+  { isOwn: true, showAvatar: false, width: '38%', lines: 1, groupStart: true },
+];
+
+/**
+ * Full conversation-thread skeleton. Bottom-anchored like a real chat (newest
+ * at the bottom), with older bubbles fading out toward the top.
+ */
+export function SkeletonChatMessages({
+  style,
+  backgroundColor,
+  highlightColor,
+}: SkeletonChatMessagesProps) {
+  const count = CHAT_MESSAGE_PATTERN.length;
+  return (
+    <View style={[styles.chatMessages, style]}>
+      {CHAT_MESSAGE_PATTERN.map((message, index) => (
+        <SkeletonMessageBubble
+          key={index}
+          isOwn={message.isOwn}
+          showAvatar={message.showAvatar}
+          width={message.width}
+          lines={message.lines}
           backgroundColor={backgroundColor}
           highlightColor={highlightColor}
-          style={{ marginTop: 6 }}
+          style={{
+            opacity: 0.35 + (0.65 * (index + 1)) / count,
+            marginTop: message.groupStart ? spacing[3] : 0,
+          }}
         />
-      </View>
+      ))}
     </View>
   );
 }
@@ -691,7 +811,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   myMatchCard: {
-    width: 200,
+    // Matches MyMatchCard's CARD_WIDTH so the carousel doesn't shift on load.
+    width: 240,
     padding: 16,
     borderRadius: 12,
   },
@@ -714,16 +835,47 @@ const styles = StyleSheet.create({
   conversation: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
   },
   conversationContent: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: spacing[3],
   },
   conversationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 2,
+  },
+  conversationName: {
+    flex: 1,
+    marginRight: spacing[2],
+  },
+  conversationPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  messageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[1],
+  },
+  messageRowOwn: {
+    flexDirection: 'row-reverse',
+  },
+  messageAvatar: {
+    marginRight: spacing[2],
+    marginTop: spacing[1],
+  },
+  messageAvatarSpacer: {
+    width: 32 + spacing[2],
+  },
+  chatMessages: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingBottom: spacing[2],
   },
 });
 

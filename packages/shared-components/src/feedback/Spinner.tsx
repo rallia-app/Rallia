@@ -3,7 +3,7 @@ import { ActivityIndicator, View, StyleSheet, ViewStyle } from 'react-native';
 import { primary } from '@rallia/design-system';
 
 // Default spinner color - teal primary that is visible on both light and dark backgrounds
-const DEFAULT_SPINNER_COLOR = primary[500]; // #14b8a6
+const DEFAULT_SPINNER_COLOR = primary[500];
 
 export interface SpinnerProps {
   /**

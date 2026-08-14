@@ -15,6 +15,24 @@
 
 BEGIN;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 -- --------------------------------------------------------------------------
 -- 1. Full 8-entry bracket (no byes) → regional tier + zero-win floor.
 --    The four round-1 losers won zero real matches, so they must land on
@@ -48,6 +66,7 @@ BEGIN
     UPDATE player SET is_certified_organizer = true WHERE id = v_org;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Ranking Cup 8', p_sport_id => v_sport,
         p_max_participants => 8::smallint,
@@ -55,6 +74,7 @@ BEGIN
         p_end_date   => now() + interval '8 days',
         p_visibility => 'public', p_registration_mode => 'open'
     );
+    PERFORM pg_temp.staff_off(v_org);
     v_tid := v_t.id; v_ver := v_t.version;
 
     SELECT * INTO v_t FROM tournament_open_registration(v_tid, v_ver);
@@ -198,6 +218,7 @@ BEGIN
     UPDATE player SET is_certified_organizer = true WHERE id = v_org;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Ranking Cup 4', p_sport_id => v_sport,
         p_max_participants => 4::smallint,
@@ -205,6 +226,7 @@ BEGIN
         p_end_date   => now() + interval '8 days',
         p_visibility => 'public', p_registration_mode => 'open'
     );
+    PERFORM pg_temp.staff_off(v_org);
     v_tid := v_t.id; v_ver := v_t.version;
     SELECT * INTO v_t FROM tournament_open_registration(v_tid, v_ver);
     v_ver := v_t.version;
@@ -297,6 +319,7 @@ BEGIN
     UPDATE player SET is_certified_organizer = true WHERE id = v_org;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Ranking Doubles 8', p_sport_id => v_sport,
         p_max_participants => 8::smallint,
@@ -305,6 +328,7 @@ BEGIN
         p_visibility => 'public', p_registration_mode => 'open',
         p_entry_format => 'doubles'
     );
+    PERFORM pg_temp.staff_off(v_org);
     v_tid := v_t.id; v_ver := v_t.version;
     ASSERT v_t.entry_format = 'doubles', 'expected doubles tournament';
 
@@ -652,6 +676,7 @@ BEGIN
     UPDATE player SET is_certified_organizer = false WHERE id = v_org;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Ranking Gate 4', p_sport_id => v_sport,
         p_max_participants => 4::smallint,
@@ -659,6 +684,7 @@ BEGIN
         p_end_date   => now() + interval '8 days',
         p_visibility => 'public', p_registration_mode => 'open'
     );
+    PERFORM pg_temp.staff_off(v_org);
     v_tid := v_t.id; v_ver := v_t.version;
     SELECT * INTO v_t FROM tournament_open_registration(v_tid, v_ver);
     v_ver := v_t.version;
@@ -855,6 +881,7 @@ BEGIN
     UPDATE player SET is_certified_organizer = true WHERE id = v_org;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Ranking Cup 32 sparse', p_sport_id => v_sport,
         p_max_participants => 32::smallint,
@@ -862,6 +889,7 @@ BEGIN
         p_end_date   => now() + interval '8 days',
         p_visibility => 'public', p_registration_mode => 'open'
     );
+    PERFORM pg_temp.staff_off(v_org);
     v_tid := v_t.id; v_ver := v_t.version;
     SELECT * INTO v_t FROM tournament_open_registration(v_tid, v_ver);
     v_ver := v_t.version;
@@ -968,6 +996,7 @@ BEGIN
     UPDATE player SET is_certified_organizer = true WHERE id = v_org;
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM pg_temp.staff_on(v_org);
     SELECT * INTO v_t FROM tournament_create(
         p_name => 'Ranking Cup walkover', p_sport_id => v_sport,
         p_max_participants => 4::smallint,
@@ -975,6 +1004,7 @@ BEGIN
         p_end_date   => now() + interval '8 days',
         p_visibility => 'public', p_registration_mode => 'open'
     );
+    PERFORM pg_temp.staff_off(v_org);
     v_tid := v_t.id; v_ver := v_t.version;
     SELECT * INTO v_t FROM tournament_open_registration(v_tid, v_ver);
     v_ver := v_t.version;

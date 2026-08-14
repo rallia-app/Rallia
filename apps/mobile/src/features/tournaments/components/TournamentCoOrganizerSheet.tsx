@@ -11,7 +11,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, EmptyState, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   lightHaptic,
@@ -217,12 +217,11 @@ export function TournamentCoOrganizerActionSheet({
             <ActivityIndicator color={colors.primary} />
           </View>
         ) : players.length === 0 ? (
-          <View style={styles.stateContainer}>
-            <Ionicons name="people-outline" size={32} color={colors.textMuted} />
-            <Text size="sm" color={colors.textMuted} style={styles.emptyText}>
-              {t('tournamentDetail.coOrganizers.noResults')}
-            </Text>
-          </View>
+          <EmptyState
+            variant="sheet"
+            icon={<Ionicons name="people-outline" size={36} color={colors.primary} />}
+            title={t('tournamentDetail.coOrganizers.noResults')}
+          />
         ) : (
           <FlatList
             data={players as PickerRow[]}
@@ -274,5 +273,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[6],
     gap: spacingPixels[2],
   },
-  emptyText: { textAlign: 'center' },
 });

@@ -14,7 +14,7 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, EmptyState, useToast } from '@rallia/shared-components';
 import {
   spacingPixels,
   radiusPixels,
@@ -127,7 +127,7 @@ export function TournamentLinkMatchActionSheet({ payload }: SheetProps<'tourname
         match={item}
         profiles={profiles}
         onPick={() => handlePick(item.id)}
-        disabled={attach.isPending}
+        busy={attach.isPending}
         colors={colors}
         isDark={isDark}
         locale={locale}
@@ -149,19 +149,16 @@ export function TournamentLinkMatchActionSheet({ payload }: SheetProps<'tourname
           <ActivityIndicator color={colors.primary} />
         </View>
       ) : matches.length === 0 ? (
-        <View style={styles.stateContainer}>
-          <Ionicons name="search-outline" size={36} color={colors.textMuted} />
-          <Text size="base" weight="semibold" color={colors.text} style={styles.emptyTitle}>
-            {t('tournamentDetail.linkPicker.empty')}
-          </Text>
-          <Text size="sm" color={colors.textMuted} style={styles.emptyHint}>
-            {t(
-              entryFormat === 'singles'
-                ? 'tournamentDetail.linkPicker.emptyHint'
-                : 'tournamentDetail.linkPicker.emptyHintDoubles'
-            )}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="search-outline" size={36} color={colors.primary} />}
+          title={t('tournamentDetail.linkPicker.empty')}
+          description={t(
+            entryFormat === 'singles'
+              ? 'tournamentDetail.linkPicker.emptyHint'
+              : 'tournamentDetail.linkPicker.emptyHintDoubles'
+          )}
+        />
       ) : (
         <FlatList
           data={matches}
@@ -355,12 +352,13 @@ const LinkableMatchCard: React.FC<{
   match: LinkableMatch;
   profiles?: Record<string, PlayerProfile>;
   onPick: () => void;
-  disabled?: boolean;
+  /** An attach is in flight — every card is inert until it settles. */
+  busy?: boolean;
   colors: ThemeColors;
   isDark: boolean;
   locale: string;
   t: (k: TranslationKey) => string;
-}> = ({ match, profiles, onPick, disabled, colors, isDark, locale, t }) => {
+}> = ({ match, profiles, onPick, busy, colors, isDark, locale, t }) => {
   const dateLabel = useMemo(
     () =>
       new Date(match.match_date).toLocaleDateString(locale, {
@@ -372,10 +370,25 @@ const LinkableMatchCard: React.FC<{
   );
   const timeLabel = match.start_time.slice(0, 5);
 
+  // A game the players have not finished reporting is shown anyway, so they
+  // recognize it and learn what unblocks it, but it cannot be picked.
+  const isReady = match.state === 'ready';
+  const blockedHint = isReady
+    ? null
+    : t(
+        match.state === 'awaiting_score'
+          ? 'tournamentDetail.linkPicker.blocked.awaitingScore'
+          : 'tournamentDetail.linkPicker.blocked.awaitingConfirmation'
+      );
+
   const accentColor = isDark ? primary[400] : primary[500];
   const trophyColor = isDark ? accent[400] : accent[500];
-  const cardBg = isDark ? primary[950] : primary[50];
-  const borderColor = isDark ? `${primary[400]}40` : `${primary[500]}20`;
+  const cardBg = isReady ? (isDark ? primary[950] : primary[50]) : colors.cardBackground;
+  const borderColor = isReady
+    ? isDark
+      ? `${primary[400]}40`
+      : `${primary[500]}20`
+    : colors.border;
 
   const side1 = match.team1_user_ids.map(id => profiles?.[id]);
   const side2 = match.team2_user_ids.map(id => profiles?.[id]);
@@ -383,14 +396,12 @@ const LinkableMatchCard: React.FC<{
   return (
     <TouchableOpacity
       onPress={onPick}
-      disabled={disabled}
+      disabled={busy || !isReady}
       activeOpacity={0.85}
       accessibilityRole="button"
-      style={[
-        styles.card,
-        { backgroundColor: cardBg, borderColor },
-        disabled && styles.cardDisabled,
-      ]}
+      accessibilityState={{ disabled: !isReady }}
+      style={[styles.card, { backgroundColor: cardBg, borderColor }, busy && styles.cardDisabled]}
+      testID={`linkable-match-${match.state}`}
     >
       {/* Date / time + verified */}
       <View style={styles.topRow}>
@@ -418,7 +429,18 @@ const LinkableMatchCard: React.FC<{
               {t('common.verified')}
             </Text>
           </View>
-        ) : null}
+        ) : (
+          <View style={[styles.verifiedChip, { backgroundColor: colors.inputBackground }]}>
+            <Ionicons name="time-outline" size={11} color={colors.textMuted} />
+            <Text size="xs" weight="semibold" color={colors.textMuted}>
+              {t(
+                match.state === 'awaiting_score'
+                  ? 'tournamentDetail.linkPicker.blocked.noScoreChip'
+                  : 'tournamentDetail.linkPicker.blocked.unconfirmedChip'
+              )}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Side — score — side */}
@@ -443,13 +465,22 @@ const LinkableMatchCard: React.FC<{
       {/* Per-set breakdown */}
       {match.sets.length > 0 ? <SetPills sets={match.sets} isDark={isDark} /> : null}
 
-      {/* Link affordance (whole card is tappable) */}
-      <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        <Text size="sm" weight="bold" color={colors.primary}>
-          {t('tournamentDetail.linkPicker.linkCta')}
-        </Text>
-        <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-      </View>
+      {/* Link affordance (whole card is tappable), or what is still missing */}
+      {blockedHint ? (
+        <View style={[styles.blockedFooter, { borderTopColor: colors.border }]}>
+          <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
+          <Text size="xs" color={colors.textMuted} style={styles.blockedHint}>
+            {blockedHint}
+          </Text>
+        </View>
+      ) : (
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <Text size="sm" weight="bold" color={colors.primary}>
+            {t('tournamentDetail.linkPicker.linkCta')}
+          </Text>
+          <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -590,6 +621,16 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[3],
     borderTopWidth: StyleSheet.hairlineWidth,
   },
+  blockedFooter: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacingPixels[1.5],
+    paddingTop: spacingPixels[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  blockedHint: {
+    flex: 1,
+  },
   stateContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -597,13 +638,6 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[8],
     gap: spacingPixels[2],
-  },
-  emptyTitle: {
-    marginTop: spacingPixels[3],
-    textAlign: 'center',
-  },
-  emptyHint: {
-    textAlign: 'center',
   },
 });
 

@@ -486,6 +486,10 @@ verify_jwt = false
 [functions.flag-rating-proof]
 verify_jwt = false
 
+# Client-invoked (app sends the user's JWT, validated via auth.getUser()).
+[functions.verify-phone]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

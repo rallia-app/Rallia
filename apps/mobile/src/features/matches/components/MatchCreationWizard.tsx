@@ -25,7 +25,13 @@ import Animated, {
 import { SheetManager } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as Localization from 'expo-localization';
-import { Text, useToast } from '@rallia/shared-components';
+import {
+  Text,
+  useToast,
+  WizardHeader,
+  WizardProgressBar,
+  WizardFooter,
+} from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -57,7 +63,7 @@ import { shareMatch } from '#/utils';
 import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { ConfirmationModal } from '#/components/ConfirmationModal';
 import * as Analytics from '#/services/analytics';
-import { useSport, type MatchDetailData } from '#/context';
+import { useSport, type MatchDetailData, type MatchCreationPrefill } from '#/context';
 
 import { WhenFormatStep } from './steps/WhenFormatStep';
 import { WhereStep } from './steps/WhereStep';
@@ -66,6 +72,13 @@ import { PlayerInviteStep } from './PlayerInviteStep';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOTAL_STEPS = 3;
+
+/** Progress-bar captions, in step order (Where → When → Preferences). */
+const STEP_NAME_KEYS = [
+  'matchCreation.stepNames.where',
+  'matchCreation.stepNames.when',
+  'matchCreation.stepNames.preferences',
+] as TranslationKey[];
 
 // =============================================================================
 // TYPES
@@ -94,6 +107,10 @@ interface MatchCreationWizardProps {
   initialBookingForWizard?: InitialBookingForWizard | null;
   /** Called after applying initialBookingForWizard so context can clear it */
   onConsumeInitialBooking?: () => void;
+  /** When set, wizard pre-fills fields from a previous match (e.g. post-feedback "Play again") */
+  matchCreationPrefill?: MatchCreationPrefill | null;
+  /** Called after applying matchCreationPrefill so context can clear it */
+  onConsumePrefill?: () => void;
 }
 
 interface ThemeColors {
@@ -109,150 +126,6 @@ interface ThemeColors {
   progressActive: string;
   progressInactive: string;
 }
-
-// =============================================================================
-// PROGRESS BAR COMPONENT
-// =============================================================================
-
-interface ProgressBarProps {
-  currentStep: number;
-  totalSteps: number;
-  colors: ThemeColors;
-  t: (key: TranslationKey) => string;
-}
-
-const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, totalSteps, colors, t }) => {
-  const progress = useSharedValue((currentStep / totalSteps) * 100);
-
-  // Animate progress when step changes
-  useEffect(() => {
-    progress.value = withTiming((currentStep / totalSteps) * 100, {
-      duration: 300,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, totalSteps]);
-
-  const animatedProgressStyle = useAnimatedStyle(() => ({
-    width: `${progress.value}%`,
-  }));
-
-  // Get step name for current step (order: Where -> When -> Preferences)
-  const stepNames = [
-    t('matchCreation.stepNames.where'),
-    t('matchCreation.stepNames.when'),
-    t('matchCreation.stepNames.preferences'),
-  ];
-  const currentStepName = stepNames[currentStep - 1] || '';
-
-  return (
-    <View style={styles.progressContainer}>
-      <View style={styles.progressHeader}>
-        <Text size="sm" weight="semibold" color={colors.textMuted}>
-          {t('matchCreation.step')
-            .replace('{current}', String(currentStep))
-            .replace('{total}', String(totalSteps))}
-        </Text>
-        <Text size="sm" weight="bold" color={colors.progressActive}>
-          {currentStepName}
-        </Text>
-      </View>
-      <View style={[styles.progressBarBg, { backgroundColor: colors.progressInactive }]}>
-        <Animated.View
-          style={[
-            styles.progressBarFill,
-            { backgroundColor: colors.progressActive },
-            animatedProgressStyle,
-          ]}
-        />
-      </View>
-    </View>
-  );
-};
-
-// =============================================================================
-// WIZARD HEADER COMPONENT
-// =============================================================================
-
-interface WizardHeaderProps {
-  currentStep: number;
-  onBack: () => void;
-  onBackToLanding: () => void;
-  onClose: () => void;
-  sportName: string;
-  sportKey?: string;
-  colors: ThemeColors;
-  t: (key: TranslationKey) => string;
-}
-
-const WizardHeader: React.FC<WizardHeaderProps> = ({
-  currentStep,
-  onBack,
-  onBackToLanding,
-  onClose,
-  sportName,
-  sportKey,
-  colors,
-  t,
-}) => {
-  return (
-    <View style={[styles.header, { borderBottomColor: colors.border }]}>
-      {/* Back button (visible on all steps) */}
-      <View style={styles.headerLeft}>
-        {currentStep === 1 ? (
-          <TouchableOpacity
-            onPress={() => {
-              Keyboard.dismiss();
-              lightHaptic();
-              onBackToLanding();
-            }}
-            style={styles.headerButton}
-            accessibilityLabel="Back to actions"
-            accessibilityRole="button"
-          >
-            <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            onPress={() => {
-              Keyboard.dismiss();
-              lightHaptic();
-              onBack();
-            }}
-            style={styles.headerButton}
-            accessibilityLabel={t('matchCreation.accessibility.previousStep')}
-            accessibilityRole="button"
-          >
-            <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Sport badge */}
-      <View style={[styles.sportBadge, { backgroundColor: colors.buttonActive }]}>
-        <SportIcon sportName={sportKey ?? 'tennis'} size={14} color={BASE_WHITE} />
-        <Text size="sm" weight="semibold" color={BASE_WHITE}>
-          {sportName}
-        </Text>
-      </View>
-
-      {/* Close button */}
-      <View style={styles.headerRight}>
-        <TouchableOpacity
-          onPress={() => {
-            Keyboard.dismiss();
-            lightHaptic();
-            onClose();
-          }}
-          style={styles.headerButton}
-          accessibilityLabel={t('matchCreation.accessibility.closeWizard')}
-          accessibilityRole="button"
-        >
-          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
 
 // =============================================================================
 // MAIN WIZARD COMPONENT
@@ -282,6 +155,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   editMatch,
   initialBookingForWizard,
   onConsumeInitialBooking,
+  matchCreationPrefill,
+  onConsumePrefill,
 }) => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
@@ -576,10 +451,41 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     formatDateLocal,
   ]);
 
+  // Apply a "play again" style prefill (post-feedback rematch). Unlike the
+  // booking prefill, nothing is locked and the user starts at step 1.
+  const hasAppliedPrefill = useRef(false);
+  useEffect(() => {
+    if (!matchCreationPrefill || hasAppliedPrefill.current || isEditMode) {
+      return;
+    }
+    const p = matchCreationPrefill;
+    form.setValue('locationType', p.locationType, { shouldDirty: true });
+    if (p.facilityId) form.setValue('facilityId', p.facilityId, { shouldDirty: true });
+    if (p.locationName) form.setValue('locationName', p.locationName, { shouldDirty: true });
+    if (p.locationAddress) {
+      form.setValue('locationAddress', p.locationAddress, { shouldDirty: true });
+    }
+    form.setValue('matchDate', p.matchDate, { shouldDirty: true });
+    form.setValue('startTime', p.startTime, { shouldDirty: true });
+    if (p.endTime) form.setValue('endTime', p.endTime, { shouldDirty: true });
+    if (p.timezone) form.setValue('timezone', p.timezone, { shouldDirty: true });
+    if (p.format) form.setValue('format', p.format, { shouldDirty: true });
+    if (p.playerExpectation) {
+      form.setValue('playerExpectation', p.playerExpectation, { shouldDirty: true });
+    }
+    if (p.duration) form.setValue('duration', p.duration as never, { shouldDirty: true });
+    if (p.customDurationMinutes != null) {
+      form.setValue('customDurationMinutes', p.customDurationMinutes, { shouldDirty: true });
+    }
+    hasAppliedPrefill.current = true;
+    onConsumePrefill?.();
+  }, [matchCreationPrefill, onConsumePrefill, isEditMode, form]);
+
   // Delayed success state for smoother UX
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMatchId, setSuccessMatchId] = useState<string | null>(null);
-  // Player invitation step (shown after success for new matches)
+  // Player invitation step (edit-mode success panel only; new matches render
+  // the invite list directly as their success screen)
   const [showInviteStep, setShowInviteStep] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
 
@@ -1118,7 +1024,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       // Fade in and scale up success view - snappy with no bounce
       successOpacity.value = withTiming(1, { duration: 250 });
       successScale.value = withTiming(1, { duration: 250 });
-      // Reset post-success position
+      // Reset post-success position (edit-mode panel)
       postSuccessTranslateX.value = 0;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1161,7 +1067,77 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     transform: [{ translateX: postSuccessTranslateX.value }],
   }));
 
-  // Success and Invite steps - horizontal slide animation between them
+  // New matches: the invite list IS the success screen. Secondary actions
+  // (share, Facebook, view game, create another) live inside it as chips, so
+  // there is no separate options panel to navigate to.
+  if (showSuccess && successMatchId && !isEditMode && selectedSport?.id && session?.user?.id) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+        <PlayerInviteStep
+          matchId={successMatchId}
+          sportId={selectedSport.id}
+          hostId={session.user.id}
+          successNote={t('matchCreation.invite.gameCreatedNote')}
+          secondaryActions={[
+            {
+              key: 'share',
+              label: t('matchDetail.inviteFriends'),
+              icon: 'share-social-outline',
+              onPress: handleShareSuccess,
+              tint: secondary[500],
+              loading: isSharing,
+            },
+            {
+              key: 'facebook',
+              label: t('matchCreation.shareToFacebook.button'),
+              icon: 'logo-facebook',
+              tint: '#1877F2',
+              onPress: () => {
+                Analytics.matchCreationSuccessAction({
+                  match_id: successMatchId,
+                  action: 'share_facebook',
+                  is_edit_mode: false,
+                });
+                SheetManager.show('share-to-facebook', {
+                  payload: { matchId: successMatchId },
+                });
+              },
+            },
+            {
+              key: 'create_another',
+              label: t('matchCreation.createAnother'),
+              icon: 'add-circle-outline',
+              onPress: () => {
+                Analytics.matchCreationSuccessAction({
+                  match_id: successMatchId,
+                  action: 'create_another',
+                  is_edit_mode: false,
+                });
+                // Reset animations and state for the next creation
+                successOpacity.value = 0;
+                successScale.value = 0.8;
+                formOpacity.value = 1;
+                postSuccessTranslateX.value = 0;
+                setShowSuccess(false);
+                setSuccessMatchId(null);
+                setShowInviteStep(false);
+                resetForm();
+                setCurrentStep(1);
+                setHighestStepVisited(1);
+              },
+            },
+          ]}
+          onComplete={() => onSuccess?.(successMatchId)}
+          colors={{ ...colors, background: colors.cardBackground }}
+          t={t}
+          isDark={isDark}
+          showCloseButton
+        />
+      </View>
+    );
+  }
+
+  // Edit mode keeps the classic confirmation screen (no invite step).
   if (showSuccess && successMatchId) {
     return (
       <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
@@ -1351,29 +1327,6 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
               </View>
             </Animated.View>
           </View>
-
-          {/* Player Invite Step */}
-          <View style={[styles.postSuccessStep, { width: SCREEN_WIDTH }]}>
-            {selectedSport?.id && session?.user?.id && (
-              <PlayerInviteStep
-                matchId={successMatchId}
-                sportId={selectedSport.id}
-                hostId={session.user.id}
-                onComplete={() => {
-                  // Close invite step and go to match detail
-                  onSuccess?.(successMatchId);
-                }}
-                onBack={() => setShowInviteStep(false)}
-                colors={{
-                  ...colors,
-                  background: colors.cardBackground,
-                }}
-                t={t}
-                isDark={isDark}
-                showCloseButton
-              />
-            )}
-          </View>
         </Animated.View>
       </View>
     );
@@ -1383,18 +1336,29 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
     <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
       {/* Header */}
       <WizardHeader
-        currentStep={currentStep}
-        onBack={goToPrevStep}
-        onBackToLanding={onBackToLanding}
+        onBack={currentStep === 1 ? onBackToLanding : goToPrevStep}
         onClose={handleClose}
-        sportName={selectedSport?.display_name ?? 'Sport'}
-        sportKey={selectedSport?.name}
+        badgeIcon={
+          <SportIcon sportName={selectedSport?.name ?? 'tennis'} size={14} color={BASE_WHITE} />
+        }
+        badgeLabel={selectedSport?.display_name ?? 'Sport'}
         colors={colors}
-        t={t}
+        backAccessibilityLabel={
+          currentStep === 1 ? 'Back to actions' : t('matchCreation.accessibility.previousStep')
+        }
+        closeAccessibilityLabel={t('matchCreation.accessibility.closeWizard')}
       />
 
       {/* Progress bar */}
-      <ProgressBar currentStep={currentStep} totalSteps={TOTAL_STEPS} colors={colors} t={t} />
+      <WizardProgressBar
+        currentStep={currentStep}
+        totalSteps={TOTAL_STEPS}
+        counterLabel={t('matchCreation.step')
+          .replace('{current}', String(currentStep))
+          .replace('{total}', String(TOTAL_STEPS))}
+        stepLabel={t(STEP_NAME_KEYS[currentStep - 1])}
+        colors={colors}
+      />
 
       {/* Step content (button navigation only) */}
       <View style={styles.stepsViewport}>
@@ -1463,48 +1427,26 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
       </View>
 
       {/* Navigation buttons */}
-      <View
-        style={[styles.footer, { borderTopColor: colors.border, paddingBottom: spacingPixels[4] }]}
-      >
-        {currentStep < TOTAL_STEPS ? (
-          <TouchableOpacity
-            style={[styles.nextButton, { backgroundColor: colors.buttonActive }]}
-            onPress={goToNextStep}
-            accessibilityLabel={t('matchCreation.accessibility.nextStep')}
-            accessibilityRole="button"
-          >
-            <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
-              {t('matchCreation.next')}
-            </Text>
-            <Ionicons name="arrow-forward-outline" size={20} color={colors.buttonTextActive} />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[
-              styles.nextButton,
-              { backgroundColor: colors.buttonActive },
-              isSubmitting && styles.buttonDisabled,
-            ]}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-            accessibilityLabel={
-              isEditMode ? t('matchCreation.saveChanges') : t('matchCreation.createMatch')
-            }
-            accessibilityRole="button"
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color={colors.buttonTextActive} />
-            ) : (
-              <>
-                <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
-                  {isEditMode ? t('matchCreation.saveChanges') : t('matchCreation.createMatch')}
-                </Text>
-                <Ionicons name="checkmark-outline" size={20} color={colors.buttonTextActive} />
-              </>
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
+      {currentStep < TOTAL_STEPS ? (
+        <WizardFooter
+          label={t('matchCreation.next')}
+          onPress={goToNextStep}
+          trailingIcon="arrow"
+          colors={colors}
+          paddingBottom={spacingPixels[4]}
+          accessibilityLabel={t('matchCreation.accessibility.nextStep')}
+        />
+      ) : (
+        <WizardFooter
+          label={isEditMode ? t('matchCreation.saveChanges') : t('matchCreation.createMatch')}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+          isSubmitting={isSubmitting}
+          trailingIcon="check"
+          colors={colors}
+          paddingBottom={spacingPixels[4]}
+        />
+      )}
 
       {/* Confirm impactful changes */}
       <ConfirmationModal
@@ -1584,54 +1526,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'column',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    borderBottomWidth: 1,
-  },
-  headerLeft: {
-    width: 40,
-  },
-  headerRight: {
-    width: 40,
-    alignItems: 'flex-end',
-  },
-  headerButton: {
-    padding: spacingPixels[1],
-  },
-  headerButtonPlaceholder: {
-    width: 24,
-  },
-  sportBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
-    borderRadius: radiusPixels.full,
-    gap: spacingPixels[1.5],
-  },
-  progressContainer: {
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  progressBarBg: {
-    height: 4,
-    borderRadius: radiusPixels.full,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: radiusPixels.full,
-  },
   stepsViewport: {
     flex: 1,
     overflow: 'hidden',
@@ -1643,21 +1537,6 @@ const styles = StyleSheet.create({
   },
   stepWrapper: {
     height: '100%',
-  },
-  footer: {
-    padding: spacingPixels[4],
-    borderTopWidth: 1,
-  },
-  nextButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[2],
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
   postSuccessContainer: {
     flexDirection: 'row',

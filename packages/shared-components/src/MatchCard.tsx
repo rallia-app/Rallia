@@ -57,55 +57,55 @@ import { TranslationKey } from '@rallia/shared-translations';
  * - readyToPlay: secondary (coral/red) - court ready, energetic
  * - regular: primary (teal) - standard matches
  */
+// Theme v2: cards sit on plain surfaces (white / dark card) — the tinted
+// wash moved to the page ground. Tier hue follows the accent jobs: gold =
+// must-play (earned), teal = court booked (act), coral = coveted player
+// (people). accentStart/End keep the tier hue for the glow/bleed effects.
 const TIER_PALETTES = {
-  // Must-Play - accent gradient strip (richest shade), primary background
   mostWanted: {
     light: {
-      background: primary[50],
-      accentStart: accent[700],
-      accentEnd: accent[600],
-    },
-    dark: {
-      background: primary[950],
-      accentStart: accent[600],
-      accentEnd: accent[500],
-    },
-  },
-  // Ready to Play - accent gradient strip (medium shade), primary background
-  readyToPlay: {
-    light: {
-      background: primary[50],
+      background: base.white,
       accentStart: accent[600],
       accentEnd: accent[500],
     },
     dark: {
-      background: primary[950],
-      accentStart: accent[500],
-      accentEnd: accent[400],
-    },
-  },
-  // Top Player - accent gradient strip (lightest shade), primary background
-  topPlayer: {
-    light: {
-      background: primary[50],
-      accentStart: accent[500],
-      accentEnd: accent[400],
-    },
-    dark: {
-      background: primary[950],
+      background: neutral[900],
       accentStart: accent[400],
       accentEnd: accent[300],
     },
   },
-  // Regular - primary palette
+  readyToPlay: {
+    light: {
+      background: base.white,
+      accentStart: primary[600],
+      accentEnd: primary[500],
+    },
+    dark: {
+      background: neutral[900],
+      accentStart: primary[400],
+      accentEnd: primary[300],
+    },
+  },
+  topPlayer: {
+    light: {
+      background: base.white,
+      accentStart: secondary[600],
+      accentEnd: secondary[500],
+    },
+    dark: {
+      background: neutral[900],
+      accentStart: secondary[400],
+      accentEnd: secondary[300],
+    },
+  },
   regular: {
     light: {
-      background: primary[50],
+      background: base.white,
       accentStart: primary[500],
       accentEnd: primary[400],
     },
     dark: {
-      background: primary[950],
+      background: neutral[900],
       accentStart: primary[400],
       accentEnd: primary[300],
     },
@@ -759,8 +759,9 @@ const CardFooter: React.FC<CardFooterProps> = ({
     !playerHasCheckedIn &&
     locationAllowsCheckIn;
 
-  const ctaPositive = isDark ? primary[400] : primary[500];
-  const ctaDestructive = isDark ? secondary[400] : secondary[500];
+  // White CTA text in both modes, so the fills stay at the 500 step.
+  const ctaPositive = primary[500];
+  const ctaDestructive = secondary[500];
   // const ctaAccent = isDark ? accent[400] : accent[500];
   const ctaNeutralBg = isDark ? neutral[700] : neutral[200];
   const ctaNeutralText = colors.text;
@@ -1077,7 +1078,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
       background: themeColors.background,
       cardBackground: themeColors.card,
       text: themeColors.foreground,
-      textSecondary: isDark ? primary[300] : neutral[600],
+      textSecondary: isDark ? neutral[300] : neutral[600],
       textMuted: themeColors.mutedForeground,
       border: themeColors.border,
       primary: isDark ? primary[400] : primary[600],
@@ -1282,19 +1283,20 @@ const MatchCard: React.FC<MatchCardProps> = ({
       ? `${primary[400]}40`
       : `${primary[500]}20`;
 
-  // Tier ribbon badge config — one hue per tier (gold / red / teal).
-  // mostWanted uses the same gold anchor as Home's quick-nav buttons
-  // (accent[500] light / accent[400] dark) instead of accent[600] which
-  // skewed orange.
+  // Tier ribbon badge config — hue follows the accent jobs: gold = earned
+  // (must-play), teal = act (court booked), coral = people (coveted player).
+  // Bright dark-mode fills flip to dark ink text for contrast.
   const tierRibbon = isMostWanted
     ? {
         label: t('match.tier.mostWanted' as TranslationKey),
         bg: isDark ? accent[400] : accent[500],
+        fg: isDark ? accent[950] : base.white,
       }
     : isReadyToPlay
       ? {
           label: t('match.courtStatus.courtBooked'),
-          bg: secondary[500],
+          bg: isDark ? primary[400] : primary[600],
+          fg: isDark ? primary[950] : base.white,
         }
       : isTopPlayer
         ? {
@@ -1303,7 +1305,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
                 ? 'match.tier.topPlayerPlural'
                 : 'match.tier.topPlayer') as TranslationKey
             ),
-            bg: primary[500],
+            bg: isDark ? secondary[400] : secondary[500],
+            fg: isDark ? secondary[950] : base.white,
           }
         : null;
 
@@ -1312,7 +1315,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
       {/* Tier ribbon badge - outside TouchableOpacity to avoid overflow:hidden clipping */}
       {tierRibbon && (
         <View style={[styles.tierRibbon, { backgroundColor: tierRibbon.bg }]}>
-          <Text size="xs" weight="bold" color={base.white}>
+          <Text size="xs" weight="bold" color={tierRibbon.fg}>
             {tierRibbon.label}
           </Text>
         </View>
@@ -1382,7 +1385,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
                 />
               )}
               <Text
-                size="base"
+                variant="stat"
+                size="lg"
                 weight="bold"
                 color={
                   isExpired
@@ -1444,20 +1448,23 @@ const MatchCard: React.FC<MatchCardProps> = ({
             </ScrollView>
           )}
 
-          {/* Footer with CTA */}
-          {renderCta ? (
-            renderCta(match)
-          ) : (
-            <CardFooter
-              match={match}
-              participantInfo={participantInfo}
-              colors={colors}
-              isDark={isDark}
-              t={t}
-              onPress={onPress}
-              currentPlayerId={currentPlayerId}
-            />
-          )}
+          {/* Footer with CTA — the slots row's auto margin pushes this to the
+              bottom, so slack never lands under the CTA or beside the separator */}
+          <View>
+            {renderCta ? (
+              renderCta(match)
+            ) : (
+              <CardFooter
+                match={match}
+                participantInfo={participantInfo}
+                colors={colors}
+                isDark={isDark}
+                t={t}
+                onPress={onPress}
+                currentPlayerId={currentPlayerId}
+              />
+            )}
+          </View>
         </View>
 
         {/* Scrim + banner AFTER content so they render on top in the paint order */}
@@ -1504,7 +1511,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
 const styles = StyleSheet.create({
   // Card container
   card: {
-    borderRadius: radiusPixels.xl,
+    borderRadius: radiusPixels['2xl'],
     marginHorizontal: CARD_HORIZONTAL_MARGIN,
     marginBottom: spacingPixels[3],
     borderWidth: 1.5,
@@ -1514,7 +1521,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 5,
-    minHeight: 244,
+    // Matches the natural height of a populated card, so the footer's
+    // marginTop:'auto' has no slack to absorb and the separator keeps equal
+    // spacing above and below. Was 244, calibrated when chips stretched 14pt.
+    minHeight: 230,
   },
 
   // Tier ribbon badge (top-right corner)
@@ -1590,6 +1600,7 @@ const styles = StyleSheet.create({
   content: {
     padding: CARD_PADDING,
     zIndex: 1,
+    flexGrow: 1,
   },
 
   // Top row (time + status)
@@ -1658,6 +1669,10 @@ const styles = StyleSheet.create({
   slotsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    // Absorbs whatever slack minHeight leaves (cards with no chips have more),
+    // so it never lands next to the footer separator. Everything below this row
+    // keeps fixed spacing: slots -> chips -> separator -> CTA.
+    marginTop: 'auto',
     marginBottom: spacingPixels[3],
   },
   slotsRow: {
@@ -1716,6 +1731,7 @@ const styles = StyleSheet.create({
   },
   badgesContentContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: spacingPixels[1.5],
   },
   badge: {

@@ -31,6 +31,8 @@ export const FeedbackActionSheet: React.FC = () => {
     closeSheet();
   }, [closeSheet]);
 
+  // Records completion (analytics + optimistic flip) WITHOUT closing — the
+  // wizard may still show its "what's next" prompt after this fires.
   const handleComplete = useCallback(() => {
     Analytics.matchFeedbackSubmitted({
       sport_id: feedbackData?.sportId ?? selectedMatch?.sport?.id ?? 'unknown',
@@ -45,8 +47,12 @@ export const FeedbackActionSheet: React.FC = () => {
         participants: updatedParticipants,
       });
     }
+  }, [selectedMatch, feedbackData, updateSelectedMatch]);
+
+  // Close after completion — no abandonment analytics.
+  const handleDone = useCallback(() => {
     closeSheet();
-  }, [closeSheet, selectedMatch, feedbackData, updateSelectedMatch]);
+  }, [closeSheet]);
 
   return (
     <BaseActionSheet>
@@ -56,6 +62,7 @@ export const FeedbackActionSheet: React.FC = () => {
             feedbackData={feedbackData}
             onClose={handleClose}
             onComplete={handleComplete}
+            onDone={handleDone}
           />
         )}
       </View>

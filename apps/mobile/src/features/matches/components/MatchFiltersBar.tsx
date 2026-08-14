@@ -110,7 +110,7 @@ const GENDER_OPTIONS: GenderFilter[] = ['all', 'male', 'female', 'other'];
 const COST_OPTIONS: CostFilter[] = ['all', 'free', 'under_5', 'under_10', 'under_20', '20_plus'];
 const JOIN_MODE_OPTIONS: JoinModeFilter[] = ['all', 'direct', 'request'];
 const DURATION_OPTIONS_LIST: DurationFilter[] = ['all', '30', '60', '90', '120+'];
-const SPOTS_AVAILABLE_OPTIONS: SpotsAvailableFilter[] = ['all', '1', '2', '3'];
+const SPOTS_AVAILABLE_OPTIONS: SpotsAvailableFilter[] = ['all', 'any', '1', '2', '3'];
 const REPUTATION_OPTIONS: ReputationFilter[] = ['all', 'bronze', 'silver', 'gold', 'platinum'];
 
 // =============================================================================
@@ -126,7 +126,7 @@ interface FilterChipProps {
   icon?: keyof typeof Ionicons.glyphMap;
 }
 
-function FilterChip({
+export function FilterChip({
   value,
   isActive,
   onPress,
@@ -179,6 +179,36 @@ function FilterChip({
         )}
       </TouchableOpacity>
     </Animated.View>
+  );
+}
+
+/** Secondary-tinted "reset" pill shown at the head of a filter row when any filter is active. */
+export function FilterResetChip({
+  label,
+  onPress,
+  isDark,
+}: {
+  label: string;
+  onPress: () => void;
+  isDark: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.resetChip,
+        {
+          backgroundColor: isDark ? secondary[900] + '40' : secondary[50],
+          borderColor: isDark ? secondary[700] : secondary[200],
+        },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <Ionicons name="close-circle" size={14} color={isDark ? secondary[400] : secondary[600]} />
+      <Text size="xs" weight="semibold" color={isDark ? secondary[400] : secondary[600]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -1215,26 +1245,11 @@ export default function MatchFiltersBar({
 
         {/* Reset Button — shown after location selector, before filter chips */}
         {hasActiveFilters && onReset && (
-          <TouchableOpacity
-            style={[
-              styles.resetChip,
-              {
-                backgroundColor: isDark ? secondary[900] + '40' : secondary[50],
-                borderColor: isDark ? secondary[700] : secondary[200],
-              },
-            ]}
+          <FilterResetChip
+            label={t('publicMatches.filters.reset')}
             onPress={handleReset}
-            activeOpacity={0.85}
-          >
-            <Ionicons
-              name="close-circle"
-              size={14}
-              color={isDark ? secondary[400] : secondary[600]}
-            />
-            <Text size="xs" weight="semibold" color={isDark ? secondary[400] : secondary[600]}>
-              {t('publicMatches.filters.reset')}
-            </Text>
-          </TouchableOpacity>
+            isDark={isDark}
+          />
         )}
 
         {/* Filter Chips — sorted with active filters first */}

@@ -33,17 +33,22 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
 import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import {
+  Text,
+  useToast,
+  WizardHeader,
+  WizardProgressBar,
+  WizardFooter,
+  WizardOptionCard as OptionCard,
+  WizardFieldLabel as FieldLabel,
+  WizardRatingBoundPicker,
+  type WizardRatingOption,
+} from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -72,6 +77,7 @@ import {
 } from '@rallia/shared-hooks';
 import type { Enums } from '@rallia/shared-types';
 import type { TournamentUpdatePatch } from '@rallia/shared-services';
+import { computePoolLayout } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '../../../hooks';
 import { pickImageWithCropper } from '../../../utils/imagePicker';
@@ -85,7 +91,61 @@ const BASE_WHITE = '#ffffff';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOTAL_STEPS = 4;
 const BRACKET_SIZES = [4, 8, 16, 32, 64] as const;
-type BracketSize = (typeof BRACKET_SIZES)[number];
+/** pool_knockout admits non-powers of two; pools of 4 by default. */
+const POOL_FIELD_SIZES = [8, 12, 16, 20, 24, 32] as const;
+type BracketSize = (typeof BRACKET_SIZES)[number] | (typeof POOL_FIELD_SIZES)[number];
+type Structure = 'single_elimination' | 'pool_knockout';
+
+const POOL_ROUND_KEYS: Record<number, string> = {
+  2: 'poolRoundFinal',
+  4: 'poolRoundSemis',
+  8: 'poolRoundQuarters',
+  16: 'poolRoundOf16',
+  32: 'poolRoundOf32',
+};
+
+/**
+ * The spec's configuration preview: how many pools of what size, who advances
+ * and to which round, and the games everyone is guaranteed. Computed rather
+ * than written down, because the requested pool size is only a target and the
+ * distribution can hand back something else (20 at pools of 5 really is pools
+ * of 5, so 4 games each, while 16 at pools of 3 splits [4,3,3,3,3] and the
+ * floor is 2).
+ */
+function poolPreviewText(
+  fieldSize: number,
+  poolSize: number,
+  qualifiersPerPool: number,
+  isDoubles: boolean,
+  t: (k: TranslationKey) => string
+): string | null {
+  const layout = computePoolLayout(fieldSize, poolSize, qualifiersPerPool);
+  if (!layout) return null;
+
+  const key = (k: string) => `tournamentCreation.fields.${k}` as TranslationKey;
+
+  const groups = layout.groups.map(g =>
+    (g.count === 1
+      ? t(key('poolPreviewGroupOne'))
+      : t(key('poolPreviewGroupMany')).replace('{count}', String(g.count))
+    ).replace('{size}', String(g.size))
+  );
+
+  const one = qualifiersPerPool === 1;
+  const template = isDoubles
+    ? one
+      ? 'poolPreviewTeamsOne'
+      : 'poolPreviewTeamsTwo'
+    : one
+      ? 'poolPreviewOne'
+      : 'poolPreviewTwo';
+
+  return t(key(template))
+    .replace('{field}', String(fieldSize))
+    .replace('{layout}', groups.join(t(key('poolPreviewJoin'))))
+    .replace('{round}', t(key(POOL_ROUND_KEYS[layout.drawSize] ?? 'poolRoundOf32')))
+    .replace('{games}', String(layout.guaranteedGames));
+}
 
 function startOfLocalDay(date: Date): Date {
   const d = new Date(date);
@@ -186,6 +246,14 @@ const LEGACY_FUSED_POINTS: Partial<Record<MatchFormat, number>> = {
 
 const STEP_ANALYTICS_NAMES = ['basics', 'format', 'rules_visibility', 'payments'] as const;
 
+/** Progress-bar captions, in step order. */
+const STEP_NAME_KEYS = [
+  'tournamentCreation.stepNames.basics',
+  'tournamentCreation.stepNames.format',
+  'tournamentCreation.stepNames.rulesVisibility',
+  'tournamentCreation.stepNames.payments',
+] as TranslationKey[];
+
 /** Best-of-3 is the default for both sports: 2 sets in tennis, 2 games to 11. */
 const DEFAULT_MATCH_FORMAT: MatchFormat = 'two_of_three';
 const DEFAULT_POINTS_PER_GAME = 11;
@@ -226,6 +294,8 @@ export interface TournamentEditData {
   startDate: string; // ISO
   endDate: string; // ISO
   maxParticipants: number;
+  /** Fixed at creation; shown read-only when editing a pool tournament. */
+  bracketType?: Enums<'bracket_type'>;
   matchFormat: MatchFormat;
   /** Pickleball only; null on tennis and on rows written before the split. */
   pointsPerGame: number | null;
@@ -253,212 +323,13 @@ export interface TournamentCreationWizardProps {
   onShareInvite?: (tournamentId: string) => void;
   /** When present, the wizard runs in edit mode against this tournament. */
   editTournament?: TournamentEditData;
+  /**
+   * Structure chosen upstream by the event format picker. Seeds the field on
+   * step 2 (still editable there) and the default draw size that goes with it.
+   * Ignored in edit mode, where the saved tournament wins.
+   */
+  initialStructure?: Structure;
 }
-
-// =============================================================================
-// HEADER & PROGRESS
-// =============================================================================
-
-const WizardHeader: React.FC<{
-  currentStep: number;
-  isEditMode: boolean;
-  onBack: () => void;
-  onBackToLanding: () => void;
-  onClose: () => void;
-  sportName: string;
-  sportKey: string;
-  colors: ThemeColors;
-  t: (k: TranslationKey) => string;
-}> = ({
-  currentStep,
-  isEditMode,
-  onBack,
-  onBackToLanding,
-  onClose,
-  sportName,
-  sportKey,
-  colors,
-  t,
-}) => (
-  <View style={[styles.header, { borderBottomColor: colors.border }]}>
-    {/* Step 1 in edit mode has no landing to go back to — the close (X) handles
-        dismiss — so the back chevron is hidden there. The empty spacer keeps the
-        sport badge centered. */}
-    <View style={styles.headerLeft}>
-      {!(isEditMode && currentStep === 1) && (
-        <TouchableOpacity
-          onPress={() => {
-            Keyboard.dismiss();
-            lightHaptic();
-            if (currentStep === 1) onBackToLanding();
-            else onBack();
-          }}
-          style={styles.headerButton}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.back' as TranslationKey)}
-        >
-          <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
-        </TouchableOpacity>
-      )}
-    </View>
-
-    <View style={[styles.sportBadge, { backgroundColor: colors.buttonActive }]}>
-      <SportIcon sportName={sportKey} size={14} color={BASE_WHITE} />
-      <Text size="sm" weight="semibold" color={BASE_WHITE}>
-        {sportName}
-      </Text>
-    </View>
-
-    <View style={styles.headerRight}>
-      <TouchableOpacity
-        onPress={() => {
-          Keyboard.dismiss();
-          lightHaptic();
-          onClose();
-        }}
-        style={styles.headerButton}
-        accessibilityRole="button"
-        accessibilityLabel={t('common.close' as TranslationKey)}
-      >
-        <Ionicons name="close-outline" size={24} color={colors.textMuted} />
-      </TouchableOpacity>
-    </View>
-  </View>
-);
-
-const ProgressBar: React.FC<{
-  currentStep: number;
-  colors: ThemeColors;
-  t: (k: TranslationKey) => string;
-}> = ({ currentStep, colors, t }) => {
-  const progress = useSharedValue((currentStep / TOTAL_STEPS) * 100);
-  const stepNames = [
-    t('tournamentCreation.stepNames.basics' as TranslationKey),
-    t('tournamentCreation.stepNames.format' as TranslationKey),
-    t('tournamentCreation.stepNames.rulesVisibility' as TranslationKey),
-    t('tournamentCreation.stepNames.payments' as TranslationKey),
-  ];
-
-  useEffect(() => {
-    progress.value = withTiming((currentStep / TOTAL_STEPS) * 100, { duration: 300 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep]);
-
-  const animatedProgressStyle = useAnimatedStyle(() => ({
-    width: `${progress.value}%`,
-  }));
-
-  return (
-    <View style={styles.progressContainer}>
-      <View style={styles.progressHeader}>
-        <Text size="sm" weight="semibold" color={colors.textMuted}>
-          {t('tournamentCreation.step' as TranslationKey)
-            .replace('{current}', String(currentStep))
-            .replace('{total}', String(TOTAL_STEPS))}
-        </Text>
-        <Text size="sm" weight="bold" color={colors.progressActive}>
-          {stepNames[currentStep - 1]}
-        </Text>
-      </View>
-      <View style={[styles.progressBarBg, { backgroundColor: colors.progressInactive }]}>
-        <Animated.View
-          style={[
-            styles.progressBarFill,
-            { backgroundColor: colors.progressActive },
-            animatedProgressStyle,
-          ]}
-        />
-      </View>
-    </View>
-  );
-};
-
-// =============================================================================
-// REUSABLE OPTION CARD (mirrors PreferencesStep.tsx)
-// =============================================================================
-
-interface OptionCardProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  description?: string;
-  selected: boolean;
-  onPress: () => void;
-  colors: ThemeColors;
-  compact?: boolean;
-  testID?: string;
-}
-
-const OptionCard: React.FC<OptionCardProps> = ({
-  icon,
-  title,
-  description,
-  selected,
-  onPress,
-  colors,
-  compact = false,
-  testID,
-}) => (
-  <TouchableOpacity
-    testID={testID}
-    style={[
-      compact ? styles.optionCardCompact : styles.optionCard,
-      {
-        backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
-        borderColor: selected ? colors.buttonActive : colors.border,
-      },
-    ]}
-    onPress={() => {
-      lightHaptic();
-      onPress();
-    }}
-    activeOpacity={0.7}
-  >
-    {compact ? (
-      <View style={styles.optionContentCompact}>
-        <Ionicons name={icon} size={24} color={selected ? colors.buttonActive : colors.textMuted} />
-        <Text
-          size="sm"
-          weight={selected ? 'semibold' : 'regular'}
-          color={selected ? colors.buttonActive : colors.text}
-          style={styles.compactTitle}
-        >
-          {title}
-        </Text>
-      </View>
-    ) : (
-      <>
-        <View style={styles.optionContent}>
-          <Ionicons
-            name={icon}
-            size={20}
-            color={selected ? colors.buttonActive : colors.textMuted}
-          />
-          <View style={styles.optionTextContainer}>
-            <Text
-              size="base"
-              weight={selected ? 'semibold' : 'regular'}
-              color={selected ? colors.buttonActive : colors.text}
-            >
-              {title}
-            </Text>
-            {description && (
-              <Text size="xs" color={colors.textMuted}>
-                {description}
-              </Text>
-            )}
-          </View>
-        </View>
-        {selected && <Ionicons name="checkmark-circle" size={20} color={colors.buttonActive} />}
-      </>
-    )}
-  </TouchableOpacity>
-);
-
-const FieldLabel: React.FC<{ children: string; colors: ThemeColors }> = ({ children, colors }) => (
-  <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-    {children}
-  </Text>
-);
 
 // =============================================================================
 // STEPS
@@ -847,98 +718,6 @@ const LocationSection: React.FC<{
   );
 };
 
-type RatingOption = {
-  value: number;
-  label: string;
-  skillLevel: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
-  id: string;
-};
-
-/** One bound of the rating band: the sport's tiers plus a "no bound" card. */
-const RatingBoundPicker: React.FC<{
-  label: string;
-  noneLabel: string;
-  hint: string;
-  value: number | null;
-  onChange: (v: number | null) => void;
-  options: RatingOption[];
-  colors: ThemeColors;
-  t: (k: TranslationKey) => string;
-}> = ({ label, noneLabel, hint, value, onChange, options, colors, t }) => (
-  <View style={styles.fieldGroup}>
-    <FieldLabel colors={colors}>{label}</FieldLabel>
-    <GestureScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.ratingScrollContent}
-      nestedScrollEnabled
-    >
-      <TouchableOpacity
-        onPress={() => {
-          lightHaptic();
-          onChange(null);
-        }}
-        activeOpacity={0.7}
-        style={[
-          styles.ratingCard,
-          {
-            backgroundColor: value === null ? `${colors.buttonActive}15` : colors.buttonInactive,
-            borderColor: value === null ? colors.buttonActive : colors.border,
-          },
-        ]}
-      >
-        <Text
-          size="sm"
-          weight={value === null ? 'bold' : 'regular'}
-          color={value === null ? colors.buttonActive : colors.text}
-        >
-          {noneLabel}
-        </Text>
-      </TouchableOpacity>
-      {options.map(opt => {
-        const selected = value === opt.value;
-        return (
-          <TouchableOpacity
-            key={opt.id}
-            onPress={() => {
-              lightHaptic();
-              onChange(opt.value);
-            }}
-            activeOpacity={0.7}
-            style={[
-              styles.ratingCard,
-              {
-                backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
-                borderColor: selected ? colors.buttonActive : colors.border,
-              },
-            ]}
-          >
-            <Text
-              size="base"
-              weight={selected ? 'bold' : 'semibold'}
-              color={selected ? colors.buttonActive : colors.text}
-            >
-              {opt.label}
-            </Text>
-            {opt.skillLevel && (
-              <Text
-                size="xs"
-                color={selected ? colors.buttonActive : colors.textMuted}
-                style={styles.ratingSkillLevel}
-              >
-                {t(`matchCreation.fields.skillLevelAbbr.${opt.skillLevel}` as TranslationKey)}
-              </Text>
-            )}
-          </TouchableOpacity>
-        );
-      })}
-    </GestureScrollView>
-    <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
-      {hint}
-    </Text>
-  </View>
-);
-
 const DetailsStep: React.FC<{
   /** Which form step to render: 1 Basics, 2 Format. */
   step: number;
@@ -951,12 +730,7 @@ const DetailsStep: React.FC<{
   setMinRating: (v: number | null) => void;
   maxRating: number | null;
   setMaxRating: (v: number | null) => void;
-  ratingOptions: {
-    value: number;
-    label: string;
-    skillLevel: 'beginner' | 'intermediate' | 'advanced' | 'professional' | null;
-    id: string;
-  }[];
+  ratingOptions: WizardRatingOption[];
   /** Location capture, rendered on step 1 only. */
   location: React.ComponentProps<typeof LocationSection>;
   /** Poster/logo is edit-only too (uploaded to the tournament-logos bucket). */
@@ -966,6 +740,12 @@ const DetailsStep: React.FC<{
   onRemovePoster: () => void;
   bracketSize: BracketSize;
   setBracketSize: (v: BracketSize) => void;
+  structure: Structure;
+  setStructure: (v: Structure) => void;
+  poolSize: number;
+  setPoolSize: (v: number) => void;
+  qualifiersPerPool: number;
+  setQualifiersPerPool: (v: number) => void;
   matchFormat: MatchFormat;
   setMatchFormat: (v: MatchFormat) => void;
   formatOptions: readonly MatchFormat[];
@@ -1008,6 +788,12 @@ const DetailsStep: React.FC<{
   onRemovePoster,
   bracketSize,
   setBracketSize,
+  structure,
+  setStructure,
+  poolSize,
+  setPoolSize,
+  qualifiersPerPool,
+  setQualifiersPerPool,
   matchFormat,
   setMatchFormat,
   formatOptions,
@@ -1033,6 +819,14 @@ const DetailsStep: React.FC<{
   // Tracks the value the spinner currently shows, so "Done" commits it even
   // when the user never scrolls (iOS onChange only fires on an actual change).
   const [pickerValue, setPickerValue] = useState<Date>(() => todayAtLocalMidnight());
+
+  const poolPreview = useMemo(
+    () =>
+      structure === 'pool_knockout'
+        ? poolPreviewText(bracketSize, poolSize, qualifiersPerPool, entryFormat === 'doubles', t)
+        : null,
+    [structure, bracketSize, poolSize, qualifiersPerPool, entryFormat, t]
+  );
 
   const openPicker = useCallback(
     (which: 'start' | 'end') => {
@@ -1312,6 +1106,140 @@ const DetailsStep: React.FC<{
 
               <View style={styles.fieldGroup}>
                 <FieldLabel colors={colors}>
+                  {t('tournamentCreation.fields.structure' as TranslationKey)}
+                </FieldLabel>
+                <View style={styles.optionsRow}>
+                  {(['single_elimination', 'pool_knockout'] as const).map(s => {
+                    const selected = s === structure;
+                    return (
+                      <TouchableOpacity
+                        key={s}
+                        disabled={!canEditStructure || isEditMode}
+                        onPress={() => {
+                          lightHaptic();
+                          setStructure(s);
+                        }}
+                        activeOpacity={0.7}
+                        style={[
+                          styles.bracketChip,
+                          {
+                            backgroundColor: selected
+                              ? `${colors.buttonActive}15`
+                              : colors.buttonInactive,
+                            borderColor: selected ? colors.buttonActive : colors.border,
+                            opacity: !canEditStructure || isEditMode ? 0.5 : 1,
+                          },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                      >
+                        <Text
+                          size="base"
+                          weight={selected ? 'semibold' : 'regular'}
+                          color={selected ? colors.buttonActive : colors.text}
+                        >
+                          {t(
+                            (s === 'single_elimination'
+                              ? 'tournamentCreation.fields.structureSingle'
+                              : 'tournamentCreation.fields.structurePool') as TranslationKey
+                          )}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {structure === 'pool_knockout' && (
+                  <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+                    {t('tournamentCreation.fields.structurePoolHint' as TranslationKey)}
+                  </Text>
+                )}
+              </View>
+
+              {structure === 'pool_knockout' && (
+                <View style={styles.fieldGroup}>
+                  <FieldLabel colors={colors}>
+                    {t('tournamentCreation.fields.poolSize' as TranslationKey)}
+                  </FieldLabel>
+                  <View style={styles.optionsRow}>
+                    {[3, 4, 5].map(n => {
+                      const selected = n === poolSize;
+                      return (
+                        <TouchableOpacity
+                          key={n}
+                          disabled={isEditMode}
+                          onPress={() => {
+                            lightHaptic();
+                            setPoolSize(n);
+                          }}
+                          activeOpacity={0.7}
+                          style={[
+                            styles.bracketChip,
+                            {
+                              backgroundColor: selected
+                                ? `${colors.buttonActive}15`
+                                : colors.buttonInactive,
+                              borderColor: selected ? colors.buttonActive : colors.border,
+                              opacity: isEditMode ? 0.5 : 1,
+                            },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                        >
+                          <Text
+                            size="base"
+                            weight={selected ? 'semibold' : 'regular'}
+                            color={selected ? colors.buttonActive : colors.text}
+                          >
+                            {n}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <FieldLabel colors={colors}>
+                    {t('tournamentCreation.fields.qualifiersPerPool' as TranslationKey)}
+                  </FieldLabel>
+                  <View style={styles.optionsRow}>
+                    {[1, 2].map(n => {
+                      const selected = n === qualifiersPerPool;
+                      return (
+                        <TouchableOpacity
+                          key={n}
+                          disabled={isEditMode}
+                          onPress={() => {
+                            lightHaptic();
+                            setQualifiersPerPool(n);
+                          }}
+                          activeOpacity={0.7}
+                          style={[
+                            styles.bracketChip,
+                            {
+                              backgroundColor: selected
+                                ? `${colors.buttonActive}15`
+                                : colors.buttonInactive,
+                              borderColor: selected ? colors.buttonActive : colors.border,
+                              opacity: isEditMode ? 0.5 : 1,
+                            },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                        >
+                          <Text
+                            size="base"
+                            weight={selected ? 'semibold' : 'regular'}
+                            color={selected ? colors.buttonActive : colors.text}
+                          >
+                            {n}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.fieldGroup}>
+                <FieldLabel colors={colors}>
                   {t(
                     (entryFormat === 'singles'
                       ? 'tournamentCreation.fields.maxParticipants'
@@ -1319,7 +1247,7 @@ const DetailsStep: React.FC<{
                   )}
                 </FieldLabel>
                 <View style={styles.optionsRow}>
-                  {BRACKET_SIZES.map(n => {
+                  {(structure === 'pool_knockout' ? POOL_FIELD_SIZES : BRACKET_SIZES).map(n => {
                     const selected = n === bracketSize;
                     return (
                       <TouchableOpacity
@@ -1359,6 +1287,16 @@ const DetailsStep: React.FC<{
                       : 'tournamentCreation.fields.maxTeamsHint') as TranslationKey
                   )}
                 </Text>
+                {poolPreview && (
+                  <Text
+                    size="xs"
+                    color={colors.textMuted}
+                    style={styles.fieldHint}
+                    testID="pool-config-preview"
+                  >
+                    {poolPreview}
+                  </Text>
+                )}
               </View>
 
               <View style={styles.fieldGroup}>
@@ -1468,7 +1406,7 @@ const DetailsStep: React.FC<{
 
           {canEditStructure && ratingOptions.length > 0 && (
             <>
-              <RatingBoundPicker
+              <WizardRatingBoundPicker
                 label={t('tournamentCreation.fields.minLevel' as TranslationKey)}
                 noneLabel={t('tournamentCreation.fields.minLevelNone' as TranslationKey)}
                 hint={t('tournamentCreation.fields.minLevelHint' as TranslationKey)}
@@ -1481,9 +1419,8 @@ const DetailsStep: React.FC<{
                 }}
                 options={ratingOptions}
                 colors={colors}
-                t={t}
               />
-              <RatingBoundPicker
+              <WizardRatingBoundPicker
                 label={t('tournamentCreation.fields.maxLevel' as TranslationKey)}
                 noneLabel={t('tournamentCreation.fields.maxLevelNone' as TranslationKey)}
                 hint={t('tournamentCreation.fields.maxLevelHint' as TranslationKey)}
@@ -1495,7 +1432,6 @@ const DetailsStep: React.FC<{
                     : ratingOptions.filter(o => o.value >= minRating)
                 }
                 colors={colors}
-                t={t}
               />
             </>
           )}
@@ -2068,6 +2004,7 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   onSuccess,
   onShareInvite,
   editTournament,
+  initialStructure,
 }) => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
@@ -2127,14 +2064,36 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       ratingScores.map(r => ({
         value: r.value,
         label: r.label,
-        skillLevel: r.skillLevel,
+        skillLabel: r.skillLevel
+          ? t(`matchCreation.fields.skillLevelAbbr.${r.skillLevel}` as TranslationKey)
+          : null,
         id: r.id,
       })),
-    [ratingScores]
+    [ratingScores, t]
   );
+  // Creation arrives with the structure already chosen (the format picker is
+  // that choice); edit always reads the saved tournament.
+  const seedStructure: Structure = editTournament
+    ? editTournament.bracketType === 'pool_knockout'
+      ? 'pool_knockout'
+      : 'single_elimination'
+    : (initialStructure ?? 'single_elimination');
   const [bracketSize, setBracketSize] = useState<BracketSize>(
-    (editTournament?.maxParticipants as BracketSize) ?? 8
+    (editTournament?.maxParticipants as BracketSize) ??
+      ((seedStructure === 'pool_knockout' ? 16 : 8) as BracketSize)
   );
+  const [structure, setStructureState] = useState<Structure>(seedStructure);
+  // Switching structure snaps the field size to the nearest valid option.
+  const setStructure = useCallback((s: Structure) => {
+    setStructureState(s);
+    setBracketSize(prev => {
+      const sizes: readonly number[] = s === 'pool_knockout' ? POOL_FIELD_SIZES : BRACKET_SIZES;
+      if (sizes.includes(prev)) return prev;
+      return (s === 'pool_knockout' ? 16 : 8) as BracketSize;
+    });
+  }, []);
+  const [poolSize, setPoolSize] = useState<number>(4);
+  const [qualifiersPerPool, setQualifiersPerPool] = useState<number>(2);
   const [matchFormat, setMatchFormat] = useState<MatchFormat>(() => {
     const stored = editTournament?.matchFormat;
     if (!stored) return DEFAULT_MATCH_FORMAT;
@@ -2515,7 +2474,13 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         if (endDate.toISOString() !== new Date(editTournament.endDate).toISOString())
           patch.endDate = endDate.toISOString();
         if (canEditStructure) {
-          if (bracketSize !== editTournament.maxParticipants) patch.maxParticipants = bracketSize;
+          // The update RPC's size allowlist is single-elim only; pool field
+          // sizes are fixed at creation for now.
+          if (
+            editTournament.bracketType !== 'pool_knockout' &&
+            bracketSize !== editTournament.maxParticipants
+          )
+            patch.maxParticipants = bracketSize as 4 | 8 | 16 | 32 | 64 | 128;
           if (matchFormat !== editTournament.matchFormat) patch.matchFormat = matchFormat;
           // Only pickleball carries a target, and only when it changed.
           const nextPoints = isPickleball ? pointsPerGame : null;
@@ -2579,6 +2544,9 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         prizeMoneyCents: prizeMoneyCents ?? undefined,
         sportId: selectedSport.id,
         maxParticipants: bracketSize,
+        bracketType: structure,
+        poolSize: structure === 'pool_knockout' ? poolSize : undefined,
+        qualifiersPerPool: structure === 'pool_knockout' ? qualifiersPerPool : undefined,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         visibility: visibility as Visibility,
@@ -2622,6 +2590,9 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
     minRating,
     maxRating,
     bracketSize,
+    structure,
+    poolSize,
+    qualifiersPerPool,
     matchFormat,
     startDate,
     endDate,
@@ -2710,6 +2681,12 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       onRemovePoster: handleRemovePoster,
       bracketSize,
       setBracketSize,
+      structure,
+      setStructure,
+      poolSize,
+      setPoolSize,
+      qualifiersPerPool,
+      setQualifiersPerPool,
       matchFormat,
       setMatchFormat,
       formatOptions,
@@ -2753,6 +2730,10 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
       handlePickPoster,
       handleRemovePoster,
       bracketSize,
+      structure,
+      setStructure,
+      poolSize,
+      qualifiersPerPool,
       matchFormat,
       formatOptions,
       pointsPerGame,
@@ -2853,23 +2834,38 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
   // Wizard
   return (
     <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
+      {/* Step 1 in edit mode has no landing to go back to — the close (X)
+          handles dismiss — so the back chevron is hidden there. */}
       <WizardHeader
-        currentStep={currentStep}
-        isEditMode={isEditMode}
-        onBack={goBack}
-        onBackToLanding={handleBackToLanding}
+        showBack={!(isEditMode && currentStep === 1)}
+        onBack={currentStep === 1 ? handleBackToLanding : goBack}
         onClose={handleClose}
-        sportName={
+        badgeIcon={
+          <SportIcon
+            sportName={editTournament?.sport.name ?? selectedSport?.name ?? 'tennis'}
+            size={14}
+            color={BASE_WHITE}
+          />
+        }
+        badgeLabel={
           editTournament?.sport.display_name ??
           selectedSport?.display_name ??
           selectedSport?.name ??
           ''
         }
-        sportKey={editTournament?.sport.name ?? selectedSport?.name ?? 'tennis'}
         colors={colors}
-        t={t}
+        backAccessibilityLabel={t('common.back' as TranslationKey)}
+        closeAccessibilityLabel={t('common.close' as TranslationKey)}
       />
-      <ProgressBar currentStep={currentStep} colors={colors} t={t} />
+      <WizardProgressBar
+        currentStep={currentStep}
+        totalSteps={TOTAL_STEPS}
+        counterLabel={t('tournamentCreation.step' as TranslationKey)
+          .replace('{current}', String(currentStep))
+          .replace('{total}', String(TOTAL_STEPS))}
+        stepLabel={t(STEP_NAME_KEYS[currentStep - 1])}
+        colors={colors}
+      />
 
       <View style={styles.stepsViewport}>
         <Animated.View
@@ -2926,36 +2922,21 @@ export const TournamentCreationWizard: React.FC<TournamentCreationWizardProps> =
         </Animated.View>
       </View>
 
-      <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        <TouchableOpacity
-          onPress={currentStep === TOTAL_STEPS ? handleSubmit : goNext}
-          disabled={isSubmitting}
-          style={[
-            styles.nextButton,
-            { backgroundColor: colors.buttonActive },
-            isSubmitting && styles.buttonDisabled,
-          ]}
-          accessibilityRole="button"
-          testID="tournament-wizard-submit"
-        >
-          {isSubmitting && currentStep === TOTAL_STEPS ? (
-            <ActivityIndicator color={colors.buttonTextActive} />
-          ) : (
-            <>
-              <Text size="lg" weight="semibold" color={colors.buttonTextActive}>
-                {currentStep === TOTAL_STEPS
-                  ? isEditMode
-                    ? t('tournamentDetail.editModal.save' as TranslationKey)
-                    : t('tournamentCreation.createTournament' as TranslationKey)
-                  : t('tournamentCreation.next' as TranslationKey)}
-              </Text>
-              {currentStep !== TOTAL_STEPS && (
-                <Ionicons name="arrow-forward-outline" size={20} color={colors.buttonTextActive} />
-              )}
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
+      <WizardFooter
+        label={
+          currentStep === TOTAL_STEPS
+            ? isEditMode
+              ? t('tournamentDetail.editModal.save' as TranslationKey)
+              : t('tournamentCreation.createTournament' as TranslationKey)
+            : t('tournamentCreation.next' as TranslationKey)
+        }
+        onPress={currentStep === TOTAL_STEPS ? handleSubmit : goNext}
+        disabled={isSubmitting}
+        isSubmitting={isSubmitting && currentStep === TOTAL_STEPS}
+        trailingIcon={currentStep === TOTAL_STEPS ? 'none' : 'arrow'}
+        colors={colors}
+        testID="tournament-wizard-submit"
+      />
     </View>
   );
 };
@@ -2968,51 +2949,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'column',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-    borderBottomWidth: 1,
-  },
-  headerLeft: {
-    width: 40,
-  },
-  headerRight: {
-    width: 40,
-    alignItems: 'flex-end',
-  },
-  headerButton: {
-    padding: spacingPixels[1],
-  },
-  sportBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
-    borderRadius: radiusPixels.full,
-    gap: spacingPixels[1.5],
-  },
-  progressContainer: {
-    paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  progressBarBg: {
-    height: 4,
-    borderRadius: radiusPixels.full,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: radiusPixels.full,
   },
   stepsViewport: {
     flex: 1,
@@ -3044,9 +2980,6 @@ const styles = StyleSheet.create({
   },
   fieldDescription: {
     marginBottom: spacingPixels[3],
-  },
-  label: {
-    marginBottom: spacingPixels[2],
   },
   fieldHint: {
     marginTop: spacingPixels[2],
@@ -3146,40 +3079,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacingPixels[2],
   },
-  optionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
-  optionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: spacingPixels[3],
-  },
-  optionTextContainer: {
-    flex: 1,
-  },
-  optionCardCompact: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    flex: 1,
-    minHeight: 70,
-  },
-  optionContentCompact: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacingPixels[1],
-  },
-  compactTitle: {
-    textAlign: 'center',
-  },
   bracketChip: {
     flex: 1,
     alignItems: 'center',
@@ -3251,21 +3150,6 @@ const styles = StyleSheet.create({
   facilityResultInfo: {
     flex: 1,
     gap: spacingPixels[0.5],
-  },
-  footer: {
-    padding: spacingPixels[4],
-    borderTopWidth: 1,
-  },
-  nextButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[2],
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
   successContainer: {
     flex: 1,

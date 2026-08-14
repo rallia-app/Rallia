@@ -25,6 +25,7 @@ export const darkTheme = {
   popoverForeground: neutral[50],
 
   // Primary colors (buttons, links, etc.)
+  // Deep enough for white button text; the brighter 400 step stays on rings.
   primary: primary[500],
   primaryForeground: base.white,
 
@@ -44,10 +45,10 @@ export const darkTheme = {
   destructive: status.error.light,
   destructiveForeground: base.white,
 
-  // Border and input colors
-  border: 'rgba(255, 255, 255, 0.1)',
-  input: 'rgba(255, 255, 255, 0.15)',
-  ring: primary[500],
+  // Border and input colors (tinted hairlines, not plain white alpha)
+  border: 'rgba(180, 220, 210, 0.14)',
+  input: 'rgba(180, 220, 210, 0.18)',
+  ring: primary[400],
 
   // Sidebar specific
   sidebar: neutral[900],
@@ -56,8 +57,8 @@ export const darkTheme = {
   sidebarPrimaryForeground: base.white,
   sidebarAccent: neutral[800],
   sidebarAccentForeground: neutral[50],
-  sidebarBorder: 'rgba(255, 255, 255, 0.1)',
-  sidebarRing: primary[500],
+  sidebarBorder: 'rgba(180, 220, 210, 0.14)',
+  sidebarRing: primary[400],
 
   // Theme palette colors (for direct use) - dark mode adjusted
   palette: {
@@ -68,7 +69,15 @@ export const darkTheme = {
 
   // Background variations
   backgroundSecondary: neutral[900],
-  foregroundSecondary: primary[500],
+  foregroundSecondary: primary[400],
+
+  // Accent jobs (theme v2): coral = people/social moments, gold = earned.
+  social: darkMode.secondary[500],
+  socialSubtle: darkMode.secondary[100],
+  socialForeground: darkMode.secondary[700],
+  achievement: darkMode.accent[500],
+  achievementSubtle: darkMode.accent[100],
+  achievementForeground: darkMode.accent[700],
 } as const;
 
 /**
@@ -76,34 +85,34 @@ export const darkTheme = {
  * Uses oklch color space where appropriate
  */
 export const darkThemeCSSValues = {
-  '--background': 'oklch(0.145 0 0)',
-  '--foreground': 'oklch(0.985 0 0)',
-  '--card': 'oklch(0.205 0 0)',
-  '--card-foreground': 'oklch(0.985 0 0)',
-  '--popover': 'oklch(0.205 0 0)',
-  '--popover-foreground': 'oklch(0.985 0 0)',
-  '--primary': 'oklch(0.704 0.123 182.503)', // teal-500
-  '--primary-foreground': 'oklch(1 0 0)',
-  '--secondary': 'oklch(0.269 0 0)',
-  '--secondary-foreground': 'oklch(0.985 0 0)',
-  '--muted': 'oklch(0.269 0 0)',
-  '--muted-foreground': 'oklch(0.708 0 0)',
-  '--accent': 'oklch(0.269 0 0)',
-  '--accent-foreground': 'oklch(0.985 0 0)',
-  '--destructive': 'oklch(0.704 0.191 22.216)',
-  '--border': 'oklch(1 0 0 / 10%)',
-  '--input': 'oklch(1 0 0 / 15%)',
-  '--ring': 'oklch(0.704 0.123 182.503)', // teal-500
+  '--background': neutral[950],
+  '--foreground': neutral[50],
+  '--card': neutral[900],
+  '--card-foreground': neutral[50],
+  '--popover': neutral[900],
+  '--popover-foreground': neutral[50],
+  '--primary': primary[500],
+  '--primary-foreground': base.white,
+  '--secondary': neutral[800],
+  '--secondary-foreground': neutral[50],
+  '--muted': neutral[800],
+  '--muted-foreground': neutral[400],
+  '--accent': neutral[800],
+  '--accent-foreground': neutral[50],
+  '--destructive': status.error.light,
+  '--border': 'rgba(180, 220, 210, 0.14)',
+  '--input': 'rgba(180, 220, 210, 0.18)',
+  '--ring': primary[400],
 
   // Sidebar
-  '--sidebar': 'oklch(0.205 0 0)',
-  '--sidebar-foreground': 'oklch(0.985 0 0)',
-  '--sidebar-primary': 'oklch(0.704 0.123 182.503)', // teal-500
-  '--sidebar-primary-foreground': 'oklch(1 0 0)',
-  '--sidebar-accent': 'oklch(0.269 0 0)',
-  '--sidebar-accent-foreground': 'oklch(0.985 0 0)',
-  '--sidebar-border': 'oklch(1 0 0 / 10%)',
-  '--sidebar-ring': 'oklch(0.704 0.123 182.503)', // teal-500
+  '--sidebar': neutral[900],
+  '--sidebar-foreground': neutral[50],
+  '--sidebar-primary': primary[500],
+  '--sidebar-primary-foreground': base.white,
+  '--sidebar-accent': neutral[800],
+  '--sidebar-accent-foreground': neutral[50],
+  '--sidebar-border': 'rgba(180, 220, 210, 0.14)',
+  '--sidebar-ring': primary[400],
 
   // Theme-specific background
   '--background-secondary': neutral[900],

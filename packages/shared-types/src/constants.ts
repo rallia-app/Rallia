@@ -274,6 +274,10 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   match_check_in_available: 'checkmark-circle-outline',
   match_new_available: 'add-circle-outline',
   match_spot_opened: 'enter-outline',
+  court_booking_nudge: 'calendar-outline',
+  match_last_minute_spots: 'flash-outline',
+  match_unfilled_recovery: 'refresh-outline',
+  play_rhythm_nudge: 'repeat-outline',
   nearby_match_available: 'location-outline',
   match_completed: 'trophy-outline',
   player_kicked: 'remove-circle-outline',
@@ -344,11 +348,19 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   tournament_registration_approved: 'checkmark-circle-outline',
   tournament_registration_removed: 'remove-circle-outline',
   tournament_bracket_published: 'git-network-outline',
+  tournament_registration_open: 'trophy-outline',
   tournament_match_completed: 'podium-outline',
   tournament_match_ready: 'flash-outline',
+  tournament_deadline_changed: 'time-outline',
+  tournament_round_deadline_soon: 'alarm-outline',
+  tournament_deadline_extended: 'time-outline',
+  tournament_match_walkover: 'flag-outline',
+  tournament_dispute_escalated: 'alert-circle-outline',
   tournament_updated: 'create-outline',
   tournament_cancelled: 'close-circle-outline',
   tournament_completed: 'trophy-outline',
+  tournament_pool_eliminated: 'podium-outline',
+  tournament_action_required: 'play-circle-outline',
   session_published: 'calendar-outline',
   session_confirm_reminder: 'alarm-outline',
   season_closed: 'flag-outline',
@@ -357,6 +369,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   league_invitation: 'mail-outline',
   league_member_request: 'person-add-outline',
   league_member_approved: 'checkmark-circle-outline',
+  league_member_rejected: 'close-circle-outline',
 };
 
 /**
@@ -381,6 +394,10 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   match_check_in_available: '#4CAF50', // Green
   match_new_available: '#4DB8A8', // Teal
   match_spot_opened: '#4CAF50', // Green
+  court_booking_nudge: '#FF9800', // Orange
+  match_last_minute_spots: '#F44336', // Red (urgency)
+  match_unfilled_recovery: '#4DB8A8', // Teal (supportive)
+  play_rhythm_nudge: '#9C27B0', // Purple (habit)
   nearby_match_available: '#2196F3', // Blue
   match_completed: '#4CAF50', // Green
   player_kicked: '#F44336', // Red
@@ -451,11 +468,19 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   tournament_registration_approved: '#4CAF50', // Green
   tournament_registration_removed: '#F44336', // Red
   tournament_bracket_published: '#4DB8A8', // Teal
+  tournament_registration_open: '#E57373', // Coral (tournament)
   tournament_match_completed: '#4DB8A8', // Teal
   tournament_match_ready: '#4DB8A8', // Teal
+  tournament_deadline_changed: '#4DB8A8', // Teal
+  tournament_round_deadline_soon: '#E8863A', // Orange
+  tournament_deadline_extended: '#4DB8A8', // Teal
+  tournament_match_walkover: '#E8863A', // Orange
+  tournament_dispute_escalated: '#D9534F', // Red
   tournament_updated: '#FF9800', // Orange — details changed
   tournament_cancelled: '#F44336', // Red
   tournament_completed: '#4CAF50', // Green — celebration
+  tournament_pool_eliminated: '#4DB8A8', // Teal
+  tournament_action_required: '#FF9800', // Orange — action required from organizer
   session_published: '#4DB8A8', // Teal — info
   session_confirm_reminder: '#FF9800', // Amber — action needed
   season_closed: '#4CAF50', // Green — completion
@@ -464,6 +489,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   league_invitation: '#4DB8A8', // Teal — info
   league_member_request: '#FF9800', // Amber — action needed
   league_member_approved: '#4CAF50', // Green — accepted
+  league_member_rejected: '#9E9E9E', // Grey — closed without joining
 };
 
 /**
@@ -486,6 +512,10 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   match_check_in_available: 'Check-in Available',
   match_new_available: 'New Game in Group',
   match_spot_opened: 'Spot Opened',
+  court_booking_nudge: 'Book Your Court',
+  match_last_minute_spots: 'Starting Soon',
+  match_unfilled_recovery: 'Game Recovery',
+  play_rhythm_nudge: 'Usual Slot Open',
   nearby_match_available: 'Nearby Match',
   match_completed: 'Match Completed',
   player_kicked: 'Removed from Match',
@@ -554,11 +584,19 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   tournament_registration_approved: 'Registration Approved',
   tournament_registration_removed: 'Removed from Tournament',
   tournament_bracket_published: 'Bracket Published',
+  tournament_registration_open: 'Registration Open',
   tournament_match_completed: 'Tournament Result',
   tournament_match_ready: 'Next Match',
+  tournament_deadline_changed: 'Deadline Updated',
+  tournament_round_deadline_soon: 'Deadline Soon',
+  tournament_deadline_extended: 'Deadline Extended',
+  tournament_match_walkover: 'Walkover',
+  tournament_dispute_escalated: 'Dispute',
   tournament_updated: 'Tournament Updated',
   tournament_cancelled: 'Tournament Cancelled',
   tournament_completed: 'Tournament Complete',
+  tournament_pool_eliminated: 'Pool Stage Result',
+  tournament_action_required: 'Action Required',
   session_published: 'Session Schedule Published',
   session_confirm_reminder: 'Confirm Your Spot',
   season_closed: 'Season Closed',
@@ -567,6 +605,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   league_invitation: 'League Invitation',
   league_member_request: 'New Join Request',
   league_member_approved: 'Membership Approved',
+  league_member_rejected: 'Request Declined',
 };
 
 /**
@@ -590,6 +629,10 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   match_check_in_available: 'match',
   match_new_available: 'match',
   match_spot_opened: 'match',
+  court_booking_nudge: 'match',
+  match_last_minute_spots: 'match',
+  match_unfilled_recovery: 'match',
+  play_rhythm_nudge: 'match',
   nearby_match_available: 'match',
   match_completed: 'match',
   player_kicked: 'match',
@@ -667,11 +710,19 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   tournament_registration_approved: 'leagues',
   tournament_registration_removed: 'leagues',
   tournament_bracket_published: 'leagues',
+  tournament_registration_open: 'leagues',
   tournament_match_completed: 'leagues',
   tournament_match_ready: 'leagues',
+  tournament_deadline_changed: 'leagues',
+  tournament_round_deadline_soon: 'leagues',
+  tournament_deadline_extended: 'leagues',
+  tournament_match_walkover: 'leagues',
+  tournament_dispute_escalated: 'leagues',
   tournament_updated: 'leagues',
   tournament_cancelled: 'leagues',
   tournament_completed: 'leagues',
+  tournament_pool_eliminated: 'leagues',
+  tournament_action_required: 'leagues',
   session_published: 'leagues',
   session_confirm_reminder: 'leagues',
   season_closed: 'leagues',
@@ -680,6 +731,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   league_invitation: 'leagues',
   league_member_request: 'leagues',
   league_member_approved: 'leagues',
+  league_member_rejected: 'leagues',
 };
 
 /**
@@ -742,6 +794,10 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   match_check_in_available: { email: true, push: true, sms: false },
   match_new_available: { email: false, push: true, sms: false },
   match_spot_opened: { email: false, push: true, sms: false },
+  court_booking_nudge: { email: false, push: true, sms: false },
+  match_last_minute_spots: { email: false, push: true, sms: false },
+  match_unfilled_recovery: { email: false, push: true, sms: false },
+  play_rhythm_nudge: { email: false, push: true, sms: false },
   nearby_match_available: { email: false, push: true, sms: false },
   player_kicked: { email: true, push: true, sms: false },
   player_left: { email: false, push: true, sms: false }, // Push only for player leaves
@@ -822,11 +878,19 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   tournament_registration_approved: { email: false, push: true, sms: false },
   tournament_registration_removed: { email: false, push: true, sms: false },
   tournament_bracket_published: { email: false, push: true, sms: false },
+  tournament_registration_open: { email: false, push: true, sms: false },
   tournament_match_completed: { email: false, push: true, sms: false },
   tournament_match_ready: { email: false, push: true, sms: false },
+  tournament_deadline_changed: { email: false, push: true, sms: false },
+  tournament_round_deadline_soon: { email: false, push: true, sms: false },
+  tournament_deadline_extended: { email: false, push: true, sms: false },
+  tournament_match_walkover: { email: false, push: true, sms: false },
+  tournament_dispute_escalated: { email: false, push: true, sms: false },
   tournament_updated: { email: false, push: true, sms: false },
   tournament_cancelled: { email: true, push: true, sms: false },
   tournament_completed: { email: false, push: true, sms: false },
+  tournament_pool_eliminated: { email: false, push: true, sms: false },
+  tournament_action_required: { email: true, push: true, sms: false },
   session_published: { email: true, push: true, sms: false },
   session_confirm_reminder: { email: false, push: true, sms: false },
   season_closed: { email: true, push: true, sms: false },
@@ -835,6 +899,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   league_invitation: { email: true, push: true, sms: false },
   league_member_request: { email: false, push: true, sms: false },
   league_member_approved: { email: true, push: true, sms: false },
+  league_member_rejected: { email: false, push: true, sms: false },
 };
 
 // ============================================
@@ -861,6 +926,9 @@ export const MATCH_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] =
   'match_check_in_available',
   'match_new_available',
   'match_spot_opened',
+  'court_booking_nudge',
+  'match_last_minute_spots',
+  'play_rhythm_nudge',
   'nearby_match_available',
   'player_kicked',
   'player_left',
@@ -893,6 +961,7 @@ export const REFERENCE_RESPONSE_NOTIFICATION_TYPES: readonly ExtendedNotificatio
 
 /** Tournament notifications — target_id is always the tournament id. */
 export const TOURNAMENT_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
+  'tournament_registration_open',
   'tournament_partner_registered',
   'tournament_partner_withdrew',
   'tournament_registration_received',
@@ -902,6 +971,11 @@ export const TOURNAMENT_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnu
   'tournament_bracket_published',
   'tournament_match_completed',
   'tournament_match_ready',
+  'tournament_deadline_changed',
+  'tournament_round_deadline_soon',
+  'tournament_deadline_extended',
+  'tournament_match_walkover',
+  'tournament_dispute_escalated',
   'tournament_updated',
   'tournament_cancelled',
   'tournament_completed',
@@ -912,6 +986,7 @@ export const LEAGUE_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] 
   'league_invitation',
   'league_member_request',
   'league_member_approved',
+  'league_member_rejected',
   'season_closed',
   'season_cancelled',
 ];

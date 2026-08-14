@@ -1,79 +1,83 @@
 /**
- * Color Palette - Energy & Trust Theme
+ * Color Palette - Theme v2 "Court & Rally"
  *
- * Extracted from globals.css - the single source of truth for all colors
- * across web (Tailwind) and mobile (NativeWind) platforms.
+ * Hand-tuned ramps (no longer Tailwind's stock scales). Single source of
+ * truth for all colors across web (Tailwind) and mobile (NativeWind).
+ *
+ * Accent jobs: primary (Court Teal) = act, secondary (Rally Coral) = people,
+ * accent (Champion Gold) = earned. Gold is distinct from status.warning.
  */
 
 /**
- * Primary colors - Teal/Cyan
- * Base color: #14b8a6 (500)
+ * Primary colors - Court Teal
+ * Anchors: 600 #007a6e (light-mode action), 400 #17c9b4 (dark-mode action)
  */
 export const primary = {
-  50: '#f0fdfa',
-  100: '#ccfbf1',
-  200: '#99f6e4',
-  300: '#5eead4',
-  400: '#2dd4bf',
-  500: '#14b8a6',
-  600: '#0d9488',
-  700: '#0f766e',
-  800: '#115e59',
-  900: '#134e4a',
-  950: '#042f2e',
+  50: '#f0faf7',
+  100: '#d6f5ee',
+  200: '#a9ebdf',
+  300: '#6bdcc9',
+  400: '#17c9b4',
+  500: '#0fa893',
+  600: '#007a6e',
+  700: '#06635b',
+  800: '#0a4e48',
+  900: '#0d3b38',
+  950: '#062220',
 } as const;
 
 /**
- * Secondary colors - Red/Coral
- * Base color: #ed6a6d (500)
+ * Secondary colors - Rally Coral
+ * Anchors: 500 #f2554b (light), 400 #ff8b76 (dark-mode step, warm coral not red)
  */
 export const secondary = {
-  50: '#fdf0f0',
-  100: '#fbe1e2',
-  200: '#f8c3c5',
-  300: '#f4a6a7',
-  400: '#f1888a',
-  500: '#ed6a6d',
-  600: '#be5557',
-  700: '#8e4041',
-  800: '#5f2a2c',
-  900: '#2f1516',
-  950: '#180b0b',
+  50: '#fef1ef',
+  100: '#fde2df',
+  200: '#fbc5bf',
+  300: '#f9a390',
+  400: '#ff8b76',
+  500: '#f2554b',
+  600: '#d0433a',
+  700: '#a93129',
+  800: '#7f231d',
+  900: '#571713',
+  950: '#300b08',
 } as const;
 
 /**
- * Accent colors - Yellow/Gold
- * Base color: #f59e0b (500)
+ * Accent colors - Champion Gold
+ * Anchors: 500 #e8a020 (light), 300 #ffc94d (dark-mode step)
  */
 export const accent = {
-  50: '#fffbeb',
-  100: '#fef3c7',
-  200: '#fde68a',
-  300: '#fcd34d',
-  400: '#fbbf24',
-  500: '#f59e0b',
-  600: '#d97706',
-  700: '#b45309',
-  800: '#92400e',
-  900: '#78350f',
-  950: '#451a03',
+  50: '#fdf6e7',
+  100: '#faebc8',
+  200: '#f6d98f',
+  300: '#ffc94d',
+  400: '#f5b535',
+  500: '#e8a020',
+  600: '#c68414',
+  700: '#9c660f',
+  800: '#734a0c',
+  900: '#4e3108',
+  950: '#2b1a04',
 } as const;
 
 /**
- * Neutral/Gray colors
+ * Neutral colors - teal-tinted grays (oklch chroma ~0.004-0.012 at hue ~190).
+ * 900/950 double as the dark-mode card/background surfaces.
  */
 export const neutral = {
-  50: '#fafafa',
-  100: '#f5f5f5',
-  200: '#e5e5e5',
-  300: '#d4d4d4',
-  400: '#a3a3a3',
-  500: '#737373',
-  600: '#525252',
-  700: '#404040',
-  800: '#262626',
-  900: '#171717',
-  950: '#0a0a0a',
+  50: '#f4f9f8',
+  100: '#e9f1ef',
+  200: '#dce8e5',
+  300: '#c4d4d0',
+  400: '#93a8a2',
+  500: '#5c6f6b',
+  600: '#475753',
+  700: '#35423f',
+  800: '#232e2c',
+  900: '#15211f',
+  950: '#0c1514',
 } as const;
 
 /**
@@ -87,6 +91,8 @@ export const base = {
 
 /**
  * Status/Semantic colors
+ * Deliberately separate from the brand accents: warning stays amber-orange,
+ * Champion Gold (accent) is reserved for earned moments.
  */
 export const status = {
   success: {
@@ -113,44 +119,45 @@ export const status = {
 
 /**
  * Dark mode color adjustments
- * These are the inverted/adjusted values for dark mode
+ * 50-400 are elevated dark surfaces (teal-black, not gray), 500-800 are the
+ * brightened brand steps for dark grounds, 900 is a deep resting shade.
  */
 export const darkMode = {
   primary: {
-    50: '#0a0a0a',
-    100: '#141414',
-    200: '#1f1f1f',
-    300: '#2a2a2a',
-    400: '#353535',
-    500: '#14b8a6',
-    600: '#0d9488',
-    700: '#0f766e',
-    800: '#115e59',
-    900: '#0f1212',
+    50: '#0c1514',
+    100: '#121b1a',
+    200: '#15211f',
+    300: '#1b2a27',
+    400: '#22332f',
+    500: '#17c9b4',
+    600: '#3ddcc8',
+    700: '#6fe2d0',
+    800: '#a5efe2',
+    900: '#0f1717',
   },
   secondary: {
-    50: '#1a0a0a',
-    100: '#2d1414',
-    200: '#3d1e1e',
-    300: '#4d2828',
-    400: '#5d3232',
-    500: '#ff6b6b',
-    600: '#ff7a7a',
-    700: '#ff8989',
-    800: '#ff9898',
-    900: '#2d1414',
+    50: '#1c100e',
+    100: '#2b1714',
+    200: '#3b201c',
+    300: '#4b2a24',
+    400: '#5c342d',
+    500: '#ff8b76',
+    600: '#ff9a85',
+    700: '#ffaa95',
+    800: '#ffbaa6',
+    900: '#2b1714',
   },
   accent: {
-    50: '#1a1508',
-    100: '#2d2410',
-    200: '#3d3318',
-    300: '#4d4220',
-    400: '#5d5128',
-    500: '#ffd23f',
-    600: '#ffd653',
-    700: '#ffda67',
-    800: '#ffde7b',
-    900: '#2d2410',
+    50: '#1b1507',
+    100: '#2c230e',
+    200: '#3d3115',
+    300: '#4e3f1c',
+    400: '#5f4d23',
+    500: '#ffc94d',
+    600: '#ffd166',
+    700: '#ffd980',
+    800: '#ffe099',
+    900: '#2c230e',
   },
 } as const;
 

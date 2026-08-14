@@ -2,7 +2,7 @@
  * Community Screen
  *
  * Main community hub with:
- * - Quick action buttons: Groups, Communities, Tournaments, Leagues (horizontal carousel)
+ * - Quick action buttons: Compete, Communities
  * - Player directory for finding and connecting with players
  */
 
@@ -13,8 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useAdminStatus } from '@rallia/shared-hooks';
-import { spacingPixels, accent, primary, secondary } from '@rallia/design-system';
+import { spacingPixels, accent, secondary } from '@rallia/design-system';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 
@@ -48,7 +47,6 @@ interface ActionButton {
 const Community = () => {
   const { colors } = useThemeStyles();
   const { session } = useAuth();
-  const { isAdmin } = useAdminStatus();
   const { selectedSport } = useSport();
   const navigation = useNavigation<CommunityNavigationProp>();
   const { t } = useTranslation();
@@ -70,24 +68,15 @@ const Community = () => {
   );
 
   // Action button handlers — the tile fires the haptic on press.
-  const handleGroups = useCallback(() => {
-    if (!guardAction()) return;
-    navigation.navigate('Groups');
-  }, [navigation, guardAction]);
-
   const handleCommunities = useCallback(() => {
     navigation.navigate('Communities');
   }, [navigation]);
 
-  const handleTournaments = useCallback(() => {
-    if (!guardAction()) return;
-    navigation.navigate('Tournaments');
-  }, [navigation, guardAction]);
-
-  const handleLeagues = useCallback(() => {
-    if (!guardAction()) return;
-    navigation.navigate('Leagues');
-  }, [navigation, guardAction]);
+  // Public destination: the Compete hub reads for signed-out visitors too and
+  // guards its own actions (register, join, enroll).
+  const handleCompete = useCallback(() => {
+    navigation.navigate('Compete');
+  }, [navigation]);
 
   // Action buttons configuration — gradients match the Home play grid so each
   // destination keeps one color identity across the app (tournaments coral,
@@ -95,55 +84,32 @@ const Community = () => {
   const actionButtons: ActionButton[] = useMemo(() => {
     const buttons: ActionButton[] = [];
 
+    // One destination, one tile: the Compete hub holds both formats.
     buttons.push({
-      id: 'tournaments',
+      id: 'compete',
       icon: 'trophy-outline',
       watermark: 'trophy',
       gradient: [secondary[400], secondary[600]],
       borderColor: secondary[500],
-      label: t('community.tournaments'),
-      onPress: handleTournaments,
+      label: t('community.compete'),
+      onPress: handleCompete,
     });
 
-    // Leagues are re-admin-gated during rollout.
-    if (isAdmin) {
-      buttons.push({
-        id: 'leagues',
-        icon: 'ribbon-outline',
-        watermark: 'ribbon',
-        gradient: [primary[700], primary[900]],
-        borderColor: primary[800],
-        label: t('community.leagues'),
-        onPress: handleLeagues,
-      });
-    }
-
-    buttons.push(
-      {
-        id: 'communities',
-        icon: 'globe-outline',
-        watermark: 'globe',
-        gradient: [accent[400], accent[600]],
-        borderColor: accent[500],
-        label: t('community.communities'),
-        onPress: handleCommunities,
-      },
-      {
-        id: 'groups',
-        icon: 'people-outline',
-        watermark: 'people',
-        gradient: [primary[500], primary[700]],
-        borderColor: primary[600],
-        label: t('community.groups'),
-        onPress: handleGroups,
-      }
-    );
+    buttons.push({
+      id: 'communities',
+      icon: 'globe-outline',
+      watermark: 'globe',
+      gradient: [accent[400], accent[600]],
+      borderColor: accent[500],
+      label: t('community.communities'),
+      onPress: handleCommunities,
+    });
 
     return buttons;
-  }, [handleGroups, handleCommunities, handleTournaments, handleLeagues, isAdmin, t]);
+  }, [handleCommunities, handleCompete, t]);
 
-  // When there are few enough buttons to fit without scrolling (e.g. non-admin
-  // users only see Tournaments + Communities + Groups), stretch them to fill the width.
+  // When there are few enough buttons to fit without scrolling, stretch them
+  // to fill the width.
   const fillWidth = actionButtons.length <= 2;
 
   const navigateToPlayerProfile = useNavigateToPlayerProfile();

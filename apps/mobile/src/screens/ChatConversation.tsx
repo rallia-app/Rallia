@@ -5,7 +5,8 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, Alert, Keyboard } from 'react-native';
-import { Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
+import { Skeleton, SkeletonChatMessages, useToast } from '@rallia/shared-components';
+import { spacingPixels } from '@rallia/design-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -787,37 +788,26 @@ export default function ChatConversationScreen() {
           onReport={handleReport}
           onClearChat={handleClearChat}
         />
-        <View style={styles.loadingContainer}>
-          {/* Message Skeleton Loaders */}
-          {[...Array(6)].map((_, index) => {
-            const isMe = index % 3 === 0;
-            return (
-              <View
-                key={index}
-                style={[
-                  styles.messageSkeletonRow,
-                  isMe ? styles.messageSkeletonRowRight : styles.messageSkeletonRowLeft,
-                ]}
-              >
-                {!isMe && (
-                  <SkeletonAvatar
-                    size={32}
-                    backgroundColor={colors.cardBackground}
-                    highlightColor={colors.border}
-                  />
-                )}
-                <View style={[styles.messageSkeleton, isMe && styles.messageSkeletonRight]}>
-                  <Skeleton
-                    width={isMe ? 150 : 200}
-                    height={50}
-                    borderRadius={16}
-                    backgroundColor={colors.cardBackground}
-                    highlightColor={colors.border}
-                  />
-                </View>
-              </View>
-            );
-          })}
+        <SkeletonChatMessages
+          backgroundColor={colors.skeletonBackground}
+          highlightColor={colors.skeletonHighlight}
+        />
+        {/* Input bar placeholder mirroring MessageInput so layout doesn't jump on load */}
+        <View style={[styles.inputSkeletonContainer, { borderTopColor: colors.border }]}>
+          <Skeleton
+            height={44}
+            borderRadius={22}
+            backgroundColor={colors.skeletonBackground}
+            highlightColor={colors.skeletonHighlight}
+            style={styles.inputSkeletonField}
+          />
+          <Skeleton
+            width={34}
+            height={34}
+            circle
+            backgroundColor={colors.skeletonBackground}
+            highlightColor={colors.skeletonHighlight}
+          />
         </View>
       </View>
     );
@@ -913,27 +903,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 20,
-  },
-  messageSkeletonRow: {
+  inputSkeletonContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    marginBottom: 16,
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[6],
+    borderTopWidth: 1,
   },
-  messageSkeletonRowLeft: {
-    justifyContent: 'flex-start',
-  },
-  messageSkeletonRowRight: {
-    justifyContent: 'flex-end',
-  },
-  messageSkeleton: {
-    marginLeft: 8,
-  },
-  messageSkeletonRight: {
-    marginLeft: 0,
-    marginRight: 0,
+  inputSkeletonField: {
+    flex: 1,
   },
 });

@@ -17,14 +17,16 @@ import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
+import { useQueryClient } from '@tanstack/react-query';
 import { Text, useToast } from '@rallia/shared-components';
-import { OnboardingService, Logger } from '@rallia/shared-services';
+import { OnboardingService, Logger, regenerateRoundChatSuggestions } from '@rallia/shared-services';
+import { useSharedAvailability, sharedAvailabilityKeys } from '@rallia/shared-hooks';
 import type { OnboardingAvailability, DayEnum } from '@rallia/shared-types';
 import { mediumHaptic } from '@rallia/shared-utils';
-import { radiusPixels, spacingPixels } from '@rallia/design-system';
+import { accent, radiusPixels, secondary, spacingPixels } from '@rallia/design-system';
 
 import ProgressIndicator from '#/features/onboarding/components/ProgressIndicator';
-import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
+import { useAuth, useThemeStyles, useTranslation } from '#/hooks';
 import { useLocale } from '#/context';
 import * as Analytics from '#/services/analytics';
 import {
@@ -51,10 +53,35 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
   const totalSteps = payload?.totalSteps || 8;
   const initialData = payload?.initialData;
   const _selectedSportIds = payload?.selectedSportIds;
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
+
+  // Three hues, one per state, so they separate at a 28pt cell: the player's own
+  // teal, the opponent's coral, and gold where they meet. Gold is the design
+  // system's "earned" colour, which is exactly what a mutual hour is. Dark mode
+  // takes each ramp's brighter anchor.
+  const overlayColors = useMemo(
+    () => ({
+      mine: colors.primary,
+      theirs: isDark ? secondary[400] : secondary[500],
+      both: isDark ? accent[300] : accent[500],
+    }),
+    [colors.primary, isDark]
+  );
   const { t } = useTranslation();
   const { locale } = useLocale();
   const toast = useToast();
+  const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const viewerId = session?.user?.id;
+
+  // Pairing context (opened from a tournament round chat): draw the opponent's
+  // free hours under the player's own selection and persist the save here, then
+  // refresh the round chat's suggestion card.
+  const opponentIds = useMemo(() => payload?.opponentIds ?? [], [payload?.opponentIds]);
+  const opponentName = payload?.opponentName ?? null;
+  const tournamentMatchId = payload?.tournamentMatchId ?? null;
+  const isPairing = opponentIds.length > 0;
+  const { data: opponentGrid } = useSharedAvailability(isPairing ? opponentIds : undefined);
 
   const [selection, setSelection] = useState<HourGrid>(initialData ?? emptyGrid());
   const [isSaving, setIsSaving] = useState(false);
@@ -88,6 +115,58 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
   const handleContinue = async () => {
     mediumHaptic();
     if (isSaving) return;
+
+    // Pairing mode: persist here (same diff-sync + last_confirmed_at stamp the
+    // profile edit path uses), then regenerate the round chat's card so the
+    // player sees their new mutual slots without leaving the thread.
+    if (isPairing) {
+      if (selection.size < MIN_SELECTIONS) {
+        toast.error(t('alerts.minAvailabilitiesRequired'));
+        return;
+      }
+      setIsSaving(true);
+      try {
+        const availabilityData: OnboardingAvailability[] = Array.from(selection).map(key => {
+          const sepIdx = key.lastIndexOf('-');
+          return {
+            day: key.slice(0, sepIdx) as DayEnum,
+            hour_of_day: Number(key.slice(sepIdx + 1)),
+            is_active: true,
+          };
+        });
+
+        const { error } = await OnboardingService.saveAvailability(availabilityData);
+        if (error) throw new Error(error.message);
+
+        Analytics.availabilityScheduleUpdated({
+          was_refresh_only: !!initialData && setsEqual(selection, initialData),
+        });
+
+        if (tournamentMatchId && viewerId) {
+          // Best effort: the availability itself is saved either way, so a
+          // failed refresh must not read as a failed save.
+          try {
+            await regenerateRoundChatSuggestions(tournamentMatchId, viewerId);
+          } catch (regenError) {
+            Logger.warn('Failed to regenerate organizer card after availability save', {
+              error: regenError,
+              tournamentMatchId,
+            });
+          }
+        }
+
+        await queryClient.invalidateQueries({ queryKey: sharedAvailabilityKeys.all });
+        onSave?.(selection);
+        SheetManager.hide('player-availabilities');
+        toast.success(t('alerts.availabilitiesUpdated'));
+      } catch (error) {
+        Logger.error('Failed to save availability from pairing context', error as Error);
+        toast.error(t('onboarding.validation.failedToSaveAvailability'));
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
 
     // Edit mode: detect refresh-only save (no data change) so analytics can
     // distinguish weekly-confirm taps from real edits. The Save button stays
@@ -186,6 +265,57 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
             t={t}
           />
 
+          {isPairing && opponentGrid && opponentGrid.size > 0 && (
+            <View style={styles.legend}>
+              {/* Swatches use the SAME formulas as the grid cells, so the key
+                  cannot drift from what it explains. */}
+              <View style={styles.legendRow}>
+                <View
+                  style={[
+                    styles.legendSwatch,
+                    {
+                      backgroundColor: `${overlayColors.mine}99`,
+                      borderColor: overlayColors.mine,
+                    },
+                  ]}
+                />
+                <Text size="xs" style={{ color: colors.textMuted }}>
+                  {t('availabilityOverlay.legend.mine')}
+                </Text>
+              </View>
+              <View style={styles.legendRow}>
+                <View
+                  style={[
+                    styles.legendSwatch,
+                    {
+                      backgroundColor: `${overlayColors.theirs}33`,
+                      borderColor: overlayColors.theirs,
+                    },
+                  ]}
+                />
+                <Text size="xs" style={{ color: colors.textMuted }}>
+                  {opponentName
+                    ? t('availabilityOverlay.legend.theirs').replace('{name}', opponentName)
+                    : t('availabilityOverlay.legend.theirsGeneric')}
+                </Text>
+              </View>
+              <View style={styles.legendRow}>
+                <View
+                  style={[
+                    styles.legendSwatch,
+                    {
+                      backgroundColor: overlayColors.both,
+                      borderColor: overlayColors.both,
+                    },
+                  ]}
+                />
+                <Text size="xs" weight="semibold" style={{ color: colors.text }}>
+                  {t('availabilityOverlay.legend.both')}
+                </Text>
+              </View>
+            </View>
+          )}
+
           <View style={styles.gridWrapper}>
             <HourlyAvailabilityGrid
               value={selection}
@@ -193,6 +323,8 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
               colors={gridColors}
               t={t}
               locale={locale}
+              overlay={isPairing ? opponentGrid : undefined}
+              overlayColors={overlayColors}
             />
           </View>
         </ScrollView>
@@ -285,6 +417,21 @@ const styles = StyleSheet.create({
   },
   gridWrapper: {
     marginTop: spacingPixels[2],
+  },
+  legend: {
+    marginTop: spacingPixels[3],
+    gap: spacingPixels[1],
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  legendSwatch: {
+    width: 14,
+    height: 14,
+    borderWidth: 1,
+    borderRadius: radiusPixels.sm,
   },
   footer: {
     padding: spacingPixels[4],

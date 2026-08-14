@@ -73,9 +73,11 @@ BEGIN
     o_org := o_p[39 + p_org_idx];
 
     PERFORM pg_temp.as_user(o_org);
+    PERFORM pg_temp.staff_on(o_org);
     SELECT * INTO v_l FROM league_create(
         p_name => p_name, p_sport_id => v_sport,
         p_visibility => 'public', p_join_mode => 'open');
+    PERFORM pg_temp.staff_off(o_org);
     FOR v_i IN 31..38 LOOP
         PERFORM pg_temp.as_user(o_p[v_i]);
         PERFORM league_join(v_l.id);
@@ -129,6 +131,24 @@ LANGUAGE sql STABLE AS $$
       ) q;
 $$;
 
+-- Event creation went staff-only in 20260812150000 ("Rallia runs every event
+-- during this phase"). Staff is granted around the create calls only and
+-- dropped straight after: the fixture-picking helpers filter admins out, so a
+-- lingering row would shift which players a later block picks, and the
+-- organizer has to stay an ordinary player for the authz assertions to mean
+-- anything.
+-- SECURITY DEFINER so the grant still works inside a block that has switched
+-- to the authenticated role, where admin's RLS would refuse the insert.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+LANGUAGE sql SECURITY DEFINER AS $$
+  DELETE FROM admin WHERE id = p;
+$$;
+
 -- Like mk_season, but the season can carry a rules override (doubles).
 CREATE OR REPLACE FUNCTION pg_temp.mk_season2(
     p_name    text,
@@ -151,9 +171,11 @@ BEGIN
     o_org := o_p[39 + p_org_idx];
 
     PERFORM pg_temp.as_user(o_org);
+    PERFORM pg_temp.staff_on(o_org);
     SELECT * INTO v_l FROM league_create(
         p_name => p_name, p_sport_id => v_sport,
         p_visibility => 'public', p_join_mode => 'open');
+    PERFORM pg_temp.staff_off(o_org);
     FOR v_i IN 31..38 LOOP
         PERFORM pg_temp.as_user(o_p[v_i]);
         PERFORM league_join(v_l.id);

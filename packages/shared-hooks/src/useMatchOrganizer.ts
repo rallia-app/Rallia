@@ -13,6 +13,7 @@ import {
   getMatchTimeVotes,
   toggleMatchTimeVote,
   createCasualMatch,
+  addCustomOrganizerOption,
   getOrCreateTournamentRoundChat,
   getTournamentMatchSportId,
   getOrCreateSessionPairingChat,
@@ -175,6 +176,32 @@ export function useMatchVotesRealtime(
       unsubscribeFromChannel(channel);
     };
   }, [conversationId, playerId, queryClient]);
+}
+
+/**
+ * Propose your own time/place on a card. Refreshes both the card (its options
+ * live in the message metadata) and the votes, since proposing also votes.
+ */
+export function useAddCustomOrganizerOption() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      conversationId: _conversationId,
+      ...params
+    }: Parameters<typeof addCustomOrganizerOption>[0] & { conversationId?: string }) =>
+      addCustomOrganizerOption(params),
+    onSuccess: (_optionIndex, variables) => {
+      if (variables.conversationId) {
+        queryClient.invalidateQueries({
+          queryKey: chatKeys.messages(variables.conversationId),
+        });
+      }
+      queryClient.invalidateQueries({
+        queryKey: matchOrganizerKeys.votes(variables.messageId),
+      });
+    },
+  });
 }
 
 // ============================================================================

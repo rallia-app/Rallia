@@ -3,6 +3,7 @@ import { describe, it, expect } from '@jest/globals';
 import {
   parseScore,
   outcomePoints,
+  matchPoints,
   assignRanks,
   type RankingRules,
   type RankingRow,
@@ -30,6 +31,31 @@ describe('outcomePoints', () => {
     expect(outcomePoints(RULES, 'walkover', false)).toBe(0);
     expect(outcomePoints(RULES, 'draw', true)).toBe(5);
     expect(outcomePoints(RULES, 'draw', false)).toBe(5);
+  });
+});
+
+describe('matchPoints', () => {
+  it('is the result alone when the league does not count games', () => {
+    expect(matchPoints(RULES, 'completed', true, 12)).toBe(10);
+  });
+
+  it('adds the games won on top of the result', () => {
+    const rules: RankingRules = { ...RULES, pointPerGameWon: 1 };
+    // 6-4 6-2: winner takes 12 games, loser 6.
+    expect(matchPoints(rules, 'completed', true, 12)).toBe(22);
+    expect(matchPoints(rules, 'completed', false, 6)).toBe(7);
+  });
+
+  it('separates a blowout from a grind, which is the point of the setting', () => {
+    const rules: RankingRules = { ...RULES, pointPerGameWon: 1 };
+    const blowout = matchPoints(rules, 'completed', true, parseScore('6-0 6-0').aGames);
+    const grind = matchPoints(rules, 'completed', true, parseScore('7-6 6-7 7-6').aGames);
+    expect(grind).toBeGreaterThan(blowout);
+  });
+
+  it('gives a walkover winner nothing extra, since no game was played', () => {
+    const rules: RankingRules = { ...RULES, pointPerGameWon: 1 };
+    expect(matchPoints(rules, 'walkover', true, parseScore(null).aGames)).toBe(10);
   });
 });
 
@@ -74,6 +100,17 @@ describe('parseScore', () => {
     expect(parseScore(null)).toEqual({ aSets: 0, bSets: 0, aGames: 0, bGames: 0 });
     expect(parseScore('W/O')).toEqual({ aSets: 0, bSets: 0, aGames: 0, bGames: 0 });
     expect(parseScore('garbage')).toEqual({ aSets: 0, bSets: 0, aGames: 0, bGames: 0 });
+  });
+
+  it('stays linear on unbalanced parentheses', () => {
+    const started = Date.now();
+    expect(parseScore(`6-4 6-2 ${'('.repeat(50000)}`)).toEqual({
+      aSets: 2,
+      bSets: 0,
+      aGames: 12,
+      bGames: 6,
+    });
+    expect(Date.now() - started).toBeLessThan(1000);
   });
 });
 

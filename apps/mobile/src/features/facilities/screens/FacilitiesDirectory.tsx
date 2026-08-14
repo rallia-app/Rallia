@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { EmptyState, Text, useToast } from '@rallia/shared-components';
 import {
   useFacilitySearch,
   useFavoriteFacilities,
@@ -37,8 +37,6 @@ import {
   useThemeStyles,
   useTranslation,
   useEffectiveLocation,
-  type TranslationKey,
-  type TranslationOptions,
   useRequireOnboarding,
 } from '#/hooks';
 import { useAuth } from '#/hooks';
@@ -53,43 +51,6 @@ import {
 // =============================================================================
 // HELPER COMPONENTS
 // =============================================================================
-
-interface EmptyStateProps {
-  hasActiveSearch: boolean;
-  hasLocation: boolean;
-  colors: ReturnType<typeof useThemeStyles>['colors'];
-  t: (key: TranslationKey, options?: TranslationOptions) => string;
-}
-
-function EmptyState({ hasActiveSearch, hasLocation, colors, t }: EmptyStateProps) {
-  return (
-    <View style={styles.emptyContainer}>
-      <View style={[styles.emptyIconContainer, { backgroundColor: colors.card }]}>
-        <Ionicons
-          name={
-            hasActiveSearch
-              ? 'search-outline'
-              : hasLocation
-                ? 'business-outline'
-                : 'location-outline'
-          }
-          size={48}
-          color={colors.textMuted}
-        />
-      </View>
-      <Text size="lg" weight="semibold" color={colors.text} style={styles.emptyTitle}>
-        {!hasLocation
-          ? t('facilitiesTab.empty.noLocation')
-          : hasActiveSearch
-            ? t('facilitiesTab.empty.title')
-            : t('facilitiesTab.empty.title')}
-      </Text>
-      <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-        {hasLocation ? t('facilitiesTab.empty.description') : t('facilitiesTab.empty.noLocation')}
-      </Text>
-    </View>
-  );
-}
 
 function LoadingSkeleton() {
   return (
@@ -401,15 +362,31 @@ export default function FacilitiesDirectory() {
   // Render empty state
   const renderEmptyComponent = useCallback(() => {
     if (isLoading) return null;
+    const hasLocation = !!location;
     return (
-      <EmptyState
-        hasActiveSearch={hasActiveSearch}
-        hasLocation={!!location}
-        colors={colors}
-        t={t}
-      />
+      <View style={styles.emptyStateWrapper}>
+        <EmptyState
+          icon={
+            <Ionicons
+              name={
+                hasActiveSearch
+                  ? 'search-outline'
+                  : hasLocation
+                    ? 'business-outline'
+                    : 'location-outline'
+              }
+              size={64}
+              color={colors.primary}
+            />
+          }
+          title={hasLocation ? t('facilitiesTab.empty.title') : t('facilitiesTab.empty.noLocation')}
+          description={
+            hasLocation ? t('facilitiesTab.empty.description') : t('facilitiesTab.empty.noLocation')
+          }
+        />
+      </View>
     );
-  }, [isLoading, hasActiveSearch, location, colors, t]);
+  }, [isLoading, hasActiveSearch, location, colors.primary, t]);
 
   const isManualRefresh = useRef(false);
 
@@ -508,26 +485,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 0,
   },
-  emptyContainer: {
+  emptyStateWrapper: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[6],
-  },
-  emptyIconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacingPixels[4],
-  },
-  emptyTitle: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[2],
-  },
-  emptyDescription: {
-    textAlign: 'center',
   },
   // Sits inside the list header below the filters so the gap above the first
   // card is the same whether the skeleton or the loaded items are rendering.

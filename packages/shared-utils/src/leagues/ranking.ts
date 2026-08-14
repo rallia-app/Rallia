@@ -19,6 +19,8 @@ export interface RankingRules {
   pointRetirementLoser: number;
   pointWalkoverWinner: number;
   pointWalkoverLoser: number;
+  /** Points per GAME won, added on top of the result. 0 = result-only. */
+  pointPerGameWon?: number;
 }
 
 /** Terminal session-match statuses that award points. */
@@ -47,6 +49,20 @@ export function outcomePoints(
   }
 }
 
+/**
+ * Total points one player takes from one match: the result, plus
+ * pointPerGameWon for every game they won. Mirrors the `contrib` CTE in
+ * recalc_season_ranking, which adds the same term to its per-side points.
+ */
+export function matchPoints(
+  rules: RankingRules,
+  status: ScoredStatus,
+  isWinner: boolean,
+  gamesWon = 0
+): number {
+  return outcomePoints(rules, status, isWinner) + (rules.pointPerGameWon ?? 0) * gamesWon;
+}
+
 export interface ParsedScore {
   aSets: number;
   bSets: number;
@@ -72,8 +88,8 @@ export function parseScore(score: string | null | undefined): ParsedScore {
 
   // Strip tiebreak detail "(5)", super-tb brackets, "to <target>", and modifiers.
   const cleaned = score
-    .replace(/\([^)]*\)/g, '')
-    .replace(/[[\]]/g, '')
+    .replace(/\([^()]*\)/g, '')
+    .replace(/[[\]()]/g, '')
     .replace(/\bto\s+\d+/gi, '')
     .replace(/\b(RET|W\/O|DEF|INT)\b/gi, '')
     .trim();

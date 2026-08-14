@@ -4,10 +4,12 @@
 
 // Foundation Components
 export { Button } from './foundation/Button';
+export { IconButton } from './foundation/IconButton';
 export { Text } from './foundation/Text';
 export { Heading } from './foundation/Heading';
 
 export type { ButtonProps } from './foundation/Button';
+export type { IconButtonProps } from './foundation/IconButton';
 export type { TextProps } from './foundation/Text';
 export type { HeadingProps } from './foundation/Heading';
 
@@ -35,6 +37,7 @@ export type { SpacerProps } from './layout/Spacer';
 export { Spinner } from './feedback/Spinner';
 export { ErrorMessage } from './feedback/ErrorMessage';
 export { Badge } from './feedback/Badge';
+export { EmptyState } from './feedback/EmptyState';
 export { ErrorBoundary } from './ErrorBoundary';
 export type { ErrorBoundaryTranslations } from './ErrorBoundary';
 export {
@@ -48,6 +51,8 @@ export {
   SkeletonMyMatchCard,
   SkeletonPlayerCard,
   SkeletonConversation,
+  SkeletonMessageBubble,
+  SkeletonChatMessages,
 } from './feedback/Skeleton';
 export { Toast, ToastProvider, ToastOverlay, useToast } from './feedback/Toast';
 export {
@@ -60,6 +65,7 @@ export {
 export type { SpinnerProps } from './feedback/Spinner';
 export type { ErrorMessageProps } from './feedback/ErrorMessage';
 export type { BadgeProps } from './feedback/Badge';
+export type { EmptyStateProps } from './feedback/EmptyState';
 export type {
   SkeletonProps,
   SkeletonTextProps,
@@ -70,6 +76,8 @@ export type {
   SkeletonMyMatchCardProps,
   SkeletonPlayerCardProps,
   SkeletonConversationProps,
+  SkeletonMessageBubbleProps,
+  SkeletonChatMessagesProps,
 } from './feedback/Skeleton';
 export type { ToastProps, ToastType, ToastPosition } from './feedback/Toast';
 export type { OfflineIndicatorProps, NetworkStatus } from './feedback/OfflineIndicator';
@@ -102,6 +110,51 @@ export type { PermissionType } from './overlays';
 // Preferences Components
 export { PreferencesChips } from './preferences';
 export type { PreferencesChipsProps } from './preferences';
+
+// Wizard chrome — header, progress, footer and option rows shared by every
+// creation wizard (match, league, tournament, and the formats that follow).
+export {
+  WizardHeader,
+  WizardProgressBar,
+  WizardFooter,
+  WizardOptionCard,
+  WizardFieldLabel,
+  WizardRatingBoundPicker,
+} from './wizard';
+export type {
+  WizardColors,
+  WizardHeaderProps,
+  WizardProgressBarProps,
+  WizardFooterProps,
+  WizardOptionCardProps,
+  WizardRatingBoundPickerProps,
+  WizardRatingOption,
+} from './wizard';
+
+// Event list primitives — format-neutral card chrome for tournaments, leagues
+// and the formats that follow.
+export {
+  useEventListColors,
+  formatEventRatingRange,
+  EventStatusPill,
+  EventMetaRow,
+  EventMetaChip,
+  EventAvatarStrip,
+  EventCardShell,
+  EventCardSkeleton,
+  EventFooterLink,
+} from './events';
+export type {
+  EventListColors,
+  EventTone,
+  EventStatusPillProps,
+  EventMetaRowProps,
+  EventMetaChipProps,
+  EventAvatarStripProps,
+  EventCardShellProps,
+  EventCardSkeletonProps,
+  EventFooterLinkProps,
+} from './events';
 
 // Charts and analytics layout components are intentionally NOT re-exported
 // here. They pull in `react-native-gifted-charts`, whose top-level module

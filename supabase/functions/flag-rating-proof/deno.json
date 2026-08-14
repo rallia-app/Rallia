@@ -1,4 +1,5 @@
 {
+  "lock": false,
   "imports": {
     "@std/encoding": "jsr:@std/encoding@1",
     "@supabase/functions-js": "jsr:@supabase/functions-js@2",

@@ -39,6 +39,7 @@ import type { OnboardingFormData } from '#/features/onboarding/hooks/useOnboardi
 import { useLocale } from '#/context';
 import { PENDING_REFERRAL_KEY } from '#/navigation/deepLinkStore';
 import * as Analytics from '#/services/analytics';
+import { PhoneInput } from '#/components/PhoneInput';
 
 interface ThemeColors {
   background: string;
@@ -53,6 +54,7 @@ interface ThemeColors {
   inputBackground: string;
   inputBorder: string;
   error: string;
+  success: string;
 }
 
 interface PersonalInfoStepProps {
@@ -88,6 +90,13 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
 
   // Field validation errors
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  const handlePhoneNumberChange = useCallback(
+    (fullNumber: string, _countryCode: string, _localNumber: string) => {
+      onUpdateFormData({ phoneNumber: fullNumber, phoneVerified: false });
+    },
+    [onUpdateFormData]
+  );
 
   // Refs for keyboard visibility handling
   const scrollViewRef = useRef<any>(null);
@@ -511,6 +520,35 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
             );
           })}
         </View>
+      </View>
+
+      {/* Phone Number (optional) */}
+      <View
+        style={styles.inputContainer}
+        onLayout={e => {
+          fieldYOffsets.current.phoneNumber = e.nativeEvent.layout.y;
+        }}
+      >
+        <PhoneInput
+          value={formData.phoneNumber}
+          onChangePhone={handlePhoneNumberChange}
+          label={t('onboarding.personalInfoStep.phoneNumber')}
+          placeholder={t('onboarding.personalInfoStep.phoneNumber')}
+          required={false}
+          colors={{
+            text: colors.text,
+            textMuted: colors.textMuted,
+            textSecondary: colors.textSecondary,
+            background: colors.background,
+            inputBackground: colors.inputBackground,
+            inputBorder: colors.inputBorder,
+            primary: colors.buttonActive,
+            error: colors.error,
+            card: colors.cardBackground,
+          }}
+          onFocus={() => scrollToField('phoneNumber')}
+          TextInputComponent={TextInput}
+        />
       </View>
 
       {/* Referral Code */}

@@ -16,7 +16,7 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, useToast, EmptyState } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, primary, neutral, base } from '@rallia/design-system';
 import {
   getSharedContactLists,
@@ -407,15 +407,13 @@ export function InviteFromListsStep({
     }
     if (lists.length === 0) {
       return (
-        <View style={styles.emptyState}>
-          <Ionicons name="people-outline" size={48} color={colors.textMuted} />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            {t('sharedLists.share.noSharedLists')}
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {t('sharedLists.share.createListFirst')}
-          </Text>
-        </View>
+        <EmptyState
+          variant="sheet"
+          icon={<Ionicons name="people-outline" size={36} color={colors.primary} />}
+          title={t('sharedLists.share.noSharedLists')}
+          description={t('sharedLists.share.createListFirst')}
+          style={styles.emptyState}
+        />
       );
     }
     return (
@@ -588,20 +586,7 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels[8],
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: spacingPixels[3],
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: spacingPixels[2],
-    paddingHorizontal: spacingPixels[4],
   },
   selectedBadge: {
     alignSelf: 'flex-start',

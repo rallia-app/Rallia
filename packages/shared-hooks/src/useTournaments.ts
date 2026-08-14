@@ -37,6 +37,14 @@ import {
   generateTournamentBracket,
   setTournamentSeeds,
   previewTournamentBracket,
+  previewTournamentPools,
+  generateTournamentPools,
+  getTournamentPoolStandings,
+  generateTournamentKnockout,
+  forfeitTournamentRegistration,
+  getTournamentRoundDeadlines,
+  setTournamentRoundDeadlines,
+  extendTournamentMatchDeadline,
   getTournamentCoOrganizers,
   addTournamentCoOrganizer,
   removeTournamentCoOrganizer,
@@ -68,6 +76,10 @@ import {
   type TournamentRegistration,
   type TournamentMatch,
   type PreviewBracketMatch,
+  type PreviewPoolSlot,
+  type PoolStandingRow,
+  type TournamentRoundDeadline,
+  type RoundDeadlineInput,
   type TournamentCoOrganizer,
   type LinkableMatch,
   type PlayerProfile,
@@ -103,6 +115,12 @@ export const tournamentKeys = {
   matches: (tournamentId: string) => [...tournamentKeys.all, 'matches', tournamentId] as const,
   bracketPreview: (tournamentId: string) =>
     [...tournamentKeys.all, 'bracketPreview', tournamentId] as const,
+  poolPreview: (tournamentId: string) =>
+    [...tournamentKeys.all, 'poolPreview', tournamentId] as const,
+  poolStandings: (tournamentId: string) =>
+    [...tournamentKeys.all, 'poolStandings', tournamentId] as const,
+  roundDeadlines: (tournamentId: string) =>
+    [...tournamentKeys.all, 'roundDeadlines', tournamentId] as const,
   coOrganizers: (tournamentId: string) =>
     [...tournamentKeys.all, 'coOrganizers', tournamentId] as const,
   amIOrganizer: (tournamentId: string) =>
@@ -282,6 +300,8 @@ function useTournamentDetailInvalidator() {
     qc.invalidateQueries({ queryKey: tournamentKeys.registrations(tournamentId) });
     qc.invalidateQueries({ queryKey: tournamentKeys.participants(tournamentId) });
     qc.invalidateQueries({ queryKey: tournamentKeys.matches(tournamentId) });
+    qc.invalidateQueries({ queryKey: tournamentKeys.poolStandings(tournamentId) });
+    qc.invalidateQueries({ queryKey: tournamentKeys.roundDeadlines(tournamentId) });
     qc.invalidateQueries({ queryKey: [...tournamentKeys.all, 'myRegistration', tournamentId] });
     qc.invalidateQueries({ queryKey: [...tournamentKeys.all, 'myActiveRegistrations'] });
     // The card's "5/16" chip comes from registration_count, which the list query
@@ -536,6 +556,165 @@ export function useTournamentBracketPreview(tournamentId: string | undefined, en
     queryFn: () => previewTournamentBracket(tournamentId!),
     enabled: !!tournamentId && enabled,
   });
+}
+
+/**
+ * Read-only serpentine pool preview (pool_knockout, organizer only). Enable
+ * while the setup screen is open (registration_closed, no pools yet).
+ */
+export function useTournamentPoolPreview(tournamentId: string | undefined, enabled: boolean) {
+  return useQuery<PreviewPoolSlot[]>({
+    queryKey: tournamentKeys.poolPreview(tournamentId ?? ''),
+    queryFn: () => previewTournamentPools(tournamentId!),
+    enabled: !!tournamentId && enabled,
+  });
+}
+
+/** Organizer publishes the pool phase (pool_knockout twin of bracket gen). */
+export function useGenerateTournamentPools(options: MutationOptions<TournamentMatch[]> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentMatch[],
+    Error,
+    { tournamentId: string; versionWas: number }
+  >({
+    mutationFn: ({ tournamentId, versionWas }) => generateTournamentPools(tournamentId, versionWas),
+    onSuccess: (matches, vars) => {
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(matches);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Derived pool standings. Other players' results move this, so keep it fresh
+ * on every mount like the other cross-player reads.
+ */
+export function useTournamentPoolStandings(tournamentId: string | undefined, enabled = true) {
+  return useQuery<PoolStandingRow[]>({
+    queryKey: tournamentKeys.poolStandings(tournamentId ?? ''),
+    queryFn: () => getTournamentPoolStandings(tournamentId!),
+    enabled: !!tournamentId && enabled,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+}
+
+/** Organizer launches the knockout once every pool match is settled. */
+export function useGenerateTournamentKnockout(options: MutationOptions<TournamentMatch[]> = {}) {
+  const qc = useQueryClient();
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentMatch[],
+    Error,
+    { tournamentId: string; versionWas: number }
+  >({
+    mutationFn: ({ tournamentId, versionWas }) =>
+      generateTournamentKnockout(tournamentId, versionWas),
+    onSuccess: (matches, vars) => {
+      qc.invalidateQueries({ queryKey: tournamentKeys.poolStandings(vars.tournamentId) });
+      qc.invalidateQueries({ queryKey: tournamentKeys.roundDeadlines(vars.tournamentId) });
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(matches);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/** Organizer removes a player mid-pools (walkovers for the opponents). */
+export function useForfeitTournamentRegistration(
+  options: MutationOptions<TournamentRegistration> = {}
+) {
+  const qc = useQueryClient();
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentRegistration,
+    Error,
+    { registrationId: string; versionWas: number; tournamentId: string; reason?: string }
+  >({
+    mutationFn: ({ registrationId, versionWas, reason }) =>
+      forfeitTournamentRegistration(registrationId, versionWas, reason),
+    onSuccess: (reg, vars) => {
+      qc.invalidateQueries({ queryKey: tournamentKeys.poolStandings(vars.tournamentId) });
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(reg);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/** Phase/round deadlines (advisory read model for countdowns). */
+export function useTournamentRoundDeadlines(tournamentId: string | undefined, enabled = true) {
+  return useQuery<TournamentRoundDeadline[]>({
+    queryKey: tournamentKeys.roundDeadlines(tournamentId ?? ''),
+    queryFn: () => getTournamentRoundDeadlines(tournamentId!),
+    enabled: !!tournamentId && enabled,
+  });
+}
+
+/** Organizer upserts phase/round deadlines. */
+export function useSetTournamentRoundDeadlines(
+  options: MutationOptions<TournamentRoundDeadline[]> = {}
+) {
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    TournamentRoundDeadline[],
+    Error,
+    { tournamentId: string; rounds: RoundDeadlineInput[] }
+  >({
+    mutationFn: ({ tournamentId, rounds }) => setTournamentRoundDeadlines(tournamentId, rounds),
+    onSuccess: (rows, vars) => {
+      qc.invalidateQueries({ queryKey: tournamentKeys.roundDeadlines(vars.tournamentId) });
+      options.onSuccess?.(rows);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/** Organizer extends one match's deadline. */
+export function useExtendTournamentMatchDeadline(options: MutationOptions<TournamentMatch> = {}) {
+  const qc = useQueryClient();
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    TournamentMatch,
+    Error,
+    { tournamentMatchId: string; tournamentId: string; deadlineAt: string; reason?: string }
+  >({
+    mutationFn: ({ tournamentMatchId, deadlineAt, reason }) =>
+      extendTournamentMatchDeadline(tournamentMatchId, deadlineAt, reason),
+    onSuccess: (row, vars) => {
+      qc.invalidateQueries({ queryKey: tournamentKeys.roundDeadlines(vars.tournamentId) });
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(row);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
 }
 
 /**

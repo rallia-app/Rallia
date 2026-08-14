@@ -1,7 +1,15 @@
 import { reactNative } from '@rallia/eslint-config/react-native';
+import { uiConsistency } from '@rallia/eslint-config/ui-consistency';
 
 export default [
   ...reactNative({ tsconfigRootDir: import.meta.dirname }),
+  {
+    // Registry-first UI enforcement (warn-level burn-down; see
+    // specs/design-system/button-audit.md §3.4). Screens and features only —
+    // shared primitives legitimately define these styles.
+    files: ['src/screens/**/*.{ts,tsx}', 'src/features/**/*.{ts,tsx}'],
+    ...uiConsistency,
+  },
   {
     ignores: [
       'node_modules/**',
