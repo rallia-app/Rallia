@@ -98,23 +98,19 @@ import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 import { neutral } from '@rallia/design-system';
 import { useFonts } from 'expo-font';
-import {
-  Poppins_400Regular,
-  Poppins_500Medium,
-  Poppins_600SemiBold,
-  Poppins_700Bold,
-  Poppins_800ExtraBold,
-} from '@expo-google-fonts/poppins';
-import {
-  BarlowSemiCondensed_600SemiBold,
-  BarlowSemiCondensed_700Bold,
-} from '@expo-google-fonts/barlow-semi-condensed';
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
+// Per-weight subpaths, not the package barrel: the barrel requires every face,
+// which drags all 54 .ttf into the asset graph and the OTA payload.
+import { Poppins_400Regular } from '@expo-google-fonts/poppins/400Regular';
+import { Poppins_500Medium } from '@expo-google-fonts/poppins/500Medium';
+import { Poppins_600SemiBold } from '@expo-google-fonts/poppins/600SemiBold';
+import { Poppins_700Bold } from '@expo-google-fonts/poppins/700Bold';
+import { Poppins_800ExtraBold } from '@expo-google-fonts/poppins/800ExtraBold';
+import { BarlowSemiCondensed_600SemiBold } from '@expo-google-fonts/barlow-semi-condensed/600SemiBold';
+import { BarlowSemiCondensed_700Bold } from '@expo-google-fonts/barlow-semi-condensed/700Bold';
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 
 // Theme v2 faces — the names here are what shared-components' Text resolves
 // (Poppins = display, Barlow Semi Condensed = stat numerals, Inter = body).
@@ -341,7 +337,8 @@ function SplashGate({ children }: PropsWithChildren) {
   }, []);
 
   const isAppReady = useMemo(() => {
-    if (!fontsLoaded) return false;
+    // A font failure is terminal, so gate on it too or the splash hangs the full 5s.
+    if (!fontsLoaded && !fontError) return false;
     if (isCheckingUpdate) return false;
     if (!isLocaleReady) return false;
     if (authLoading) return false;
@@ -354,6 +351,7 @@ function SplashGate({ children }: PropsWithChildren) {
     return true;
   }, [
     fontsLoaded,
+    fontError,
     isCheckingUpdate,
     isLocaleReady,
     authLoading,
