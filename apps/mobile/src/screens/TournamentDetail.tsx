@@ -402,11 +402,18 @@ export const TournamentDetail: React.FC = () => {
   const open = useOpenTournamentRegistration({
     onSuccess: () => successHaptic(),
     onError: e => {
-      // Paid event without completed payout setup: prompt the organizer to
-      // finish Stripe onboarding instead of a generic error.
+      // Paid event without completed payout setup. The gate checks the primary
+      // organizer's account, so only they get sent to onboarding.
       if (e.message.includes('PAYOUTS_SETUP_REQUIRED')) {
         warningHaptic();
-        promptOnboardPayouts();
+        if (isPrimaryOrganizer) {
+          promptOnboardPayouts();
+        } else {
+          Alert.alert(
+            t('tournamentDetail.payments.payoutsSetupTitle'),
+            t('tournamentDetail.payments.errors.organizerNotReady')
+          );
+        }
         return;
       }
       showError(e.message, 'tournamentDetail.errors.openFailed');
@@ -451,13 +458,18 @@ export const TournamentDetail: React.FC = () => {
   const { data: feeQuote } = useTournamentFeeQuote(params.tournamentId, isPaidTournament);
   // Only paid entry needs the consent tick, so only fetch the terms there.
   const { data: participationTerms } = useParticipationTerms(isPaidTournament);
-  // Organizer payout status drives the manage/onboard card on paid events.
-  const { data: payoutAccount } = useMyPayoutAccount(userId, isOrganizer && isPaidTournament);
+  // Payout status drives the manage/onboard card. Primary only: the entry
+  // settles into their connected account, never a co-organizer's.
+  const { data: payoutAccount } = useMyPayoutAccount(
+    userId,
+    isPrimaryOrganizer && isPaidTournament
+  );
   // What this event has collected — the organizer's only in-app money view
   // (the Stripe dashboard is account-wide and can't be tied back to one event).
+  // lt_event_earnings refuses co-organizers, so gate on the primary.
   const { data: earnings } = useEventEarnings(
     { tournamentId: params.tournamentId },
-    isOrganizer && isPaidTournament
+    isPrimaryOrganizer && isPaidTournament
   );
   // Stripe-hosted receipt for the payer's own paid registration. Not gated on
   // status: after a withdrawal that same receipt is where the refund shows up.
@@ -2209,8 +2221,10 @@ export const TournamentDetail: React.FC = () => {
         testID: 'cta-add-myself',
       });
     }
+    // Primary check repeated: the account cache is keyed per player, so a
+    // co-organizer running their own paid event would see a stale hit here.
     // undefined = still loading; the row appears once the status is known.
-    if (isPaidTournament && payoutAccount !== undefined) {
+    if (isPrimaryOrganizer && isPaidTournament && payoutAccount !== undefined) {
       organizerRows.push({
         icon: 'wallet-outline',
         label: t('tournamentDetail.payments.payoutRow.label'),
@@ -2227,7 +2241,7 @@ export const TournamentDetail: React.FC = () => {
     }
     // Per-event money summary. Only in-app place an organizer can see what
     // this event collected; the Stripe dashboard is account-wide.
-    if (isPaidTournament && earnings !== undefined) {
+    if (isPrimaryOrganizer && isPaidTournament && earnings !== undefined) {
       organizerRows.push({
         icon: 'cash-outline',
         label: t('tournamentDetail.earnings.row'),
