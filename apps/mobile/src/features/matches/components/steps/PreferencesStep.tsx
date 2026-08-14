@@ -96,11 +96,16 @@ const OptionCard: React.FC<OptionCardProps> = ({
       // Compact layout: icon on top, title below
       <View style={styles.optionContentCompact}>
         <Ionicons name={icon} size={24} color={selected ? colors.buttonActive : colors.textMuted} />
+        {/* One line, always: four tiles across leaves "Homme"/"Femme" barely
+            enough room, so the label shrinks rather than breaking mid-word. */}
         <Text
           size="sm"
           weight={selected ? 'semibold' : 'regular'}
           color={selected ? colors.buttonActive : colors.text}
           style={styles.compactTitle}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
         >
           {title}
         </Text>
@@ -1023,19 +1028,23 @@ const styles = StyleSheet.create({
   optionCardCompact: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacingPixels[3],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[2],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     flex: 1,
+    minWidth: 0,
     minHeight: 70,
   },
   optionContentCompact: {
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
     gap: spacingPixels[1],
   },
   compactTitle: {
     textAlign: 'center',
+    alignSelf: 'stretch',
   },
   optionsRow: {
     flexDirection: 'row',
