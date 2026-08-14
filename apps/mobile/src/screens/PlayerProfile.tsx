@@ -1332,7 +1332,8 @@ const PlayerProfile = () => {
   }, [currentUserId, referenceLoading, sportId, sports, playerId, t, toast]);
 
   const handleToggleFavorite = useCallback(async () => {
-    if (!currentUserId || favoriteLoading) return;
+    // player_favorite_no_self: favoriting yourself is rejected by the DB
+    if (!currentUserId || favoriteLoading || currentUserId === playerId) return;
 
     setFavoriteLoading(true);
     lightHaptic();
@@ -1372,7 +1373,8 @@ const PlayerProfile = () => {
   }, [currentUserId, favoriteLoading, isFavorite, playerId, t]);
 
   const handleToggleBlock = useCallback(async () => {
-    if (!currentUserId || blockLoading) return;
+    // player_block_no_self: blocking yourself is rejected by the DB
+    if (!currentUserId || blockLoading || currentUserId === playerId) return;
 
     setBlockLoading(true);
     mediumHaptic();
@@ -1421,8 +1423,13 @@ const PlayerProfile = () => {
     }
   }, [currentUserId, blockLoading, isBlocked, isFavorite, playerId, t]);
 
-  // Block + favorite icons in the screen header right
+  // Block + favorite icons in the screen header right; never on your own
+  // profile (both tables have no_self constraints)
   useEffect(() => {
+    if (currentUserId && currentUserId === playerId) {
+      navigation.setOptions({ headerRight: undefined });
+      return;
+    }
     navigation.setOptions({
       headerRight: () => (
         <View
@@ -1475,6 +1482,7 @@ const PlayerProfile = () => {
   }, [
     navigation,
     currentUserId,
+    playerId,
     blockLoading,
     favoriteLoading,
     isBlocked,
