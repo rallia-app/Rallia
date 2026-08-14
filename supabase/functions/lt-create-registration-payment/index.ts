@@ -22,9 +22,11 @@
  * lt_expire_stale_registration_payments cron.
  *
  * POST /lt-create-registration-payment   (authenticated — JWT validated internally)
- * Body:    { tournamentId: string; partnerId?: string }   -- tournament entry
- *      or  { seasonId: string }                           -- league season entry
- *          (exactly one of tournamentId / seasonId)
+ * Body:    { tournamentId: string; partnerId?: string; termsVersion?: number }
+ *      or  { seasonId: string; termsVersion?: number }    -- league season entry
+ *          (exactly one of tournamentId / seasonId; termsVersion is the
+ *          lt_participation_terms version the player accepted — optional
+ *          until the consent gate flips, see participation-consent.md)
  * Success: { clientSecret, paymentId, entryCents, serviceFeeCents,
  *            feeTaxCents, amountChargedCents, currency }
  * Errors:  { error: ErrorCode }
@@ -68,6 +70,7 @@ type ErrorCode =
   | 'not_league_member'
   | 'already_enrolled'
   | 'enrollment_removed'
+  | 'terms_acceptance_required'
   | 'organizer_not_ready'
   | 'registration_failed'
   | 'internal_error';
@@ -137,6 +140,10 @@ function mapRpcError(message: string | undefined): ErrorCode {
     // Season twin of REGISTRATION_REMOVED: an organizer-removed member.
     case 'ENROLLMENT_REMOVED':
       return 'enrollment_removed';
+    // The client sent a stale participation-terms version (or, once the gate
+    // flips, none at all): refetch lt_participation_terms and re-present.
+    case 'TERMS_ACCEPTANCE_REQUIRED':
+      return 'terms_acceptance_required';
     default:
       return 'registration_failed';
   }
@@ -192,6 +199,7 @@ Deno.serve(async req => {
     let tournamentId: string | null = null;
     let seasonId: string | null = null;
     let partnerId: string | null = null;
+    let termsVersion: number | null = null;
     try {
       const body = await req.json();
       if (body?.tournamentId && typeof body.tournamentId === 'string') {
@@ -202,6 +210,12 @@ Deno.serve(async req => {
       }
       if (!tournamentId === !seasonId) throw new Error();
       if (body?.partnerId && typeof body.partnerId === 'string') partnerId = body.partnerId;
+      if (body?.termsVersion !== undefined) {
+        if (typeof body.termsVersion !== 'number' || !Number.isInteger(body.termsVersion)) {
+          throw new Error();
+        }
+        termsVersion = body.termsVersion;
+      }
     } catch {
       return err('invalid_body');
     }
@@ -212,8 +226,12 @@ Deno.serve(async req => {
       ? await userClient.rpc('tournament_begin_paid_registration', {
           p_tournament_id: tournamentId,
           p_partner_user_id: partnerId,
+          p_terms_version: termsVersion,
         })
-      : await userClient.rpc('season_begin_paid_enrollment', { p_season_id: seasonId });
+      : await userClient.rpc('season_begin_paid_enrollment', {
+          p_season_id: seasonId,
+          p_terms_version: termsVersion,
+        });
     if (rpcError) {
       return err(mapRpcError(rpcError.message), 400);
     }
@@ -240,6 +258,8 @@ Deno.serve(async req => {
       organizerAmountCents: String(reg.organizer_amount_cents),
       feePayer: reg.fee_payer,
       payoutTiming: reg.payout_timing,
+      // Stripe-side copy of the consent record (spec §3). Absent = pre-checkbox client.
+      ...(termsVersion !== null ? { termsVersion: String(termsVersion) } : {}),
     };
 
     // v0: always a destination charge on behalf of the organizer. The entry
