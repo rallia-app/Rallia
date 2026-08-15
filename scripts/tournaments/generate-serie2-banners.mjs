@@ -52,7 +52,28 @@ const CATEGORIES = [
 
 // What the scrim underneath cannot say.
 const HEADLINE = 'ROUND ROBIN'
-const SUBLINE = 'Île de Montréal · 8 poules de 4 · 250 $ de bourse'
+
+// One banner per (zone, category) that actually exists. Montréal runs all
+// three categories at 32; the shores run Intermédiaire only at 16 (the only
+// band that filled off-island in Série 1). The subline carries the zone, the
+// draw shape and the prize ceiling, since those differ per zone.
+const BANNERS = [
+  ...CATEGORIES.map(category => ({
+    zone: 'montreal',
+    category,
+    subline: 'Île de Montréal · 8 poules de 4 · 250 $ de bourse',
+  })),
+  {
+    zone: 'rive-nord',
+    category: CATEGORIES[1],
+    subline: 'Laval & Rive-Nord · 4 poules de 4 · 125 $ de bourse',
+  },
+  {
+    zone: 'rive-sud',
+    category: CATEGORIES[1],
+    subline: 'Rive-Sud · 4 poules de 4 · 125 $ de bourse',
+  },
+]
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
@@ -104,7 +125,7 @@ const courtMotif = (tint) => {
     </g>`
 }
 
-function svg(category) {
+function svg(category, subline) {
   const pillLabel = `${category.label} · ${category.band}`
   const pillFont = 22
   const pillTrack = 1.5
@@ -182,7 +203,7 @@ function svg(category) {
   </g>
 
   <text x="${PAD}" y="326" font-family="${FONT}" font-size="19" font-weight="500"
-        letter-spacing="0.4" fill="${base.white}" fill-opacity="0.82">${esc(SUBLINE)}</text>
+        letter-spacing="0.4" fill="${base.white}" fill-opacity="0.82">${esc(subline)}</text>
 
   <image href="${LOGO_HREF}" x="${W - 30 - LOGO_W}" y="${H - 32 - LOGO_H}" width="${LOGO_W}" height="${LOGO_H}"/>
 
@@ -193,9 +214,9 @@ function svg(category) {
 const outDir = path.resolve(process.argv[2] ?? 'scratchpad/serie2-banners')
 await mkdir(outDir, { recursive: true })
 
-for (const category of CATEGORIES) {
-  const markup = svg(category)
-  const name = `serie2-montreal-tennis-${category.key}-v1`
+for (const { zone, category, subline } of BANNERS) {
+  const markup = svg(category, subline)
+  const name = `serie2-${zone}-tennis-${category.key}-v1`
 
   // Render at 2x then downscale: librsvg hints text at the raster size, and
   // the extra pass keeps the wordmark edges clean at 1080 wide.
@@ -208,4 +229,4 @@ for (const category of CATEGORIES) {
   await writeFile(path.join(outDir, `${name}.svg`), markup)
 }
 
-console.log(`${CATEGORIES.length} banners written to ${outDir}`)
+console.log(`${BANNERS.length} banners written to ${outDir}`)
