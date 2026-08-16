@@ -12116,7 +12116,9 @@
     "spotsLeft": "{count, plural, =1 {1 place restante} other {# places restantes}}",
     "full": "Complet",
     "registrationClosed": "Inscriptions fermées",
-    "storyCta": "Inscris-toi sur Rallia"
+    "storyCta": "Inscris-toi sur Rallia",
+    "storyDeadline": "Inscriptions jusqu'au {date}",
+    "storyScan": "Scanne pour t'inscrire"
   },
   "feedback": {
     "title": "Commentaires",

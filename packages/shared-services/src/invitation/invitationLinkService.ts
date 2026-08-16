@@ -206,10 +206,12 @@ export function parseInvitationUrl(url: string): ParsedInvitationLink | null {
 export function getTournamentStoryImageUrl(
   tournamentId: string,
   referralCode: string,
-  locale?: string
+  locale?: string,
+  shareToken?: string
 ): string {
   const params = new URLSearchParams({ type: 'tournament', id: tournamentId, format: 'story' });
   if (referralCode) params.set('code', referralCode);
   if (locale) params.set('locale', locale);
+  if (shareToken) params.set('share', shareToken);
   return `${BASE_URL}/api/og/invite?${params.toString()}`;
 }
