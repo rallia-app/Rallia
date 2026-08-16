@@ -1655,6 +1655,7 @@ export const LeagueDetail: React.FC = () => {
         ? () => (
             <TouchableOpacity
               onPress={handleShareLeague}
+              style={{ marginRight: spacingPixels[2] }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel={t('leagueDetail.invite.shareCta')}
