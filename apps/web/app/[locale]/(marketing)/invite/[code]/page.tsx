@@ -1,7 +1,9 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { CalendarDays, MapPin } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { getTournamentLogoUrl } from '@rallia/shared-utils';
 
 import { IOSCodeHandoff } from './_components/ios-code-handoff';
 
@@ -86,6 +88,7 @@ async function getCommunityDetails(inviteCode: string) {
 
 interface TournamentDetails {
   name: string;
+  logo_url: string | null;
   start_date: string;
   end_date: string;
   city: string | null;
@@ -99,7 +102,9 @@ async function getTournamentDetails(tournamentId: string): Promise<TournamentDet
     createServiceRoleClient() as unknown as import('@supabase/supabase-js').SupabaseClient;
   const { data } = await supabase
     .from('tournaments')
-    .select('name, start_date, end_date, city, venue_name, facility:facility_id (name, city)')
+    .select(
+      'name, logo_url, start_date, end_date, city, venue_name, facility:facility_id (name, city)'
+    )
     .eq('id', tournamentId)
     .single();
   return data as unknown as TournamentDetails | null;
@@ -352,6 +357,11 @@ export default async function InvitePage({ params, searchParams }: Props) {
   // Fetch contextual details for rich preview
   let contextHeading: string | null = null;
   let contextDescription: string | null = null;
+  // Tournament invites render richer context: the event artwork as a banner
+  // plus icon rows instead of an emoji text line.
+  let bannerImageUrl: string | null = null;
+  let bannerImageAlt: string | null = null;
+  let contextRows: { icon: 'calendar' | 'location'; text: string }[] = [];
 
   if (invitationType === 'match' && targetId) {
     const match = await getMatchDetails(targetId);
@@ -382,9 +392,10 @@ export default async function InvitePage({ params, searchParams }: Props) {
         : t('tournamentInviteHeadingGeneric', { tournament: tournament.name });
       const location = tournamentLocation(tournament);
       const dateRange = formatDateRange(tournament.start_date, tournament.end_date, locale);
-      const parts = [`📅 ${dateRange}`];
-      if (location) parts.push(`📍 ${location}`);
-      contextDescription = parts.join(' · ');
+      contextRows = [{ icon: 'calendar', text: dateRange }];
+      if (location) contextRows.push({ icon: 'location', text: location });
+      bannerImageUrl = getTournamentLogoUrl(tournament.logo_url);
+      bannerImageAlt = tournament.name;
     }
   } else if (invitationType === 'league' && targetId) {
     const league = await getLeagueDetails(targetId);
@@ -427,7 +438,16 @@ export default async function InvitePage({ params, searchParams }: Props) {
   const fallbackDescription = isChannel ? t('physicalDescription') : t('description');
 
   return (
-    <div className="flex flex-col items-center gap-8 py-16 w-full max-w-lg mx-auto animate-fade-in">
+    <div className="relative flex flex-col items-center gap-8 py-16 w-full max-w-lg mx-auto animate-fade-in">
+      {/* Decorative glow — same vocabulary as /events so the funnel feels continuous */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 flex justify-center"
+      >
+        <div className="h-56 w-56 -translate-x-16 rounded-full bg-[var(--primary-400)]/15 blur-3xl" />
+        <div className="h-48 w-48 translate-x-16 translate-y-10 rounded-full bg-[var(--secondary-400)]/10 blur-3xl" />
+      </div>
+
       <InviteLandingTracker
         surface="invite"
         invitationType={invitationType}
@@ -437,9 +457,31 @@ export default async function InvitePage({ params, searchParams }: Props) {
       />
       <ThemeLogo width={140} height={40} />
 
-      <div className="text-center space-y-2">
+      {bannerImageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={bannerImageUrl}
+          alt={bannerImageAlt ?? ''}
+          className="w-full max-h-60 rounded-2xl border object-cover shadow-lg"
+        />
+      )}
+
+      <div className="text-center space-y-3">
         <h1 className="text-3xl font-bold">{heading}</h1>
-        {contextDescription ? (
+        {contextRows.length > 0 ? (
+          <div className="flex flex-col items-center gap-1.5 text-muted-foreground">
+            {contextRows.map(row => (
+              <span key={`${row.icon}-${row.text}`} className="flex items-center gap-2">
+                {row.icon === 'calendar' ? (
+                  <CalendarDays className="size-4 shrink-0 text-primary/70" />
+                ) : (
+                  <MapPin className="size-4 shrink-0 text-primary/70" />
+                )}
+                {row.text}
+              </span>
+            ))}
+          </div>
+        ) : contextDescription ? (
           <p className="text-muted-foreground">{contextDescription}</p>
         ) : (
           <p className="text-muted-foreground">{fallbackDescription}</p>
