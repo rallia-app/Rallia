@@ -14,6 +14,7 @@ const PUBLIC_PATHS: ReadonlyArray<{
 }> = [
   { path: '', changeFrequency: 'weekly', priority: 1.0 },
   { path: '/play', changeFrequency: 'hourly', priority: 0.9 },
+  { path: '/events', changeFrequency: 'daily', priority: 0.8 },
   { path: '/communities', changeFrequency: 'daily', priority: 0.8 },
   { path: '/guides', changeFrequency: 'weekly', priority: 0.6 },
   { path: '/about', changeFrequency: 'monthly', priority: 0.5 },

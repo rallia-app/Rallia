@@ -5545,6 +5545,9 @@
       "generating": "Preparing your invite link...",
       "scanToRegister": "Scan to register for the tournament",
       "share": "Share invite link",
+      "shareStory": "Share to story",
+      "storyLinkCopied": "Link copied! Paste it as a link sticker in your story.",
+      "storyFailed": "Couldn't prepare the story image. Try again.",
       "shareTitle": "Join {name} on Rallia",
       "shareMessage": "You're invited to my tournament {name} on Rallia. Register here: {link}",
       "resetLink": "Reset link",
@@ -6105,6 +6108,7 @@
       "nav": {
         "home": "Home",
         "play": "Play",
+        "events": "Events",
         "communities": "Communities",
         "guides": "Guides",
         "donate": "Support"
@@ -6716,6 +6720,7 @@
     "about": "About",
     "guides": "Guides",
     "play": "Games & Courts",
+    "events": "Tournaments",
     "communities": "Communities",
     "donate": "Support Rallia",
     "legal": "Legal",
@@ -12059,6 +12064,22 @@
     "lightOff": "Light Off",
     "join": "Join"
   },
+  "eventsPage": {
+    "eyebrow": "Rallia Tournaments",
+    "title": "Events",
+    "subtitle": "Upcoming tennis and pickleball tournaments on Rallia. Pick yours and register in a few taps with the app.",
+    "statusRegistrationOpen": "Registration open",
+    "statusRegistrationClosed": "Registration closed",
+    "statusInProgress": "In progress",
+    "singles": "Singles",
+    "doubles": "Doubles",
+    "free": "Free",
+    "full": "Full",
+    "spotsLeft": "{count, plural, =1 {1 spot left} other {# spots left}}",
+    "viewTournament": "View tournament",
+    "emptyTitle": "No tournaments right now",
+    "emptyDescription": "New tournaments are coming soon. Download the Rallia app to be among the first to know."
+  },
   "invitePage": {
     "title": "Join Rallia",
     "description": "Download Rallia to find players, join matches, and play more.",
@@ -12112,7 +12133,10 @@
     "prizePool": "{amount} in prizes",
     "spotsLeft": "{count, plural, =1 {1 spot left} other {# spots left}}",
     "full": "Full",
-    "registrationClosed": "Registration closed"
+    "registrationClosed": "Registration closed",
+    "storyCta": "Register on Rallia",
+    "storyDeadline": "Register by {date}",
+    "storyScan": "Scan to register"
   },
   "feedback": {
     "title": "Feedback",
@@ -12596,6 +12620,12 @@
       "description": "Find tennis and pickleball communities in your city. Join local groups, meet players at your level, and grow your network — discover communities on Rallia.",
       "ogTitle": "Find a Local Tennis or Pickleball Community",
       "ogDescription": "Join active tennis and pickleball communities near you on Rallia."
+    },
+    "events": {
+      "title": "Tennis & Pickleball Tournaments",
+      "description": "Browse upcoming tennis and pickleball tournaments near you. See dates, venues and levels, then register in a few taps with the Rallia app.",
+      "ogTitle": "Find a Tennis or Pickleball Tournament Near You",
+      "ogDescription": "Upcoming tennis and pickleball tournaments on Rallia. Pick yours and register in a few taps."
     },
     "guides": {
       "title": "Tennis & Pickleball Guides",

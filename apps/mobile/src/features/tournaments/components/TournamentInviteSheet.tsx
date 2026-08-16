@@ -15,6 +15,8 @@ import { View, TouchableOpacity, StyleSheet, Share, Alert, ActivityIndicator } f
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import QRCode from 'react-native-qrcode-svg';
 import { Text, useToast, Button } from '@rallia/shared-components';
 import {
@@ -23,7 +25,7 @@ import {
   useTournamentInviteLink,
   useResetTournamentInvite,
 } from '@rallia/shared-hooks';
-import { getTournamentInviteLink } from '@rallia/shared-services';
+import { getTournamentInviteLink, getTournamentStoryImageUrl } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 
@@ -49,10 +51,11 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
   const tournamentName = payload?.tournamentName ?? '';
 
   const { colors, isDark } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const toast = useToast();
   const { session } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [storyPending, setStoryPending] = useState(false);
 
   const {
     data: link,
@@ -67,6 +70,7 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
     onError: () => toast.error(t('tournamentDetail.invite.resetFailed')),
   });
 
+  const linkToken = link?.token;
   const inviteLink =
     link?.token && referralCode
       ? getTournamentInviteLink(link.token, tournamentId, referralCode, {
@@ -137,6 +141,35 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
       }
     }
   }, [inviteLink, tournamentId, tournamentName, toast, t]);
+
+  // Downloads the 9:16 poster from the web OG endpoint and hands it to the
+  // native share sheet; the invite link goes to the clipboard first so the
+  // sharer can paste it into their story's link sticker.
+  const handleShareStory = useCallback(async () => {
+    if (!inviteLink || !referralCode) return;
+    setStoryPending(true);
+    try {
+      const file = new File(Paths.cache, `tournament-story-${tournamentId}.png`);
+      if (file.exists) file.delete();
+      const downloaded = await File.downloadFileAsync(
+        getTournamentStoryImageUrl(tournamentId, referralCode, locale, linkToken),
+        file
+      );
+      if (!(await Sharing.isAvailableAsync())) {
+        toast.error(t('tournamentDetail.invite.errors.sharingUnavailable'));
+        setStoryPending(false);
+        return;
+      }
+      await Clipboard.setStringAsync(inviteLink);
+      toast.success(t('tournamentDetail.invite.storyLinkCopied'));
+      await Sharing.shareAsync(downloaded.uri, { mimeType: 'image/png' });
+      Analytics.tournamentShared({ tournamentId, medium: 'story' });
+      setStoryPending(false);
+    } catch {
+      toast.error(t('tournamentDetail.invite.storyFailed'));
+      setStoryPending(false);
+    }
+  }, [inviteLink, referralCode, tournamentId, locale, linkToken, toast, t]);
 
   const handleReset = useCallback(() => {
     Alert.alert(t('tournamentDetail.invite.resetLink'), t('tournamentDetail.invite.resetWarning'), [
@@ -270,6 +303,18 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
                   isDark={isDark}
                 >
                   {t('tournamentDetail.invite.share')}
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  size="md"
+                  fullWidth
+                  onPress={handleShareStory}
+                  loading={storyPending}
+                  leftIcon={<Ionicons name="images-outline" size={20} color={colors.primary} />}
+                  isDark={isDark}
+                >
+                  {t('tournamentDetail.invite.shareStory')}
                 </Button>
 
                 {!isPlayerLink && (

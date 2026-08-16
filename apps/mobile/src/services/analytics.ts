@@ -1128,7 +1128,7 @@ export function sessionScoreSubmittedAnalytics(props: { sessionId: string }): vo
 
 export function tournamentShared(props: {
   tournamentId: string;
-  medium: 'link' | 'native' | 'qr';
+  medium: 'link' | 'native' | 'qr' | 'story';
 }): void {
   capture('lt.tournament.shared', props);
 }

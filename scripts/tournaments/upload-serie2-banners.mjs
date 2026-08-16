@@ -35,7 +35,7 @@ const PROJECTS = {
   },
 }
 
-const EXPECTED = 3
+const EXPECTED = 5
 
 const env = process.argv[2]
 const dir = process.argv[3]

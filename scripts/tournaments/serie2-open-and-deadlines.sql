@@ -140,6 +140,35 @@ COMMIT;
 
 
 -- ============================================================================
+-- ÉTAPE 2-RIVES : mêmes échéances pour les tableaux régionaux (seed
+-- 20260815100000). Un 16 = 4 poules x 2 qualifiés = 8, soit TROIS tours
+-- éliminatoires (quarts, demies, finale), pas quatre. Fin le 17 septembre.
+-- ============================================================================
+-- BEGIN;
+--
+-- INSERT INTO public.tournament_round_deadlines (tournament_id, bracket_side, round_number, deadline_at)
+-- SELECT t.id, 'pool', 0, '2026-09-02 23:59:00 America/Toronto'::timestamptz
+--   FROM public.tournaments t
+--  WHERE t.name LIKE 'Série 2 Rive-%'
+-- ON CONFLICT (tournament_id, bracket_side, round_number)
+-- DO UPDATE SET deadline_at = EXCLUDED.deadline_at, updated_at = now();
+--
+-- INSERT INTO public.tournament_round_deadlines (tournament_id, bracket_side, round_number, deadline_at)
+-- SELECT t.id, 'main', d.round_number, d.deadline_at
+--   FROM public.tournaments t
+--  CROSS JOIN (VALUES
+--        (1::smallint, '2026-09-07 23:59:00 America/Toronto'::timestamptz),  -- quarts
+--        (2::smallint, '2026-09-12 23:59:00 America/Toronto'::timestamptz),  -- demies
+--        (3::smallint, '2026-09-17 23:59:00 America/Toronto'::timestamptz)   -- finale
+--  ) AS d(round_number, deadline_at)
+--  WHERE t.name LIKE 'Série 2 Rive-%'
+-- ON CONFLICT (tournament_id, bracket_side, round_number)
+-- DO UPDATE SET deadline_at = EXCLUDED.deadline_at, updated_at = now();
+--
+-- COMMIT;
+
+
+-- ============================================================================
 -- VÉRIFICATION. Utile à tout moment.
 -- ============================================================================
 -- SELECT t.name,

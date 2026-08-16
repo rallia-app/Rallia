@@ -568,6 +568,7 @@ export const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: spacingPixels[2],
   },
   headerMenuButton: {
     paddingHorizontal: spacingPixels[2],

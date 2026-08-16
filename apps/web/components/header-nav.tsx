@@ -8,6 +8,7 @@ import MobileNavSheet from './mobile-nav-sheet';
 const navLinks = [
   { href: '/', key: 'home' },
   { href: '/play', key: 'play' },
+  { href: '/events', key: 'events' },
   { href: '/communities', key: 'communities' },
   { href: '/guides', key: 'guides' },
 ] as const;

@@ -8,6 +8,7 @@ import {
   Home as HomeIcon,
   MapPin,
   Menu,
+  Trophy,
   Users,
   X,
   type LucideIcon,
@@ -23,13 +24,14 @@ import ThemeLogo from './theme-logo';
 
 type NavLink = {
   href: string;
-  key: 'home' | 'play' | 'communities' | 'guides';
+  key: 'home' | 'play' | 'events' | 'communities' | 'guides';
   icon: LucideIcon;
 };
 
 const navLinks: NavLink[] = [
   { href: '/', key: 'home', icon: HomeIcon },
   { href: '/play', key: 'play', icon: MapPin },
+  { href: '/events', key: 'events', icon: Trophy },
   { href: '/communities', key: 'communities', icon: Users },
   { href: '/guides', key: 'guides', icon: BookOpen },
 ];
