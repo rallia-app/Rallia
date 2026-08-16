@@ -70,6 +70,7 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
     onError: () => toast.error(t('tournamentDetail.invite.resetFailed')),
   });
 
+  const linkToken = link?.token;
   const inviteLink =
     link?.token && referralCode
       ? getTournamentInviteLink(link.token, tournamentId, referralCode, {
@@ -151,7 +152,7 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
       const file = new File(Paths.cache, `tournament-story-${tournamentId}.png`);
       if (file.exists) file.delete();
       const downloaded = await File.downloadFileAsync(
-        getTournamentStoryImageUrl(tournamentId, referralCode, locale, link?.token),
+        getTournamentStoryImageUrl(tournamentId, referralCode, locale, linkToken),
         file
       );
       if (!(await Sharing.isAvailableAsync())) {
@@ -168,7 +169,7 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
       toast.error(t('tournamentDetail.invite.storyFailed'));
       setStoryPending(false);
     }
-  }, [inviteLink, referralCode, tournamentId, locale, link?.token, toast, t]);
+  }, [inviteLink, referralCode, tournamentId, locale, linkToken, toast, t]);
 
   const handleReset = useCallback(() => {
     Alert.alert(t('tournamentDetail.invite.resetLink'), t('tournamentDetail.invite.resetWarning'), [
