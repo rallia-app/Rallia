@@ -1019,7 +1019,7 @@ async function tournamentStoryImage(
             justifyContent: 'center',
             width: 900,
             height: 380,
-            marginTop: 12,
+            marginTop: 60,
           }}
         >
           {/* Seeds funnel in from both sides toward the trophy */}
