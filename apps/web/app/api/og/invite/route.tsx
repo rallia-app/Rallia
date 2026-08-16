@@ -735,10 +735,10 @@ async function tournamentImage(tournament: TournamentOgData, locale: string, fon
 // ---------------------------------------------------------------------------
 
 /**
- * Vertical poster a player shares to their story. Same poster language as the
- * backdrop OG card; content is inset ~170px top / ~200px bottom so Instagram's
- * username header and reply box never cover it. The sharer's referral code is
- * rendered as the visible link so screenshots still carry attribution.
+ * Vertical poster a player shares to their story. Content is inset ~180px top
+ * / ~250px bottom so Instagram's username header and reply box never cover it.
+ * The sharer's referral code is rendered as the visible link so screenshots
+ * still carry attribution.
  */
 async function tournamentStoryImage(
   tournament: TournamentOgData,
@@ -748,15 +748,83 @@ async function tournamentStoryImage(
 ) {
   const t = await getTranslations({ locale, namespace: 'tournamentOg' });
 
-  const { sportName, bannerUrl, dateStr, location, badges, pillText, pillColor, pillBg, pillDot } =
-    deriveTournamentCard(tournament, locale, t);
+  const { sportName, bannerUrl, dateStr, location, badges, pillText } = deriveTournamentCard(
+    tournament,
+    locale,
+    t
+  );
   // 952×397 keeps the 2.4:1 banner shape uncropped inside the story frame.
   const bannerSrc = bannerUrl ? await fetchBannerDataUri(bannerUrl, 952, 397) : null;
 
   const rawName = tournament.name;
   const name = rawName.length > 72 ? `${rawName.slice(0, 71)}…` : rawName;
-  const nameSize = name.length > 42 ? 56 : name.length > 26 ? 64 : 76;
+  const nameSize = name.length > 48 ? 56 : name.length > 30 ? 66 : 78;
   const linkLabel = code ? `rallia.app/invite/${code.toUpperCase()}` : 'rallia.app';
+
+  const isOpen = tournament.status === 'registration_open';
+  const spotsLeft = Math.max(0, tournament.max_participants - tournament.registeredCount);
+  const urgent = isOpen && spotsLeft > 0 && spotsLeft <= 3;
+  // Dark-scheme status colors — the OG card's light pill palette washes out here.
+  const spot =
+    !isOpen || spotsLeft === 0
+      ? {
+          dot: neutral[400],
+          text: neutral[200],
+          bg: 'rgba(2,27,26,0.65)',
+          border: 'rgba(255,255,255,0.25)',
+        }
+      : urgent
+        ? {
+            dot: accent[400],
+            text: accent[300],
+            bg: 'rgba(245,181,53,0.14)',
+            border: 'rgba(245,181,53,0.45)',
+          }
+        : {
+            dot: '#34d399',
+            text: '#6ee7b7',
+            bg: 'rgba(52,211,153,0.12)',
+            border: 'rgba(52,211,153,0.40)',
+          };
+
+  const goldText = {
+    backgroundImage: `linear-gradient(180deg, #fde9a8 0%, ${accent[400]} 55%, #d99a1f 100%)`,
+    backgroundClip: 'text',
+    color: 'transparent',
+  } as const;
+
+  const hasPrize = !!tournament.prize_money_cents && tournament.prize_money_cents > 0;
+  const prizeStr = hasPrize
+    ? t('prizePool', {
+        amount: formatMoney(tournament.prize_money_cents!, tournament.currency, locale),
+      })
+    : '';
+  // The gold hero line already shows the prize — don't repeat it as a badge.
+  const shownBadges = hasPrize ? badges.filter(b => b !== prizeStr) : badges;
+
+  const eyebrowDash = (color: string) => (
+    <div style={{ width: 42, height: 5, borderRadius: 3, background: color, display: 'flex' }} />
+  );
+
+  const trophySvg = (size: number, stroke: string, strokeWidth: number) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={stroke}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+      <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+      <path d="M4 22h16" />
+      <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+      <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+      <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+    </svg>
+  );
 
   return new ImageResponse(
     <div
@@ -765,11 +833,55 @@ async function tournamentStoryImage(
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'center',
         position: 'relative',
         fontFamily: 'Inter',
-        background: `linear-gradient(160deg, ${primary[950]} 0%, #0a4e48 55%, ${primary[800]} 100%)`,
+        background: `linear-gradient(175deg, #021b1a 0%, ${primary[950]} 38%, #0a4e48 78%, #0d5a52 100%)`,
       }}
     >
+      {/* Ambient glows */}
+      <div
+        style={{
+          position: 'absolute',
+          top: -320,
+          right: -320,
+          width: 900,
+          height: 900,
+          display: 'flex',
+          background:
+            'radial-gradient(circle, rgba(242,85,75,0.22) 0%, rgba(242,85,75,0.06) 45%, transparent 68%)',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: -380,
+          left: -320,
+          width: 1000,
+          height: 1000,
+          display: 'flex',
+          background:
+            'radial-gradient(circle, rgba(107,220,201,0.18) 0%, rgba(107,220,201,0.05) 45%, transparent 68%)',
+        }}
+      />
+      {/* Faint perspective court lines in the empty bottom zone */}
+      <svg
+        width="1080"
+        height="620"
+        viewBox="0 0 1080 620"
+        fill="none"
+        style={{ position: 'absolute', bottom: 0, left: 0 }}
+      >
+        <g stroke="rgba(255,255,255,0.05)" strokeWidth="3">
+          <path d="M400 0 L680 0 L1010 620 L70 620 Z" />
+          <path d="M442 0 L211 620" />
+          <path d="M638 0 L869 620" />
+          <path d="M330 300 L750 300" />
+          <path d="M540 0 L540 300" />
+        </g>
+      </svg>
+
+      {/* Accent bar */}
       <div
         style={{
           position: 'absolute',
@@ -781,90 +893,56 @@ async function tournamentStoryImage(
           background: 'linear-gradient(90deg, #6bdcc9, #f5b535, #f2554b)',
         }}
       />
-      {/* Faint concentric arcs, bottom-left */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: -260,
-          left: -220,
-          width: 760,
-          height: 760,
-          borderRadius: 380,
-          border: '2px solid rgba(94,234,212,0.11)',
-          display: 'flex',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          bottom: -170,
-          left: -120,
-          width: 560,
-          height: 560,
-          borderRadius: 280,
-          border: '2px solid rgba(94,234,212,0.07)',
-          display: 'flex',
-        }}
-      />
 
-      {/* Top block: logo + sport eyebrow, below the Instagram username header */}
+      {/* Top: logo + sport eyebrow, below the Instagram username header */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: 30,
-          paddingTop: 170,
+          gap: 34,
+          paddingTop: 180,
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logoSrc} height={58} style={{ height: 58, objectFit: 'contain' }} />
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '14px 30px',
-            borderRadius: 999,
-            background: 'rgba(4,47,46,0.55)',
-            border: '1px solid rgba(255,255,255,0.22)',
-          }}
-        >
-          <svg
-            width="26"
-            height="26"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={accent[400]}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-            <path d="M4 22h16" />
-            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-          </svg>
+        <img src={logoSrc} height={54} style={{ height: 54, objectFit: 'contain' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          {eyebrowDash(accent[400])}
           <span
             style={{
               fontFamily: 'Poppins',
-              fontSize: 24,
+              fontSize: 27,
               fontWeight: 600,
-              color: '#ffffff',
+              color: primary[300],
               textTransform: 'uppercase',
-              letterSpacing: '0.12em',
+              letterSpacing: '0.24em',
             }}
           >
             {sportName ? `${sportName} · ${t('tournament')}` : t('tournament')}
           </span>
+          {eyebrowDash(accent[400])}
         </div>
       </div>
 
-      {/* Banner art, or the bracket-to-trophy motif on the default banner */}
+      {/* Name */}
+      <span
+        style={{
+          fontFamily: 'Poppins',
+          fontSize: nameSize,
+          fontWeight: 700,
+          color: '#ffffff',
+          lineHeight: 1.08,
+          maxWidth: 940,
+          textAlign: 'center',
+          marginTop: 40,
+        }}
+      >
+        {name}
+      </span>
+
+      {/* Hero: tilted banner art, or glowing trophy + prize */}
       {bannerSrc ? (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 52 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 56 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={bannerSrc}
@@ -874,207 +952,221 @@ async function tournamentStoryImage(
               width: 952,
               height: 397,
               objectFit: 'cover',
-              borderRadius: 28,
-              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 26,
+              border: '1px solid rgba(255,255,255,0.16)',
+              transform: 'rotate(-2deg)',
+              boxShadow: '0 30px 70px rgba(0,0,0,0.5)',
             }}
           />
         </div>
       ) : (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 70 }}>
-          <svg width="574" height="473" viewBox="0 0 400 330" fill="none">
-            <g
-              stroke={secondary[500]}
-              strokeOpacity="0.55"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              fill="none"
-            >
-              <path d="M0 10h55M0 50h55M55 10v40M55 30h75" />
-              <path d="M0 100h55M0 140h55M55 100v40M55 120h75" />
-              <path d="M0 190h55M0 230h55M55 190v40M55 210h75" />
-              <path d="M0 280h55M0 320h55M55 280v40M55 300h75" />
-              <path d="M130 30v90M130 75h75" />
-              <path d="M130 210v90M130 255h75" />
-              <path d="M205 75v180M205 165h61" />
-            </g>
-            <circle cx="300" cy="165" r="52" fill={accent[400]} fillOpacity="0.09" />
-            <circle
-              cx="300"
-              cy="165"
-              r="34"
-              fill="rgba(4,47,46,0.75)"
-              stroke={accent[400]}
-              strokeOpacity="0.85"
-              strokeWidth="2"
-            />
-            <g transform="translate(282,147) scale(1.5)">
-              <g
-                stroke={accent[400]}
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              >
-                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-                <path d="M4 22h16" />
-                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-              </g>
-            </g>
-          </svg>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', flexGrow: 1 }} />
-
-      {/* Info block */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 26,
-          padding: '0 64px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div
-            style={{
-              width: 56,
-              height: 8,
-              borderRadius: 4,
-              background: primary[300],
-              display: 'flex',
-            }}
-          />
-          <div
-            style={{
-              width: 56,
-              height: 8,
-              borderRadius: 4,
-              background: secondary[400],
-              display: 'flex',
-            }}
-          />
-          <div
-            style={{
-              width: 56,
-              height: 8,
-              borderRadius: 4,
-              background: accent[400],
-              display: 'flex',
-            }}
-          />
-        </div>
-        <span
+        <div
           style={{
-            fontFamily: 'Poppins',
-            fontSize: nameSize,
-            fontWeight: 700,
-            color: '#ffffff',
-            lineHeight: 1.12,
-            maxWidth: 952,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 6,
+            marginTop: 30,
           }}
         >
-          {name}
-        </span>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={primary[200]}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
-            <span style={{ fontSize: 34, fontWeight: 500, color: primary[100] }}>{dateStr}</span>
-          </div>
-          {location && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={primary[200]}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-              <span style={{ fontSize: 32, fontWeight: 500, color: neutral[200] }}>{location}</span>
-            </div>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          {badges.map((badge, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '13px 28px',
-                borderRadius: 14,
-                background: 'rgba(4,47,46,0.5)',
-                border: '1px solid rgba(255,255,255,0.18)',
-              }}
-            >
-              <span style={{ fontSize: 27, fontWeight: 500, color: primary[100] }}>{badge}</span>
-            </div>
-          ))}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 13,
-              padding: '15px 32px',
-              borderRadius: 100,
-              background: pillBg,
+              justifyContent: 'center',
+              width: 330,
+              height: 330,
+              background:
+                'radial-gradient(circle, rgba(245,181,53,0.25) 0%, rgba(245,181,53,0.07) 50%, transparent 68%)',
             }}
           >
-            <div style={{ width: 14, height: 14, borderRadius: 7, background: pillDot }} />
-            <span
-              style={{ fontFamily: 'Poppins', fontSize: 27, fontWeight: 600, color: pillColor }}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 210,
+                height: 210,
+                borderRadius: 105,
+                background: 'rgba(4,47,46,0.8)',
+                border: `2px solid ${accent[400]}`,
+                boxShadow: '0 0 60px rgba(245,181,53,0.35)',
+              }}
             >
-              {pillText}
-            </span>
+              {trophySvg(108, accent[400], 1.3)}
+            </div>
           </div>
+          {hasPrize && (
+            <span style={{ fontFamily: 'Poppins', fontSize: 84, fontWeight: 700, ...goldText }}>
+              {prizeStr}
+            </span>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* CTA card, above the Instagram reply box */}
+      {/* Prize line for the banner layout (the hero already shows it otherwise) */}
+      {bannerSrc && hasPrize && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 48 }}>
+          {trophySvg(44, accent[400], 1.8)}
+          <span style={{ fontFamily: 'Poppins', fontSize: 56, fontWeight: 700, ...goldText }}>
+            {prizeStr}
+          </span>
+        </div>
+      )}
+
+      {/* Date + venue */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: 12,
-          margin: '52px 64px 200px 64px',
-          padding: '34px 40px',
-          borderRadius: 26,
-          background: 'rgba(255,255,255,0.10)',
-          border: '1px solid rgba(255,255,255,0.15)',
+          marginTop: 42,
         }}
       >
-        <span style={{ fontFamily: 'Poppins', fontSize: 34, fontWeight: 700, color: '#ffffff' }}>
-          {t('storyCta')}
+        <span style={{ fontFamily: 'Poppins', fontSize: 36, fontWeight: 600, color: '#ffffff' }}>
+          {dateStr}
         </span>
-        <span style={{ fontFamily: 'Poppins', fontSize: 30, fontWeight: 600, color: accent[400] }}>
-          {linkLabel}
-        </span>
+        {location && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={primary[300]}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span style={{ fontSize: 30, fontWeight: 500, color: primary[200] }}>{location}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Badges + spots pill */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 22,
+          marginTop: 44,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 14,
+            flexWrap: 'wrap',
+            maxWidth: 940,
+          }}
+        >
+          {shownBadges.map((badge, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '13px 28px',
+                borderRadius: 999,
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.16)',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'Poppins',
+                  fontSize: 26,
+                  fontWeight: 600,
+                  color: primary[100],
+                }}
+              >
+                {badge}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 13,
+            padding: '15px 34px',
+            borderRadius: 999,
+            background: spot.bg,
+            border: `1.5px solid ${spot.border}`,
+          }}
+        >
+          <div style={{ width: 14, height: 14, borderRadius: 7, background: spot.dot }} />
+          <span style={{ fontFamily: 'Poppins', fontSize: 28, fontWeight: 600, color: spot.text }}>
+            {pillText}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexGrow: 1 }} />
+
+      {/* CTA, above the Instagram reply box */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 20,
+          marginBottom: 250,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '26px 70px',
+            borderRadius: 999,
+            background: 'linear-gradient(90deg, #f2554b, #ed6c6e)',
+            boxShadow: '0 14px 44px rgba(242,85,75,0.4)',
+          }}
+        >
+          <span style={{ fontFamily: 'Poppins', fontSize: 37, fontWeight: 700, color: '#ffffff' }}>
+            {t('storyCta')}
+          </span>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '13px 30px',
+            borderRadius: 999,
+            background: 'rgba(2,27,26,0.6)',
+            border: '1px solid rgba(255,255,255,0.16)',
+          }}
+        >
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={primary[300]}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+          <span
+            style={{ fontFamily: 'Poppins', fontSize: 28, fontWeight: 600, color: primary[200] }}
+          >
+            {linkLabel}
+          </span>
+        </div>
       </div>
     </div>,
     { ...STORY_SIZE, fonts, headers: CACHE_HEADERS }
