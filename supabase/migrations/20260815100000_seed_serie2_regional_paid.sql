@@ -25,15 +25,27 @@
 -- comme Montréal. Les échéances exactes se posent après chaque tirage
 -- (scripts/tournaments/serie2-open-and-deadlines.sql, variante rives).
 --
+-- ORGANISATEUR : le compte maison contact@rallia.ca (les événements Rallia
+-- règlent dans le compte Connect de l'entreprise, jamais dans celui d'un
+-- fondateur — voir la note house-organizer du 14 août). Repli sur
+-- jdl.sonkin@gmail.com quand le compte maison n'existe pas (staging), NO-OP si
+-- ni l'un ni l'autre. L'organisateur résolu est certifié d'office : sans
+-- is_certified_organizer, l'ouverture notifierait ZÉRO joueur, silencieusement.
+-- Jean et Mathis sont ajoutés co-organisateurs quand leurs comptes existent.
+-- Les bannières restent dans le dossier storage de Jean (c'est là que
+-- upload-serie2-banners.mjs les pose), peu importe l'organisateur.
+--
 -- Même contrat que le seed Montréal (20260812280000) : résolution par clés
--- stables, NO-OP si l'organisateur manque (local/CI), idempotent par nom,
--- bannières vérifiées en WARNING jamais en échec, créés en DRAFT — l'ouverture
--- passe par l'app, qui vérifie le Stripe de l'organisateur.
+-- stables, idempotent par nom, bannières vérifiées en WARNING jamais en échec,
+-- créés en DRAFT — l'ouverture passe par l'app, qui vérifie le Stripe de
+-- l'organisateur.
 -- ============================================================================
 
 DO $$
 DECLARE
-    c_organizer_email  text := 'jdl.sonkin@gmail.com';
+    c_house_email      text := 'contact@rallia.ca';
+    c_jdl_email        text := 'jdl.sonkin@gmail.com';
+    c_mathis_email     text := 'lefrancmathis@gmail.com';
     c_entry_fee_cents  integer := 1500;
     c_prize_cents      integer := 12500;   -- plafond pour un 16 complet
     c_refund_kind      refund_policy_kind_enum := 'full';
@@ -46,6 +58,10 @@ DECLARE
     c_end     timestamptz := '2026-09-17 23:59:00 America/Toronto';
 
     v_org      uuid;
+    v_house    uuid;
+    v_jdl      uuid;
+    v_mathis   uuid;
+    v_banner_owner uuid;
     v_tennis   uuid;
     v_created  integer := 0;
     v_missing  integer := 0;
@@ -54,15 +70,26 @@ DECLARE
 BEGIN
     SELECT id INTO v_tennis FROM public.sport WHERE name = 'tennis';
 
-    SELECT p.id INTO v_org
-      FROM public.player p
-      JOIN public.profile pr ON pr.id = p.id
-     WHERE lower(pr.email) = lower(c_organizer_email);
+    SELECT p.id INTO v_house FROM public.player p
+      JOIN public.profile pr ON pr.id = p.id WHERE lower(pr.email) = lower(c_house_email);
+    SELECT p.id INTO v_jdl FROM public.player p
+      JOIN public.profile pr ON pr.id = p.id WHERE lower(pr.email) = lower(c_jdl_email);
+    SELECT p.id INTO v_mathis FROM public.player p
+      JOIN public.profile pr ON pr.id = p.id WHERE lower(pr.email) = lower(c_mathis_email);
+
+    v_org := COALESCE(v_house, v_jdl);
+    v_banner_owner := COALESCE(v_jdl, v_org);
 
     IF v_org IS NULL OR v_tennis IS NULL THEN
-        RAISE NOTICE 'Seed Série 2 régional ignoré: sport tennis ou organisateur % absent.', c_organizer_email;
+        RAISE NOTICE 'Seed Série 2 régional ignoré: sport tennis ou organisateur absent.';
         RETURN;
     END IF;
+
+    -- Sans certification, le fan-out d'ouverture ne notifie personne, sans erreur.
+    UPDATE public.player
+       SET is_certified_organizer = true,
+           certified_organizer_at = COALESCE(certified_organizer_at, now())
+     WHERE id = v_org AND is_certified_organizer = false;
 
     IF EXISTS (SELECT 1 FROM public.tournaments WHERE name LIKE 'Série 2 Rive-%') THEN
         RAISE NOTICE 'Série 2 régionale déjà présente; seed ignoré.';
@@ -76,7 +103,7 @@ BEGIN
         IF NOT EXISTS (
             SELECT 1 FROM storage.objects
              WHERE bucket_id = 'tournament-logos'
-               AND name = v_org || '/' || v_banner
+               AND name = v_banner_owner || '/' || v_banner
         ) THEN
             v_missing := v_missing + 1;
             RAISE WARNING 'Bannière % absente du bucket tournament-logos.', v_banner;
@@ -101,6 +128,7 @@ BEGIN
     LOOP
         INSERT INTO public.tournaments (
             name, description, rules, logo_url, sport_id, organizer_id,
+            organizer_display_name,
             visibility, registration_mode, status,
             level, categories, min_rating, max_rating,
             city, latitude, longitude,
@@ -132,8 +160,9 @@ BEGIN
                 'Remboursement : l''entrée est remboursable jusqu''à la fermeture des inscriptions le 21 août.',
                 'Communication : utilisez le chat du tournoi. Contactez l''équipe Rallia en cas de problème majeur.'
             ),
-            c_storage_base || v_org || '/' || v_zone.banner,
+            c_storage_base || v_banner_owner || '/' || v_zone.banner,
             v_tennis, v_org,
+            CASE WHEN v_org = v_house THEN 'Rallia' END,
             'public', 'open', 'draft',
             'Intermédiaire', ARRAY['Intermédiaire'], 3.0, 3.5,
             v_zone.city, v_zone.lat, v_zone.lon,
@@ -148,6 +177,15 @@ BEGIN
         );
         v_created := v_created + 1;
     END LOOP;
+
+    -- Les humains gardent la main via tournament_co_organizers.
+    INSERT INTO public.tournament_co_organizers (tournament_id, user_id, added_by)
+    SELECT t.id, x.uid, v_org
+      FROM public.tournaments t
+      CROSS JOIN (SELECT unnest(ARRAY[v_jdl, v_mathis]) AS uid) x
+     WHERE t.name LIKE 'Série 2 Rive-%'
+       AND x.uid IS NOT NULL AND x.uid <> v_org
+    ON CONFLICT (tournament_id, user_id) DO NOTHING;
 
     RAISE NOTICE 'Seed Série 2 régional: % tournois créés en draft (% bannière(s) manquante(s)).',
         v_created, v_missing;
