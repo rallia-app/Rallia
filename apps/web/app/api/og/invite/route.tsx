@@ -1012,16 +1012,44 @@ async function tournamentStoryImage(
       ) : (
         <div
           style={{
+            position: 'relative',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 360,
-            height: 360,
-            marginTop: 16,
-            background:
-              'radial-gradient(circle, rgba(245,181,53,0.25) 0%, rgba(245,181,53,0.07) 50%, transparent 68%)',
+            width: 900,
+            height: 380,
+            marginTop: 12,
           }}
         >
+          {/* Seeds funnel in from both sides toward the trophy */}
+          <svg
+            width="900"
+            height="380"
+            viewBox="0 0 900 380"
+            fill="none"
+            style={{ position: 'absolute', top: 0, left: 0 }}
+          >
+            <g stroke={secondary[500]} strokeOpacity="0.5" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M20 60h100M20 140h100M120 60v80M120 100h90" />
+              <path d="M20 240h100M20 320h100M120 240v80M120 280h90" />
+              <path d="M210 100v180M210 190h90" />
+              <path d="M780 60h100M780 140h100M780 60v80M690 100h90" />
+              <path d="M780 240h100M780 320h100M780 240v80M690 280h90" />
+              <path d="M690 100v180M600 190h90" />
+            </g>
+          </svg>
+          <div
+            style={{
+              position: 'absolute',
+              top: 10,
+              left: 270,
+              width: 360,
+              height: 360,
+              display: 'flex',
+              background:
+                'radial-gradient(circle, rgba(245,181,53,0.25) 0%, rgba(245,181,53,0.07) 50%, transparent 68%)',
+            }}
+          />
           <div
             style={{
               display: 'flex',
@@ -1040,10 +1068,9 @@ async function tournamentStoryImage(
         </div>
       )}
 
-      {/* Distribute leftover height around the info card — the banner variant
-          has little to give, the trophy variant spreads instead of pooling it
-          all above the CTA. */}
-      <div style={{ display: 'flex', flexGrow: 1 }} />
+      {/* Distribute leftover height around the info card, capped so sparse
+          posters lift the CTA instead of stretching the gaps. */}
+      <div style={{ display: 'flex', flexGrow: 1, maxHeight: 190 }} />
 
       {/* Prize lockup */}
       {hasPrize && (
@@ -1172,7 +1199,7 @@ async function tournamentStoryImage(
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexGrow: 1 }} />
+      <div style={{ display: 'flex', flexGrow: 1, maxHeight: 190 }} />
 
       {/* CTA + QR, above the Instagram reply box */}
       <div
