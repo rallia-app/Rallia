@@ -4,7 +4,8 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { CalendarDays, MapPin, Trophy } from 'lucide-react';
 import { getTournamentLogoUrl } from '@rallia/shared-utils';
 
-import { Link } from '@/i18n/navigation';
+import { UtmForwardingLink } from './_components/utm-forwarding-link';
+
 import { Badge } from '@/components/ui/badge';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { buildPageMetadata } from '@/lib/seo';
@@ -121,7 +122,7 @@ export default async function EventsPage({ params }: { params: Promise<{ locale:
               ? event.sport.name.charAt(0).toUpperCase() + event.sport.name.slice(1)
               : null;
             return (
-              <Link
+              <UtmForwardingLink
                 key={event.id}
                 href={`/invite/${event.referralCode}?type=tournament&id=${event.id}`}
                 className="group relative flex flex-col overflow-hidden rounded-xl border bg-card transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 h-full"
@@ -173,7 +174,7 @@ export default async function EventsPage({ params }: { params: Promise<{ locale:
                     {t('viewTournament')}
                   </span>
                 </div>
-              </Link>
+              </UtmForwardingLink>
             );
           })}
         </div>
