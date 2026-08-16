@@ -985,7 +985,7 @@ async function tournamentStoryImage(
           lineHeight: 1.08,
           maxWidth: 940,
           textAlign: 'center',
-          marginTop: 36,
+          marginTop: 32,
         }}
       >
         {name}
@@ -993,7 +993,7 @@ async function tournamentStoryImage(
 
       {/* Hero: tilted banner art, or glowing trophy */}
       {bannerSrc ? (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 48 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 44 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={bannerSrc}
@@ -1075,7 +1075,7 @@ async function tournamentStoryImage(
 
       {/* Prize lockup */}
       {hasPrize && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 42 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 44 }}>
           {trophySvg(52, accent[400], 1.8)}
           <span style={{ fontFamily: 'Poppins', fontSize: 62, fontWeight: 700, ...goldText }}>
             {prizeStr}
@@ -1090,7 +1090,7 @@ async function tournamentStoryImage(
           flexDirection: 'column',
           alignItems: 'center',
           gap: 14,
-          marginTop: hasPrize ? 36 : 44,
+          marginTop: hasPrize ? 32 : 44,
           padding: '30px 54px',
           borderRadius: 28,
           background: 'rgba(255,255,255,0.06)',
@@ -1160,7 +1160,7 @@ async function tournamentStoryImage(
           gap: 14,
           flexWrap: 'wrap',
           maxWidth: 940,
-          marginTop: 30,
+          marginTop: 28,
         }}
       >
         {shownBadges.map((badge, i) => (
@@ -1202,48 +1202,38 @@ async function tournamentStoryImage(
 
       <div style={{ display: 'flex', flexGrow: 1, maxHeight: 190 }} />
 
-      {/* CTA + QR, above the Instagram reply box. The button stays on the
-          page's center axis; the QR anchors to the right margin. */}
+      {/* Footer action card: CTA, link and QR as one centered unit */}
       <div
         style={{
-          position: 'relative',
-          width: '100%',
-          height: 212,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: 228,
+          gap: 34,
+          padding: '26px 38px',
+          borderRadius: 30,
+          background: 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.14)',
+          marginBottom: 204,
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '25px 62px',
+              padding: '22px 54px',
               borderRadius: 999,
               background: 'linear-gradient(90deg, #f2554b, #ed6c6e)',
               boxShadow: '0 14px 44px rgba(242,85,75,0.4)',
             }}
           >
             <span
-              style={{ fontFamily: 'Poppins', fontSize: 36, fontWeight: 700, color: '#ffffff' }}
+              style={{ fontFamily: 'Poppins', fontSize: 34, fontWeight: 700, color: '#ffffff' }}
             >
               {t('storyCta')}
             </span>
           </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '13px 28px',
-              borderRadius: 999,
-              background: 'rgba(2,27,26,0.6)',
-              border: '1px solid rgba(255,255,255,0.16)',
-            }}
-          >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <svg
               width="25"
               height="25"
@@ -1258,7 +1248,7 @@ async function tournamentStoryImage(
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
             </svg>
             <span
-              style={{ fontFamily: 'Poppins', fontSize: 27, fontWeight: 600, color: primary[200] }}
+              style={{ fontFamily: 'Poppins', fontSize: 26, fontWeight: 600, color: primary[200] }}
             >
               {linkLabel}
             </span>
@@ -1267,23 +1257,29 @@ async function tournamentStoryImage(
         {qrSrc && (
           <div
             style={{
-              position: 'absolute',
-              right: 64,
-              top: 0,
+              width: 1,
+              alignSelf: 'stretch',
+              background: 'rgba(255,255,255,0.14)',
+              display: 'flex',
+            }}
+          />
+        )}
+        {qrSrc && (
+          <div
+            style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 10,
-              padding: '16px 16px 12px 16px',
-              borderRadius: 22,
+              gap: 8,
+              padding: '12px 12px 10px 12px',
+              borderRadius: 18,
               background: '#ffffff',
-              boxShadow: '0 12px 36px rgba(0,0,0,0.35)',
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={qrSrc} width={148} height={148} style={{ width: 148, height: 148 }} />
+            <img src={qrSrc} width={132} height={132} style={{ width: 132, height: 132 }} />
             <span
-              style={{ fontFamily: 'Poppins', fontSize: 19, fontWeight: 600, color: primary[950] }}
+              style={{ fontFamily: 'Poppins', fontSize: 17, fontWeight: 600, color: primary[950] }}
             >
               {t('storyScan')}
             </span>
