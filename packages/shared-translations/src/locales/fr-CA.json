@@ -12073,6 +12073,9 @@
     "statusInProgress": "En cours",
     "singles": "Simple",
     "doubles": "Double",
+    "free": "Gratuit",
+    "full": "Complet",
+    "spotsLeft": "{count, plural, =1 {1 place restante} other {# places restantes}}",
     "viewTournament": "Voir le tournoi",
     "emptyTitle": "Aucun tournoi pour le moment",
     "emptyDescription": "De nouveaux tournois s'en viennent. Téléchargez l'application Rallia pour être parmi les premiers avertis."

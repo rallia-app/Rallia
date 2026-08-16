@@ -12073,6 +12073,9 @@
     "statusInProgress": "In progress",
     "singles": "Singles",
     "doubles": "Doubles",
+    "free": "Free",
+    "full": "Full",
+    "spotsLeft": "{count, plural, =1 {1 spot left} other {# spots left}}",
     "viewTournament": "View tournament",
     "emptyTitle": "No tournaments right now",
     "emptyDescription": "New tournaments are coming soon. Download the Rallia app to be among the first to know."

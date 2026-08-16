@@ -444,8 +444,8 @@ export default async function InvitePage({ params, searchParams }: Props) {
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 flex justify-center"
       >
-        <div className="h-56 w-56 -translate-x-16 rounded-full bg-[var(--primary-400)]/15 blur-3xl" />
-        <div className="h-48 w-48 translate-x-16 translate-y-10 rounded-full bg-[var(--secondary-400)]/10 blur-3xl" />
+        <div className="h-56 w-56 -translate-x-16 rounded-full bg-[var(--primary-500)]/15 blur-3xl" />
+        <div className="h-48 w-48 translate-x-16 translate-y-10 rounded-full bg-[var(--secondary-500)]/10 blur-3xl" />
       </div>
 
       <InviteLandingTracker

@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import type { Locale } from '@rallia/shared-translations';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { ArrowRight, CalendarDays, MapPin, Trophy } from 'lucide-react';
-import { getTournamentLogoUrl } from '@rallia/shared-utils';
+import { ArrowRight, CalendarDays, MapPin, Trophy, Users } from 'lucide-react';
+import { formatPrice, getTournamentLogoUrl } from '@rallia/shared-utils';
 
 import { UtmForwardingLink } from './_components/utm-forwarding-link';
 
@@ -39,9 +39,13 @@ interface PublicTournament {
   city: string | null;
   venue_name: string | null;
   entry_format: 'singles' | 'doubles';
+  entry_fee_cents: number;
+  currency: string;
+  max_participants: number;
   organizer_id: string;
   sport: { name: string } | null;
   facility: { name: string; city: string | null } | null;
+  tournament_registrations: { user_id: string }[] | null;
 }
 
 interface PublicEvent extends PublicTournament {
@@ -67,10 +71,13 @@ async function getPublicEvents(): Promise<PublicEvent[]> {
   const { data, error } = await supabase
     .from('tournaments')
     .select(
-      'id, name, description, logo_url, status, start_date, end_date, city, venue_name, entry_format, organizer_id, sport:sport_id (name), facility:facility_id (name, city)'
+      'id, name, description, logo_url, status, start_date, end_date, city, venue_name, entry_format, entry_fee_cents, currency, max_participants, organizer_id, sport:sport_id (name), facility:facility_id (name, city), tournament_registrations(user_id)'
     )
     .eq('visibility', 'public')
     .in('status', ['registration_open', 'registration_closed', 'in_progress'])
+    // Same occupancy semantics as the mobile list: only 'registered' rows
+    // count against max_participants.
+    .eq('tournament_registrations.status', 'registered')
     .order('start_date', { ascending: true });
   if (error || !data?.length) return [];
   const tournaments = data as unknown as PublicTournament[];
@@ -113,7 +120,7 @@ const STATUS_KEY: Record<EventStatus, string> = {
 // actionable, coral for live, frosted neutral for closed.
 const STATUS_BADGE_CLASS: Record<EventStatus, string> = {
   registration_open: 'bg-primary text-primary-foreground shadow-md',
-  in_progress: 'bg-[var(--secondary-500)] text-white shadow-md',
+  in_progress: 'bg-[var(--secondary-500)] text-white shadow-md dark:text-[var(--secondary-900)]',
   registration_closed: 'bg-background/85 text-foreground backdrop-blur-sm shadow-md',
 };
 
@@ -126,6 +133,15 @@ function EventCard({ event, locale, t }: { event: PublicEvent; locale: Locale; t
     ? event.sport.name.charAt(0).toUpperCase() + event.sport.name.slice(1)
     : null;
   const format = event.entry_format === 'doubles' ? t('doubles') : t('singles');
+  const priceLabel =
+    event.entry_fee_cents > 0
+      ? formatPrice(event.entry_fee_cents, event.currency, { locale, trimZeroCents: true })
+      : t('free');
+  // Spots only matter while people can still register.
+  const spotsLeft =
+    event.status === 'registration_open'
+      ? Math.max(event.max_participants - (event.tournament_registrations?.length ?? 0), 0)
+      : null;
 
   return (
     <UtmForwardingLink
@@ -141,7 +157,7 @@ function EventCard({ event, locale, t }: { event: PublicEvent; locale: Locale; t
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--primary-100)] via-[var(--primary-50)] to-[var(--secondary-100)] dark:from-[var(--primary-800)] dark:via-[var(--primary-900)] dark:to-[var(--primary-950)]">
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--primary-100)] via-[var(--primary-50)] to-[var(--secondary-100)]">
             <Trophy
               className="size-12 text-[var(--primary-500)]/50 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6"
               strokeWidth={1.5}
@@ -155,6 +171,9 @@ function EventCard({ event, locale, t }: { event: PublicEvent; locale: Locale; t
           )}
         >
           {t(STATUS_KEY[event.status])}
+        </Badge>
+        <Badge className="absolute right-3 top-3 border-transparent bg-background/85 px-3 py-1 text-foreground shadow-md backdrop-blur-sm">
+          {priceLabel}
         </Badge>
       </div>
 
@@ -177,6 +196,22 @@ function EventCard({ event, locale, t }: { event: PublicEvent; locale: Locale; t
             <span className="flex items-center gap-2">
               <MapPin className="size-4 shrink-0 text-primary/70" />
               <span className="truncate">{location}</span>
+            </span>
+          )}
+          {spotsLeft != null && (
+            <span
+              className={cn(
+                'flex items-center gap-2',
+                spotsLeft <= 4 && 'font-semibold text-[var(--secondary-600)]'
+              )}
+            >
+              <Users
+                className={cn(
+                  'size-4 shrink-0',
+                  spotsLeft <= 4 ? 'text-[var(--secondary-500)]' : 'text-primary/70'
+                )}
+              />
+              {spotsLeft === 0 ? t('full') : t('spotsLeft', { count: spotsLeft })}
             </span>
           )}
         </div>
@@ -210,12 +245,14 @@ export default async function EventsPage({ params }: { params: Promise<{ locale:
         aria-hidden
         className="pointer-events-none absolute inset-x-0 -top-20 -z-10 flex justify-center"
       >
-        <div className="h-64 w-64 -translate-x-24 rounded-full bg-[var(--primary-400)]/15 blur-3xl" />
-        <div className="h-56 w-56 translate-x-24 translate-y-8 rounded-full bg-[var(--secondary-400)]/10 blur-3xl" />
+        <div className="h-64 w-64 -translate-x-24 rounded-full bg-[var(--primary-500)]/15 blur-3xl" />
+        <div className="h-56 w-56 translate-x-24 translate-y-8 rounded-full bg-[var(--secondary-500)]/10 blur-3xl" />
       </div>
 
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-        <span className="inline-flex items-center gap-2 rounded-full border border-[var(--primary-300)]/50 bg-[var(--primary-100)]/60 px-4 py-1.5 text-sm font-semibold text-[var(--primary-700)] dark:border-[var(--primary-600)]/70 dark:bg-white/5 dark:text-[var(--primary-200)]">
+        {/* The dark theme remaps the color ramps (50-400 dark, 500-800 light),
+            so primary-700 self-adapts; only border/bg need dark overrides. */}
+        <span className="inline-flex items-center gap-2 rounded-full border border-[var(--primary-300)]/50 bg-[var(--primary-100)]/60 px-4 py-1.5 text-sm font-semibold text-[var(--primary-700)] dark:border-[var(--primary-500)]/30 dark:bg-white/5">
           <Trophy className="size-4" />
           {t('eyebrow')}
         </span>
