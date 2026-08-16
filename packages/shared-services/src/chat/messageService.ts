@@ -3,8 +3,36 @@
  * Operations for messages within conversations
  */
 
+import { generateUuidV4 } from '@rallia/shared-utils';
+
 import { supabase } from '../supabase';
 import type { Message, MessageWithSender, MessageStatus, SendMessageInput } from './chatTypes';
+
+const MESSAGE_WITH_SENDER_SELECT = `
+  id,
+  conversation_id,
+  sender_id,
+  content,
+  status,
+  read_by,
+  created_at,
+  updated_at,
+  reply_to_message_id,
+  is_edited,
+  edited_at,
+  deleted_at,
+  message_type,
+  metadata,
+  sender:player!message_sender_id_fkey (
+    id,
+    profile!player_id_fkey (
+      first_name,
+      last_name,
+      display_name,
+      profile_picture_url
+    )
+  )
+`;
 
 // ============================================================================
 // READ OPERATIONS
@@ -123,7 +151,16 @@ export async function getMessages(
  * Returns the message with reply_to data populated if it's a reply
  */
 export async function sendMessage(input: SendMessageInput): Promise<MessageWithSender> {
+  if ((!input.message_type || input.message_type === 'user') && !input.content.trim()) {
+    throw new Error('Cannot send an empty message');
+  }
+
+  // Client-generated id makes the insert idempotent: a network-stack replay of
+  // the same request hits the primary key instead of creating a duplicate row.
+  const messageId = input.id ?? generateUuidV4();
+
   const insertData: Record<string, unknown> = {
+    id: messageId,
     conversation_id: input.conversation_id,
     sender_id: input.sender_id,
     content: input.content,
@@ -143,41 +180,25 @@ export async function sendMessage(input: SendMessageInput): Promise<MessageWithS
     insertData.metadata = input.metadata;
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('message')
     .insert(insertData)
-    .select(
-      `
-      id,
-      conversation_id,
-      sender_id,
-      content,
-      status,
-      read_by,
-      created_at,
-      updated_at,
-      reply_to_message_id,
-      is_edited,
-      edited_at,
-      deleted_at,
-      message_type,
-      metadata,
-      sender:player!message_sender_id_fkey (
-        id,
-        profile!player_id_fkey (
-          first_name,
-          last_name,
-          display_name,
-          profile_picture_url
-        )
-      )
-    `
-    )
+    .select(MESSAGE_WITH_SENDER_SELECT)
     .single();
 
-  if (error) {
+  // 23505 = the row already exists (duplicate delivery of the same send) —
+  // treat as success and return the previously inserted row.
+  if (error && error.code === '23505') {
+    ({ data, error } = await supabase
+      .from('message')
+      .select(MESSAGE_WITH_SENDER_SELECT)
+      .eq('id', messageId)
+      .single());
+  }
+
+  if (error || !data) {
     console.error('Error sending message:', error);
-    throw error;
+    throw error ?? new Error('Failed to send message');
   }
 
   // Update conversation's updated_at

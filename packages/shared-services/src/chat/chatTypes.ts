@@ -439,6 +439,8 @@ export interface ConversationPreview {
  * @property reply_to_message_id - Optional ID of message being replied to
  */
 export interface SendMessageInput {
+  /** Client-generated message id (idempotency key). Generated when omitted. */
+  id?: string;
   conversation_id: string;
   content: string;
   sender_id: string;
