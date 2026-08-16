@@ -966,6 +966,7 @@ async function tournamentStoryImage(
               color: primary[300],
               textTransform: 'uppercase',
               letterSpacing: '0.24em',
+              marginRight: -7,
             }}
           >
             {sportName ? `${sportName} · ${t('tournament')}` : t('tournament')}
@@ -1201,12 +1202,16 @@ async function tournamentStoryImage(
 
       <div style={{ display: 'flex', flexGrow: 1, maxHeight: 190 }} />
 
-      {/* CTA + QR, above the Instagram reply box */}
+      {/* CTA + QR, above the Instagram reply box. The button stays on the
+          page's center axis; the QR anchors to the right margin. */}
       <div
         style={{
+          position: 'relative',
+          width: '100%',
+          height: 212,
           display: 'flex',
           alignItems: 'center',
-          gap: 30,
+          justifyContent: 'center',
           marginBottom: 228,
         }}
       >
@@ -1262,6 +1267,9 @@ async function tournamentStoryImage(
         {qrSrc && (
           <div
             style={{
+              position: 'absolute',
+              right: 64,
+              top: 0,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
