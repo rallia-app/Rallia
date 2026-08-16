@@ -5545,6 +5545,9 @@
       "generating": "Preparing your invite link...",
       "scanToRegister": "Scan to register for the tournament",
       "share": "Share invite link",
+      "shareStory": "Share to story",
+      "storyLinkCopied": "Link copied! Paste it as a link sticker in your story.",
+      "storyFailed": "Couldn't prepare the story image. Try again.",
       "shareTitle": "Join {name} on Rallia",
       "shareMessage": "You're invited to my tournament {name} on Rallia. Register here: {link}",
       "resetLink": "Reset link",
@@ -12112,7 +12115,8 @@
     "prizePool": "{amount} in prizes",
     "spotsLeft": "{count, plural, =1 {1 spot left} other {# spots left}}",
     "full": "Full",
-    "registrationClosed": "Registration closed"
+    "registrationClosed": "Registration closed",
+    "storyCta": "Register on Rallia"
   },
   "feedback": {
     "title": "Feedback",

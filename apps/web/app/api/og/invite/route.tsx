@@ -28,6 +28,8 @@ function untypedServiceRoleClient(): SupabaseClient {
 export const revalidate = 3600;
 
 const SIZE = { width: 1200, height: 630 };
+/** 9:16 Instagram/Snapchat story frame, requested with ?format=story. */
+const STORY_SIZE = { width: 1080, height: 1920 };
 const CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
 };
@@ -136,51 +138,15 @@ function formatMoney(cents: number, currency: string, locale: string): string {
 }
 
 type Fonts = { name: string; data: ArrayBuffer; style: 'normal'; weight: 500 | 600 | 700 }[];
+type Translator = Awaited<ReturnType<typeof getTranslations>>;
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const code = searchParams.get('code') ?? '';
-  const localeParam = searchParams.get('locale') ?? '';
-  const locale = (locales as readonly string[]).includes(localeParam) ? localeParam : defaultLocale;
-  const type = searchParams.get('type');
-  const id = searchParams.get('id');
-
-  const {
-    poppinsBold: poppinsBoldData,
-    poppinsSemiBold: poppinsSemiBoldData,
-    interMedium: interMediumData,
-  } = await loadOgFonts();
-  const fonts: Fonts = [
-    { name: 'Poppins', data: poppinsBoldData, style: 'normal', weight: 700 },
-    { name: 'Poppins', data: poppinsSemiBoldData, style: 'normal', weight: 600 },
-    { name: 'Inter', data: interMediumData, style: 'normal', weight: 500 },
-  ];
-
-  if (type === 'tournament' && id) {
-    const tournament = await getTournament(id);
-    if (tournament) return tournamentImage(tournament, locale, fonts);
-  }
-
-  return inviteImage(code, locale, fonts);
-}
-
-// ---------------------------------------------------------------------------
-// Tournament card
-// ---------------------------------------------------------------------------
-
-async function tournamentImage(tournament: TournamentOgData, locale: string, fonts: Fonts) {
-  const t = await getTranslations({ locale, namespace: 'tournamentOg' });
-
+/** Display values shared by the landscape OG card and the story poster. */
+function deriveTournamentCard(tournament: TournamentOgData, locale: string, t: Translator) {
   const rawSport = tournament.sport?.name;
   const sportName = rawSport ? rawSport.charAt(0).toUpperCase() + rawSport.slice(1) : '';
   const bannerUrl = tournament.logo_url
     ? (getTournamentLogoUrl(tournament.logo_url) ?? tournament.logo_url)
     : null;
-  const bannerSrc = bannerUrl ? await fetchBannerDataUri(bannerUrl, 1200, BANNER_HEIGHT) : null;
-
-  const rawName = tournament.name;
-  const name = rawName.length > 64 ? `${rawName.slice(0, 63)}…` : rawName;
-  const nameSize = name.length > 42 ? 42 : name.length > 26 ? 50 : 58;
 
   const dateStr = formatDateRange(tournament.start_date, tournament.end_date, locale);
   const venue = tournament.venue_name ?? tournament.facility?.name ?? null;
@@ -249,6 +215,55 @@ async function tournamentImage(tournament: TournamentOgData, locale: string, fon
       : spotsLeft <= 3
         ? status.warning.DEFAULT
         : status.success.light;
+
+  return { sportName, bannerUrl, dateStr, location, badges, pillText, pillColor, pillBg, pillDot };
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const code = searchParams.get('code') ?? '';
+  const localeParam = searchParams.get('locale') ?? '';
+  const locale = (locales as readonly string[]).includes(localeParam) ? localeParam : defaultLocale;
+  const type = searchParams.get('type');
+  const id = searchParams.get('id');
+
+  const {
+    poppinsBold: poppinsBoldData,
+    poppinsSemiBold: poppinsSemiBoldData,
+    interMedium: interMediumData,
+  } = await loadOgFonts();
+  const fonts: Fonts = [
+    { name: 'Poppins', data: poppinsBoldData, style: 'normal', weight: 700 },
+    { name: 'Poppins', data: poppinsSemiBoldData, style: 'normal', weight: 600 },
+    { name: 'Inter', data: interMediumData, style: 'normal', weight: 500 },
+  ];
+
+  if (type === 'tournament' && id) {
+    const tournament = await getTournament(id);
+    if (tournament) {
+      return searchParams.get('format') === 'story'
+        ? tournamentStoryImage(tournament, code, locale, fonts)
+        : tournamentImage(tournament, locale, fonts);
+    }
+  }
+
+  return inviteImage(code, locale, fonts);
+}
+
+// ---------------------------------------------------------------------------
+// Tournament card
+// ---------------------------------------------------------------------------
+
+async function tournamentImage(tournament: TournamentOgData, locale: string, fonts: Fonts) {
+  const t = await getTranslations({ locale, namespace: 'tournamentOg' });
+
+  const { sportName, bannerUrl, dateStr, location, badges, pillText, pillColor, pillBg, pillDot } =
+    deriveTournamentCard(tournament, locale, t);
+  const bannerSrc = bannerUrl ? await fetchBannerDataUri(bannerUrl, 1200, BANNER_HEIGHT) : null;
+
+  const rawName = tournament.name;
+  const name = rawName.length > 64 ? `${rawName.slice(0, 63)}…` : rawName;
+  const nameSize = name.length > 42 ? 42 : name.length > 26 ? 50 : 58;
 
   const pill = (
     <div
@@ -712,6 +727,357 @@ async function tournamentImage(tournament: TournamentOgData, locale: string, fon
       </div>
     </div>,
     { ...SIZE, fonts, headers: CACHE_HEADERS }
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tournament story poster (9:16, for Instagram/Snapchat stories)
+// ---------------------------------------------------------------------------
+
+/**
+ * Vertical poster a player shares to their story. Same poster language as the
+ * backdrop OG card; content is inset ~170px top / ~200px bottom so Instagram's
+ * username header and reply box never cover it. The sharer's referral code is
+ * rendered as the visible link so screenshots still carry attribution.
+ */
+async function tournamentStoryImage(
+  tournament: TournamentOgData,
+  code: string,
+  locale: string,
+  fonts: Fonts
+) {
+  const t = await getTranslations({ locale, namespace: 'tournamentOg' });
+
+  const { sportName, bannerUrl, dateStr, location, badges, pillText, pillColor, pillBg, pillDot } =
+    deriveTournamentCard(tournament, locale, t);
+  // 952×397 keeps the 2.4:1 banner shape uncropped inside the story frame.
+  const bannerSrc = bannerUrl ? await fetchBannerDataUri(bannerUrl, 952, 397) : null;
+
+  const rawName = tournament.name;
+  const name = rawName.length > 72 ? `${rawName.slice(0, 71)}…` : rawName;
+  const nameSize = name.length > 42 ? 56 : name.length > 26 ? 64 : 76;
+  const linkLabel = code ? `rallia.app/invite/${code.toUpperCase()}` : 'rallia.app';
+
+  return new ImageResponse(
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        fontFamily: 'Inter',
+        background: `linear-gradient(160deg, ${primary[950]} 0%, #0a4e48 55%, ${primary[800]} 100%)`,
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 8,
+          display: 'flex',
+          background: 'linear-gradient(90deg, #6bdcc9, #f5b535, #f2554b)',
+        }}
+      />
+      {/* Faint concentric arcs, bottom-left */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: -260,
+          left: -220,
+          width: 760,
+          height: 760,
+          borderRadius: 380,
+          border: '2px solid rgba(94,234,212,0.11)',
+          display: 'flex',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: -170,
+          left: -120,
+          width: 560,
+          height: 560,
+          borderRadius: 280,
+          border: '2px solid rgba(94,234,212,0.07)',
+          display: 'flex',
+        }}
+      />
+
+      {/* Top block: logo + sport eyebrow, below the Instagram username header */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 30,
+          paddingTop: 170,
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={logoSrc} height={58} style={{ height: 58, objectFit: 'contain' }} />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '14px 30px',
+            borderRadius: 999,
+            background: 'rgba(4,47,46,0.55)',
+            border: '1px solid rgba(255,255,255,0.22)',
+          }}
+        >
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={accent[400]}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+            <path d="M4 22h16" />
+            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+          </svg>
+          <span
+            style={{
+              fontFamily: 'Poppins',
+              fontSize: 24,
+              fontWeight: 600,
+              color: '#ffffff',
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+            }}
+          >
+            {sportName ? `${sportName} · ${t('tournament')}` : t('tournament')}
+          </span>
+        </div>
+      </div>
+
+      {/* Banner art, or the bracket-to-trophy motif on the default banner */}
+      {bannerSrc ? (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 52 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={bannerSrc}
+            width={952}
+            height={397}
+            style={{
+              width: 952,
+              height: 397,
+              objectFit: 'cover',
+              borderRadius: 28,
+              border: '1px solid rgba(255,255,255,0.15)',
+            }}
+          />
+        </div>
+      ) : (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 70 }}>
+          <svg width="574" height="473" viewBox="0 0 400 330" fill="none">
+            <g
+              stroke={secondary[500]}
+              strokeOpacity="0.55"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              fill="none"
+            >
+              <path d="M0 10h55M0 50h55M55 10v40M55 30h75" />
+              <path d="M0 100h55M0 140h55M55 100v40M55 120h75" />
+              <path d="M0 190h55M0 230h55M55 190v40M55 210h75" />
+              <path d="M0 280h55M0 320h55M55 280v40M55 300h75" />
+              <path d="M130 30v90M130 75h75" />
+              <path d="M130 210v90M130 255h75" />
+              <path d="M205 75v180M205 165h61" />
+            </g>
+            <circle cx="300" cy="165" r="52" fill={accent[400]} fillOpacity="0.09" />
+            <circle
+              cx="300"
+              cy="165"
+              r="34"
+              fill="rgba(4,47,46,0.75)"
+              stroke={accent[400]}
+              strokeOpacity="0.85"
+              strokeWidth="2"
+            />
+            <g transform="translate(282,147) scale(1.5)">
+              <g
+                stroke={accent[400]}
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              >
+                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                <path d="M4 22h16" />
+                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+              </g>
+            </g>
+          </svg>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexGrow: 1 }} />
+
+      {/* Info block */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 26,
+          padding: '0 64px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 56,
+              height: 8,
+              borderRadius: 4,
+              background: primary[300],
+              display: 'flex',
+            }}
+          />
+          <div
+            style={{
+              width: 56,
+              height: 8,
+              borderRadius: 4,
+              background: secondary[400],
+              display: 'flex',
+            }}
+          />
+          <div
+            style={{
+              width: 56,
+              height: 8,
+              borderRadius: 4,
+              background: accent[400],
+              display: 'flex',
+            }}
+          />
+        </div>
+        <span
+          style={{
+            fontFamily: 'Poppins',
+            fontSize: nameSize,
+            fontWeight: 700,
+            color: '#ffffff',
+            lineHeight: 1.12,
+            maxWidth: 952,
+          }}
+        >
+          {name}
+        </span>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={primary[200]}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            <span style={{ fontSize: 34, fontWeight: 500, color: primary[100] }}>{dateStr}</span>
+          </div>
+          {location && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={primary[200]}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <span style={{ fontSize: 32, fontWeight: 500, color: neutral[200] }}>{location}</span>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          {badges.map((badge, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '13px 28px',
+                borderRadius: 14,
+                background: 'rgba(4,47,46,0.5)',
+                border: '1px solid rgba(255,255,255,0.18)',
+              }}
+            >
+              <span style={{ fontSize: 27, fontWeight: 500, color: primary[100] }}>{badge}</span>
+            </div>
+          ))}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 13,
+              padding: '15px 32px',
+              borderRadius: 100,
+              background: pillBg,
+            }}
+          >
+            <div style={{ width: 14, height: 14, borderRadius: 7, background: pillDot }} />
+            <span
+              style={{ fontFamily: 'Poppins', fontSize: 27, fontWeight: 600, color: pillColor }}
+            >
+              {pillText}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA card, above the Instagram reply box */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 12,
+          margin: '52px 64px 200px 64px',
+          padding: '34px 40px',
+          borderRadius: 26,
+          background: 'rgba(255,255,255,0.10)',
+          border: '1px solid rgba(255,255,255,0.15)',
+        }}
+      >
+        <span style={{ fontFamily: 'Poppins', fontSize: 34, fontWeight: 700, color: '#ffffff' }}>
+          {t('storyCta')}
+        </span>
+        <span style={{ fontFamily: 'Poppins', fontSize: 30, fontWeight: 600, color: accent[400] }}>
+          {linkLabel}
+        </span>
+      </div>
+    </div>,
+    { ...STORY_SIZE, fonts, headers: CACHE_HEADERS }
   );
 }
 

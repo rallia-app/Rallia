@@ -197,3 +197,19 @@ export function parseInvitationUrl(url: string): ParsedInvitationLink | null {
     return null;
   }
 }
+
+/**
+ * Story-format (1080×1920) tournament poster rendered by the web app's OG
+ * endpoint — downloaded by the mobile "share to story" flow. The referral
+ * code is baked into the artwork so screenshots keep attribution.
+ */
+export function getTournamentStoryImageUrl(
+  tournamentId: string,
+  referralCode: string,
+  locale?: string
+): string {
+  const params = new URLSearchParams({ type: 'tournament', id: tournamentId, format: 'story' });
+  if (referralCode) params.set('code', referralCode);
+  if (locale) params.set('locale', locale);
+  return `${BASE_URL}/api/og/invite?${params.toString()}`;
+}
