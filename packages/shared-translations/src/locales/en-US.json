@@ -6108,6 +6108,7 @@
       "nav": {
         "home": "Home",
         "play": "Play",
+        "events": "Events",
         "communities": "Communities",
         "guides": "Guides",
         "donate": "Support"
@@ -6719,6 +6720,7 @@
     "about": "About",
     "guides": "Guides",
     "play": "Games & Courts",
+    "events": "Tournaments",
     "communities": "Communities",
     "donate": "Support Rallia",
     "legal": "Legal",
@@ -12062,6 +12064,18 @@
     "lightOff": "Light Off",
     "join": "Join"
   },
+  "eventsPage": {
+    "title": "Events",
+    "subtitle": "Upcoming tennis and pickleball tournaments on Rallia. Pick yours and register in a few taps with the app.",
+    "statusRegistrationOpen": "Registration open",
+    "statusRegistrationClosed": "Registration closed",
+    "statusInProgress": "In progress",
+    "singles": "Singles",
+    "doubles": "Doubles",
+    "viewTournament": "View tournament",
+    "emptyTitle": "No tournaments right now",
+    "emptyDescription": "New tournaments are coming soon. Download the Rallia app to be among the first to know."
+  },
   "invitePage": {
     "title": "Join Rallia",
     "description": "Download Rallia to find players, join matches, and play more.",
@@ -12602,6 +12616,12 @@
       "description": "Find tennis and pickleball communities in your city. Join local groups, meet players at your level, and grow your network — discover communities on Rallia.",
       "ogTitle": "Find a Local Tennis or Pickleball Community",
       "ogDescription": "Join active tennis and pickleball communities near you on Rallia."
+    },
+    "events": {
+      "title": "Tennis & Pickleball Tournaments",
+      "description": "Browse upcoming tennis and pickleball tournaments near you. See dates, venues and levels, then register in a few taps with the Rallia app.",
+      "ogTitle": "Find a Tennis or Pickleball Tournament Near You",
+      "ogDescription": "Upcoming tennis and pickleball tournaments on Rallia. Pick yours and register in a few taps."
     },
     "guides": {
       "title": "Tennis & Pickleball Guides",
