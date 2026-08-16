@@ -1015,8 +1015,8 @@ async function tournamentStoryImage(
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 300,
-            height: 300,
+            width: 360,
+            height: 360,
             marginTop: 16,
             background:
               'radial-gradient(circle, rgba(245,181,53,0.25) 0%, rgba(245,181,53,0.07) 50%, transparent 68%)',
@@ -1027,18 +1027,23 @@ async function tournamentStoryImage(
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 200,
-              height: 200,
-              borderRadius: 100,
+              width: 236,
+              height: 236,
+              borderRadius: 118,
               background: 'rgba(4,47,46,0.8)',
               border: `2px solid ${accent[400]}`,
               boxShadow: '0 0 60px rgba(245,181,53,0.35)',
             }}
           >
-            {trophySvg(102, accent[400], 1.3)}
+            {trophySvg(120, accent[400], 1.3)}
           </div>
         </div>
       )}
+
+      {/* Distribute leftover height around the info card — the banner variant
+          has little to give, the trophy variant spreads instead of pooling it
+          all above the CTA. */}
+      <div style={{ display: 'flex', flexGrow: 1 }} />
 
       {/* Prize lockup */}
       {hasPrize && (
@@ -1243,7 +1248,7 @@ async function tournamentStoryImage(
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={qrSrc} width={148} height={148} style={{ width: 148, height: 148 }} />
             <span
-              style={{ fontFamily: 'Poppins', fontSize: 17, fontWeight: 600, color: primary[950] }}
+              style={{ fontFamily: 'Poppins', fontSize: 19, fontWeight: 600, color: primary[950] }}
             >
               {t('storyScan')}
             </span>
