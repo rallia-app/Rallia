@@ -149,8 +149,10 @@ export const SessionDetail: React.FC = () => {
   const fetchSettled = !isLoading && (isError || sess !== undefined);
   useEffect(() => {
     if (!inviteToken || !fetchSettled || sess) return;
+    // Landing on the league with no explanation reads as a broken link.
+    toast.info(t('sessionDetail.membersOnlyBounce'));
     navigation.replace('LeagueDetail', { leagueId, inviteToken });
-  }, [inviteToken, fetchSettled, sess, navigation, leagueId]);
+  }, [inviteToken, fetchSettled, sess, navigation, leagueId, toast, t]);
 
   // Share mirrors the league mint conditions: the organizer always has a link;
   // anyone else only where a player link exists (public, joinable, active).

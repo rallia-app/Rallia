@@ -4744,7 +4744,7 @@
     "createSeason": {
       "title": "Créer une saison",
       "gamesPerPlayerLabel": "Parties par joueur, par séance",
-      "gamesPerPlayerHint": "Certaines ligues jouent plus d'une partie par soir. Les séances ouvrent là-dessus et peuvent quand même différer.",
+      "gamesPerPlayerHint": "Certaines ligues jouent plus d'une partie par séance. Les séances ouvrent là-dessus et peuvent quand même différer.",
       "presets": {
         "hint": "Pars d'une des quatre saisons, pis ajuste ce que tu veux.",
         "winter": "Hiver",
@@ -4851,6 +4851,7 @@
     }
   },
   "sessionDetail": {
+    "membersOnlyBounce": "Cette séance est réservée aux membres. Rejoins la ligue pour la voir.",
     "title": "Séance",
     "loadError": "Impossible de charger la séance",
     "retry": "Réessayer",

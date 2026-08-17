@@ -4744,7 +4744,7 @@
     "createSeason": {
       "title": "Create a season",
       "gamesPerPlayerLabel": "Games per player, per session",
-      "gamesPerPlayerHint": "Some leagues play more than one game a night. Sessions open on this and can still differ.",
+      "gamesPerPlayerHint": "Some leagues play more than one game per session. Sessions open on this and can still differ.",
       "presets": {
         "hint": "Start from one of the four seasons, then adjust anything.",
         "winter": "Winter",
@@ -4851,6 +4851,7 @@
     }
   },
   "sessionDetail": {
+    "membersOnlyBounce": "That session is for members. Join the league to see it.",
     "title": "Session",
     "loadError": "Couldn't load session",
     "retry": "Try again",

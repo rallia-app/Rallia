@@ -224,11 +224,15 @@ export const SeasonsTab: React.FC<SeasonsTabProps> = ({
     {openSeason && (
       <Section title={t('leagueDetail.roster.title')} colors={colors}>
         {seasonRoster.length === 0 ? (
-          <View style={styles.participantEmpty}>
-            <Text size="sm" color={colors.textMuted}>
-              {t('leagueDetail.roster.empty')}
-            </Text>
-          </View>
+          // Only a paid season has a first joiner; on a free one every active
+          // member already plays, so this would contradict the note below.
+          isPaidSeason ? (
+            <View style={styles.participantEmpty}>
+              <Text size="sm" color={colors.textMuted}>
+                {t('leagueDetail.roster.empty')}
+              </Text>
+            </View>
+          ) : null
         ) : (
           <>
             <Text
