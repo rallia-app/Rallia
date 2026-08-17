@@ -29,7 +29,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
   const playerId = payload?.playerId ?? '';
 
   const { colors, isDark } = useThemeStyles();
-  const { locale } = useTranslation();
+  const { t, locale } = useTranslation();
   const toast = useToast();
 
   const handleClose = useCallback(() => {
@@ -51,19 +51,19 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
         playerId,
       });
       successHaptic();
-      toast.success('The match score has been confirmed.');
+      toast.success(t('matchDetail.scoreConfirmed'));
       handleClose();
     } catch (error) {
       const msg = error instanceof Error ? error.message : '';
       if (msg.includes('already processed')) {
         warningHaptic();
-        toast.info('This score has already been confirmed.');
+        toast.info(t('matchDetail.scoreAlreadyProcessed'));
         handleClose();
       } else {
-        toast.error('Failed to confirm score. Please try again.');
+        toast.error(t('matchDetail.confirmScoreError'));
       }
     }
-  }, [confirmation, playerId, confirmMutation, handleClose, toast]);
+  }, [confirmation, playerId, confirmMutation, handleClose, toast, t]);
 
   const handleProposeRebuttal = useCallback(async () => {
     if (!confirmation) return;
@@ -116,7 +116,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
         {/* Header */}
         <View style={styles.header}>
           <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-            Confirm Score
+            {t('matchDetail.confirmScore')}
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <Ionicons name="close-outline" size={24} color={colors.textMuted} />
@@ -153,7 +153,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
                 {confirmation.submitted_by_name}
               </Text>
               <Text size="sm" style={{ color: colors.textSecondary }}>
-                submitted a match score
+                {t('matchDetail.submittedAScore')}
               </Text>
             </View>
           </View>
@@ -190,7 +190,9 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
             <View style={styles.scoreContainer}>
               <View style={styles.teamColumn}>
                 <Text size="sm" style={{ color: colors.textSecondary }}>
-                  {confirmation.player_team === 1 ? 'You' : confirmation.opponent_name}
+                  {confirmation.player_team === 1
+                    ? t('matchDetail.you')
+                    : confirmation.opponent_name}
                 </Text>
                 <Text
                   size="3xl"
@@ -205,7 +207,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
                   <View style={[styles.winnerBadge, { backgroundColor: colors.primary }]}>
                     <Ionicons name="trophy-outline" size={12} color="#fff" />
                     <Text size="xs" weight="medium" style={{ color: '#fff', marginLeft: 2 }}>
-                      Winner
+                      {t('matchDetail.winner')}
                     </Text>
                   </View>
                 )}
@@ -213,13 +215,15 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
 
               <View style={styles.vsContainer}>
                 <Text size="lg" weight="medium" style={{ color: colors.textMuted }}>
-                  vs
+                  {t('matchDetail.vs')}
                 </Text>
               </View>
 
               <View style={styles.teamColumn}>
                 <Text size="sm" style={{ color: colors.textSecondary }}>
-                  {confirmation.player_team === 2 ? 'You' : confirmation.opponent_name}
+                  {confirmation.player_team === 2
+                    ? t('matchDetail.you')
+                    : confirmation.opponent_name}
                 </Text>
                 <Text
                   size="3xl"
@@ -234,7 +238,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
                   <View style={[styles.winnerBadge, { backgroundColor: colors.primary }]}>
                     <Ionicons name="trophy-outline" size={12} color="#fff" />
                     <Text size="xs" weight="medium" style={{ color: '#fff', marginLeft: 2 }}>
-                      Winner
+                      {t('matchDetail.winner')}
                     </Text>
                   </View>
                 )}
@@ -246,7 +250,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
               <View style={[styles.groupInfo, { borderTopColor: colors.border }]}>
                 <Ionicons name="people-outline" size={14} color={colors.textSecondary} />
                 <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 4 }}>
-                  Posted to {confirmation.network_name}
+                  {t('matchDetail.postedTo', { network: confirmation.network_name })}
                 </Text>
               </View>
             )}
@@ -262,10 +266,13 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
             <Ionicons name="time-outline" size={20} color="#FFB800" />
             <View style={styles.deadlineInfo}>
               <Text size="sm" weight="medium" style={{ color: isDark ? '#FFD54F' : '#8B6914' }}>
-                {hoursRemaining}h {minutesRemaining}m remaining to respond
+                {t('matchDetail.timeRemainingToRespond', {
+                  hours: hoursRemaining,
+                  minutes: minutesRemaining,
+                })}
               </Text>
               <Text size="xs" style={{ color: isDark ? '#C4A84D' : '#A67F00' }}>
-                Score will be auto-confirmed after deadline
+                {t('matchDetail.autoConfirmAfterDeadline')}
               </Text>
             </View>
           </View>
@@ -279,7 +286,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
             disabled={isLoading}
             style={styles.disputeButton}
           >
-            Propose Different Score
+            {t('matchDetail.proposeDifferentScore')}
           </Button>
           <Button
             variant="primary"
@@ -287,7 +294,7 @@ export function ScoreConfirmationActionSheet({ payload }: SheetProps<'score-conf
             disabled={isLoading}
             style={styles.confirmButton}
           >
-            {isLoading ? 'Processing...' : 'Confirm Score'}
+            {isLoading ? t('common.processing') : t('matchDetail.confirmScore')}
           </Button>
         </View>
       </View>
