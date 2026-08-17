@@ -33,6 +33,7 @@ import type {
 import { supabase, Logger } from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '#/hooks/useTranslation';
+import { useStoreReviewPrompt } from '#/hooks/useStoreReviewPrompt';
 import * as Analytics from '#/services/analytics';
 import { useActionsSheet, type MatchCreationPrefill } from '#/context';
 import { navigateFromOutside } from '#/navigation/navigationRef';
@@ -140,6 +141,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   const { t, locale } = useTranslation();
   const toast = useToast();
   const { openSheetForMatchCreation } = useActionsSheet();
+  const { maybePromptForReview } = useStoreReviewPrompt();
   const isDark = theme === 'dark';
   // State
   const [currentStep, setCurrentStep] = useState(0); // 0 = outcome step, 1+ = opponent steps
@@ -249,6 +251,16 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
         successHaptic();
         onComplete?.();
         setShowNextPrompt(true);
+        // Primary review-prompt trigger: the player has just finished a
+        // reflective, optional, task-complete step with nothing left pending.
+        // Eligibility (3+ completed feedback sessions) is checked server-side.
+        // The delay lets the "what's next" screen render underneath first.
+        void maybePromptForReview('match_feedback_completed', {
+          delayMs: 1400,
+          opponentStarRating: submittedFeedback?.showedUp
+            ? (submittedFeedback.starRating ?? null)
+            : null,
+        });
       } else {
         // Move to next opponent
         goToNextStep();

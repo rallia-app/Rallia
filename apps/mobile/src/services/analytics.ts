@@ -1241,3 +1241,36 @@ export function matchOrganizerMatchCreated(props: {
 }): void {
   capture('match_organizer_match_created', props);
 }
+
+// ---- Store review prompt ----
+
+/**
+ * The native store review dialog was requested. Note this is "we asked", not
+ * "they saw", and never "they rated": neither store reports the outcome, so
+ * conversion is only ever inferable by lining these up against the weekly
+ * ratings delta in App Store Connect.
+ */
+export function reviewPromptRequested(props: {
+  trigger: string;
+  feedbacks_submitted: number | null;
+  prompts_in_window: number | null;
+  /**
+   * Star rating the player just gave their opponent, when the prompt rode on the
+   * feedback flow. Recorded but NEVER gated on: it is sentiment, and selecting
+   * who to ask by expected positivity is what both stores prohibit. Here purely
+   * so "do happier submitters convert better" can be answered with data.
+   */
+  opponent_star_rating?: number | null;
+}): void {
+  capture('review_prompt_requested', props);
+}
+
+/**
+ * A trigger fired but no prompt was shown. `reason` carries both server rules
+ * (throttled_year, not_enough_feedback, open_feedback, recent_bad_experience) and
+ * client ones (unsupported, backgrounded), so the two together are the whole
+ * funnel: every check emits exactly one of requested or suppressed.
+ */
+export function reviewPromptSuppressed(props: { trigger: string; reason: string }): void {
+  capture('review_prompt_suppressed', props);
+}

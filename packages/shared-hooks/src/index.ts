@@ -80,6 +80,7 @@ export * from './useModeration';
 export * from './useBooking';
 export * from './usePlayerBookingFilters';
 export * from './useReferral';
+export * from './useReviewPrompt';
 export * from './useSportLeaderboard';
 export * from './useTournamentRanking';
 export * from './useMapData';

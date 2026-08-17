@@ -6007,6 +6007,35 @@ export type Database = {
           },
         ]
       }
+      player_review_prompt: {
+        Row: {
+          id: number
+          player_id: string
+          shown_at: string
+          trigger_name: string
+        }
+        Insert: {
+          id?: never
+          player_id: string
+          shown_at?: string
+          trigger_name: string
+        }
+        Update: {
+          id?: never
+          player_id?: string
+          shown_at?: string
+          trigger_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_review_prompt_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_sms_consent: {
         Row: {
           created_at: string
@@ -13156,6 +13185,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_review_prompt_shown: {
+        Args: { p_trigger: string }
+        Returns: undefined
+      }
       record_weekly_checkin: {
         Args: {
           p_auto_create: boolean
@@ -13262,6 +13295,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      review_prompt_eligibility: { Args: never; Returns: Json }
       search_conversation_messages: {
         Args: { p_conversation_id: string; p_limit?: number; p_query: string }
         Returns: {
