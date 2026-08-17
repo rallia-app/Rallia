@@ -12773,6 +12773,7 @@ export type Database = {
         }[]
       }
       lt_expire_stale_registration_payments: { Args: never; Returns: number }
+      lt_format_date_fr: { Args: { p_ts: string }; Returns: string }
       lt_get_or_create_session_pairing_chat_unchecked: {
         Args: { p_session_match_id: string }
         Returns: string
@@ -12857,6 +12858,30 @@ export type Database = {
       lt_registration_display_name: {
         Args: { p_registration_id: string }
         Returns: string
+      }
+      lt_registration_result: {
+        Args: { p_registration_id: string }
+        Returns: {
+          avatar_url: string
+          best_win_name: string
+          best_win_seed: number
+          display_name: string
+          field_size: number
+          forfeited: boolean
+          losses: number
+          partner_name: string
+          placement: string
+          points: number
+          pool_letter: string
+          pool_rank: number
+          referral_code: string
+          registration_id: string
+          seed_rank: number
+          stage: string
+          tournament_id: string
+          user_id: string
+          wins: number
+        }[]
       }
       lt_registration_users: { Args: { p_reg: string }; Returns: string[] }
       lt_release_candidates: {
@@ -15076,6 +15101,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      tournament_my_result: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          avatar_url: string
+          best_win_name: string
+          best_win_seed: number
+          display_name: string
+          field_size: number
+          forfeited: boolean
+          losses: number
+          partner_name: string
+          placement: string
+          points: number
+          pool_letter: string
+          pool_rank: number
+          referral_code: string
+          registration_id: string
+          seed_rank: number
+          stage: string
+          tournament_id: string
+          user_id: string
+          wins: number
+        }[]
+      }
       tournament_open_registration: {
         Args: { p_tournament_id: string; p_version_was: number }
         Returns: {
@@ -15417,6 +15466,30 @@ export type Database = {
           released_transfer_id: string
           stripe_charge_id: string
           stripe_payment_intent_id: string
+        }[]
+      }
+      tournament_result_for_share: {
+        Args: { p_registration_id: string }
+        Returns: {
+          avatar_url: string
+          best_win_name: string
+          best_win_seed: number
+          display_name: string
+          field_size: number
+          forfeited: boolean
+          losses: number
+          partner_name: string
+          placement: string
+          points: number
+          pool_letter: string
+          pool_rank: number
+          referral_code: string
+          registration_id: string
+          seed_rank: number
+          stage: string
+          tournament_id: string
+          user_id: string
+          wins: number
         }[]
       }
       tournament_revoke_invite: {

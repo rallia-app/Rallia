@@ -12143,6 +12143,28 @@
     "storyDeadline": "Inscriptions jusqu'au {date}",
     "storyScan": "Scanne pour t'inscrire"
   },
+  "tournamentResultOg": {
+    "eyebrow": "Résultat",
+    "placement": {
+      "champion": "Champion",
+      "finalist": "Finaliste",
+      "semifinal": "Demi-finaliste",
+      "quarterfinal": "Quart de finaliste",
+      "roundOf16": "Huitièmes de finale",
+      "roundOf32": "Seizièmes de finale",
+      "roundOf64": "Trente-deuxièmes de finale",
+      "participated": "Participant"
+    },
+    "poolFinish": "{rank, selectordinal, one {#er} other {#e}} de la poule {letter}",
+    "drawSize": "Tableau de {count}",
+    "won": "Gagnées",
+    "lost": "Perdues",
+    "points": "Points Rallia",
+    "bestWin": "Meilleure victoire : {name}",
+    "seeded": "Tête de série {seed}",
+    "cta": "Joue sur Rallia",
+    "scan": "Scanne pour jouer"
+  },
   "feedback": {
     "title": "Commentaires",
     "sheetTitle": "Commentaires",
