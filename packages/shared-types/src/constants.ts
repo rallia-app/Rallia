@@ -349,6 +349,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   tournament_registration_removed: 'remove-circle-outline',
   tournament_bracket_published: 'git-network-outline',
   tournament_registration_open: 'trophy-outline',
+  tournament_registration_closing_soon: 'hourglass-outline',
   tournament_match_completed: 'podium-outline',
   tournament_match_ready: 'flash-outline',
   tournament_deadline_changed: 'time-outline',
@@ -469,6 +470,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   tournament_registration_removed: '#F44336', // Red
   tournament_bracket_published: '#4DB8A8', // Teal
   tournament_registration_open: '#E57373', // Coral (tournament)
+  tournament_registration_closing_soon: '#E8863A', // Orange (urgency)
   tournament_match_completed: '#4DB8A8', // Teal
   tournament_match_ready: '#4DB8A8', // Teal
   tournament_deadline_changed: '#4DB8A8', // Teal
@@ -585,6 +587,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   tournament_registration_removed: 'Removed from Tournament',
   tournament_bracket_published: 'Bracket Published',
   tournament_registration_open: 'Registration Open',
+  tournament_registration_closing_soon: 'Registration Closing Soon',
   tournament_match_completed: 'Tournament Result',
   tournament_match_ready: 'Next Match',
   tournament_deadline_changed: 'Deadline Updated',
@@ -711,6 +714,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   tournament_registration_removed: 'leagues',
   tournament_bracket_published: 'leagues',
   tournament_registration_open: 'leagues',
+  tournament_registration_closing_soon: 'leagues',
   tournament_match_completed: 'leagues',
   tournament_match_ready: 'leagues',
   tournament_deadline_changed: 'leagues',
@@ -879,6 +883,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   tournament_registration_removed: { email: false, push: true, sms: false },
   tournament_bracket_published: { email: false, push: true, sms: false },
   tournament_registration_open: { email: false, push: true, sms: false },
+  tournament_registration_closing_soon: { email: false, push: true, sms: false },
   tournament_match_completed: { email: false, push: true, sms: false },
   tournament_match_ready: { email: false, push: true, sms: false },
   tournament_deadline_changed: { email: false, push: true, sms: false },
@@ -962,6 +967,7 @@ export const REFERENCE_RESPONSE_NOTIFICATION_TYPES: readonly ExtendedNotificatio
 /** Tournament notifications — target_id is always the tournament id. */
 export const TOURNAMENT_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
   'tournament_registration_open',
+  'tournament_registration_closing_soon',
   'tournament_partner_registered',
   'tournament_partner_withdrew',
   'tournament_registration_received',

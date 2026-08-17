@@ -238,6 +238,7 @@
       "match_unfilled_recovery": "Game recovery",
       "play_rhythm_nudge": "Usual slot open",
       "tournament_registration_open": "Tournament registration open",
+      "tournament_registration_closing_soon": "Tournament registration closing soon",
       "nearby_match_available": "Nearby game",
       "player_kicked": "Removed from game",
       "player_left": "Player left",
@@ -472,6 +473,10 @@
       "tournament_registration_open": {
         "title": "Registration is open · {tournamentName}",
         "body": "Spots are limited. Tap to register."
+      },
+      "tournament_registration_closing_soon": {
+        "title": "Last chance · {tournamentName}",
+        "body": "Registration closes soon and spots are limited. Tap to register."
       },
       "nearby_match_available": {
         "title": "New {sportName} game nearby",

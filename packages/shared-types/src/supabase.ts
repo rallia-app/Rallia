@@ -8980,6 +8980,50 @@ export type Database = {
           },
         ]
       }
+      tournament_closing_fanout_job: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: number
+          last_error: string | null
+          last_player_id: string | null
+          notified_count: number
+          status: string
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: never
+          last_error?: string | null
+          last_player_id?: string | null
+          notified_count?: number
+          status?: string
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: never
+          last_error?: string | null
+          last_player_id?: string | null
+          notified_count?: number
+          status?: string
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_closing_fanout_job_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_co_organizers: {
         Row: {
           added_at: string
@@ -12710,6 +12754,7 @@ export type Database = {
         }
         Returns: string
       }
+      lt_enqueue_tournament_closing_soon: { Args: never; Returns: number }
       lt_ensure_ranking_season: { Args: { p_at: string }; Returns: string }
       lt_event_earnings: {
         Args: { p_season_id?: string; p_tournament_id?: string }
@@ -13035,6 +13080,10 @@ export type Database = {
       }
       post_global_announcement: { Args: { p_content: string }; Returns: string }
       process_announcement_fanout: {
+        Args: { p_batch_size?: number }
+        Returns: number
+      }
+      process_tournament_closing_soon_fanout: {
         Args: { p_batch_size?: number }
         Returns: number
       }
@@ -16002,6 +16051,7 @@ export type Database = {
         | "tournament_dispute_escalated"
         | "tournament_pool_eliminated"
         | "tournament_action_required"
+        | "tournament_registration_closing_soon"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -16697,6 +16747,7 @@ export const Constants = {
         "tournament_dispute_escalated",
         "tournament_pool_eliminated",
         "tournament_action_required",
+        "tournament_registration_closing_soon",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],
