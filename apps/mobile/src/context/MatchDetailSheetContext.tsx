@@ -11,7 +11,7 @@
  */
 
 import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
-import { SheetManager } from 'react-native-actions-sheet';
+import { SheetManager, getSheetStack } from 'react-native-actions-sheet';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { getMatchWithDetails } from '@rallia/shared-services';
 
@@ -102,7 +102,14 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
       onMatchRemovedRef.current = options?.onMatchRemoved ?? null;
       onDismissRef.current = options?.onDismiss ?? null;
       setSelectedMatch(match);
-      SheetManager.show('match-detail');
+      // Opening a match while one is already presented must SWAP the content,
+      // never push a second copy of the same sheet. Both copies read this one
+      // `selectedMatch`, so closing the top one runs handleSheetDismiss, nulls
+      // the shared state, and leaves the copy underneath rendering an empty
+      // sheet with no way back.
+      if (!getSheetStack().some(sheet => sheet.id === 'match-detail')) {
+        SheetManager.show('match-detail');
+      }
       const hasResult = Array.isArray(match.result)
         ? (match.result?.length ?? 0) > 0
         : !!match.result;

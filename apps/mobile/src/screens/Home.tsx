@@ -28,7 +28,7 @@ import {
   useToast,
 } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { SheetManager } from 'react-native-actions-sheet';
+import { SheetManager, getSheetStack } from 'react-native-actions-sheet';
 import {
   useNearbyOpenCourtCount,
   useProfile,
@@ -639,12 +639,16 @@ const Home = () => {
         await incrementOnboardedLaunchCount();
         const show = await shouldShowReferralInvite(hasReferredUser);
         if (show) {
-          // Don't surface the referral invite over the weekly check-in
-          // wizard — the wizard owns the screen when it's presenting.
-          // The launch counter still ticks so this prompt will be eligible
-          // again on the next launch.
-          if (isWeeklyCheckInActive()) {
-            Logger.logUserAction('referral_invite_suppressed_for_wizard');
+          // Never stack on another pop-up. The wizard owns the screen when
+          // it's presenting, and any already-open sheet was either user-intent
+          // (deep link) or another auto-opener that got there first. This
+          // prompt is periodic and deferrable, so it always yields. Same guard
+          // Serie1AnnouncementAutoOpener and useApplyUpdateOnResume use. The
+          // launch counter still ticks so it's eligible again next launch.
+          if (isWeeklyCheckInActive() || getSheetStack().length > 0) {
+            Logger.logUserAction('referral_invite_suppressed_for_wizard', {
+              openSheets: getSheetStack().length,
+            });
             return;
           }
           await markSheetShown();
