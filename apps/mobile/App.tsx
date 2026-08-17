@@ -308,7 +308,7 @@ const UTM_STORAGE_KEY = '@rallia/utm-params';
  * soon as auth resolves to "no session".
  */
 function SplashGate({ children }: PropsWithChildren) {
-  const { setSplashComplete } = useOverlay();
+  const { setSplashComplete, isSportSelectionResolved } = useOverlay();
   const { session, loading: authLoading } = useAuth();
   const { loading: profileLoading } = useProfile();
   const { loading: playerLoading } = usePlayer();
@@ -342,6 +342,10 @@ function SplashGate({ children }: PropsWithChildren) {
     if (isCheckingUpdate) return false;
     if (!isLocaleReady) return false;
     if (authLoading) return false;
+    // AppNavigator renders null until the sport-selection status resolves;
+    // keep the splash over that hold (OverlayContext force-resolves before
+    // the 5s safety timeout below).
+    if (!isSportSelectionResolved) return false;
     // Signed-out: nothing per-user to wait on.
     if (!session) return true;
     // Signed-in: wait for all three user-scoped contexts to settle.
@@ -355,6 +359,7 @@ function SplashGate({ children }: PropsWithChildren) {
     isCheckingUpdate,
     isLocaleReady,
     authLoading,
+    isSportSelectionResolved,
     session,
     profileLoading,
     playerLoading,
