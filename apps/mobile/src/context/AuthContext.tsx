@@ -26,6 +26,7 @@ import React, {
 import { AppState, AppStateStatus } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Session, AuthError, Provider, User } from '@supabase/supabase-js';
+import { isAuthApiError, isAuthSessionMissingError } from '@supabase/supabase-js';
 import { Logger, unregisterPushToken } from '@rallia/shared-services';
 
 import { supabase } from '#/lib/supabase';
@@ -149,6 +150,16 @@ async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): P
   throw lastError;
 }
 
+/**
+ * True only for errors that definitively mean the session is dead (user
+ * deleted, JWT rejected). Network failures, 5xx and 429 arrive as
+ * AuthRetryableFetchError and must never destroy a valid session.
+ */
+function isDefinitiveAuthError(error: unknown): boolean {
+  if (isAuthSessionMissingError(error)) return true;
+  return isAuthApiError(error) && [401, 403, 404].includes(error.status);
+}
+
 /** Auth context value type */
 export type AuthContextType = {
   // State
@@ -260,13 +271,36 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
 
         if (initialSession && isSubscribed) {
-          // Validate session by checking if user still exists in database
-          const {
-            data: { user },
-            error: userError,
-          } = await supabase.auth.getUser();
+          // Validate the session by checking the user still exists server-side.
+          // Only a DEFINITIVE rejection may clear it: getUser() also returns
+          // errors for plain network failures, and treating those as "user
+          // deleted" silently destroyed valid sessions on flaky cold starts.
+          // On transient errors we keep the session; a truly dead one surfaces
+          // as SIGNED_OUT (with the expiry toast) on the next token refresh.
+          let sessionIsDead = false;
+          try {
+            const {
+              data: { user },
+              error: userError,
+            } = await supabase.auth.getUser();
 
-          if (userError || !user) {
+            if (userError && isDefinitiveAuthError(userError)) {
+              sessionIsDead = true;
+            } else if (userError || !user) {
+              Logger.warn('Could not validate session (transient error), keeping it', {
+                error: userError?.message,
+              });
+            }
+          } catch (validationError) {
+            Logger.warn('Session validation threw, keeping session', {
+              error:
+                validationError instanceof Error
+                  ? validationError.message
+                  : String(validationError),
+            });
+          }
+
+          if (sessionIsDead) {
             Logger.warn(
               'Invalid session detected (user deleted from database). Clearing session...'
             );
@@ -285,7 +319,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             // ~6s into the cold-start request burst.
             setSession(initialSession);
             previousSessionRef.current = initialSession;
-            void checkAccountSuspended(user.id);
+            void checkAccountSuspended(initialSession.user.id);
           }
         } else if (isSubscribed) {
           setSession(null);
