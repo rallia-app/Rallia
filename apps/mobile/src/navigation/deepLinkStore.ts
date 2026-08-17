@@ -5,9 +5,11 @@
  * (which runs outside the React tree) with the Home screen's React effects.
  *
  * Flow:
- * 1. `getStateFromPath` detects a deep link URL and calls `setPendingDeepLink()`
- * 2. Navigation resolves to Main (or PreOnboarding for new users)
- * 3. Home screen calls `consumePendingDeepLink()` on mount, shows a brief overlay, and processes the action
+ * 1. `getStateFromPath` detects a deep link URL, calls `setPendingDeepLink()` and returns
+ *    no state, so React Navigation leaves the routing entirely to this store
+ * 2. The root stack lands on Main (or PreOnboarding for new users) via its own initialRouteName
+ * 3. Home screen calls `consumePendingDeepLink()` on mount — or, when it is already
+ *    mounted, from the listener below — shows a brief overlay, and processes the action
  * 4. Data is also persisted to AsyncStorage for the post-signup/post-onboarding flow
  */
 
@@ -92,20 +94,6 @@ export function consumePendingDeepLink(): DeepLinkPayload | null {
 export function addDeepLinkListener(fn: () => void): () => void {
   _listeners.add(fn);
   return () => void _listeners.delete(fn);
-}
-
-// =============================================================================
-// SPORT SELECTION STATUS (synchronous mirror for getStateFromPath)
-// =============================================================================
-
-let _sportSelectionComplete = false;
-
-export function setSportSelectionComplete(value: boolean): void {
-  _sportSelectionComplete = value;
-}
-
-export function isSportSelectionComplete(): boolean {
-  return _sportSelectionComplete;
 }
 
 // =============================================================================
