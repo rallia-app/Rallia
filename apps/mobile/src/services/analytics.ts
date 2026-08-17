@@ -14,6 +14,29 @@ function capture(event: string, properties?: Record<string, JsonType>): void {
 
 // ---- Auth ----
 
+export type SessionEndReason =
+  | 'user_initiated'
+  | 'account_suspended'
+  | 'invalid_session'
+  | 'unexpected_signed_out'
+  | 'session_missing_at_launch';
+
+/**
+ * Fired whenever a session ends, with why. Splits the residual logout
+ * mechanisms apart in prod: 'unexpected_signed_out' = refresh failure or
+ * server-side revocation while running; 'session_missing_at_launch' =
+ * the stored session vanished between launches (storage loss).
+ */
+export function sessionEnded(props: {
+  reason: SessionEndReason;
+  trigger?: string;
+  error_name?: string;
+  error_status?: number;
+  last_seen_at?: string;
+}): void {
+  capture('session_ended', props);
+}
+
 export function signInStarted(props: { method: 'email' | 'google' | 'apple' | 'facebook' }): void {
   capture('sign_in_started', props);
 }
