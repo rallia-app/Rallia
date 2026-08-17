@@ -29,6 +29,7 @@ import {
   navigateToSessionDetailFromOutside,
   navigateToCommunityScreen,
   navigateToIncomingReferenceRequestsFromOutside,
+  navigateToWeeklyCheckInFromOutside,
 } from '#/navigation/navigationRef';
 import * as Analytics from '#/services/analytics';
 import { buildRecoveryFilters } from '#/utils/recoveryFilters';
@@ -494,6 +495,17 @@ export function usePushNotifications(
         matchId,
         type: notificationType,
         redirect: 'public_matches',
+      });
+      return;
+    }
+
+    // Weekly check-in reminder — opens the wizard. It carries no target id, so
+    // it routes ahead of the id-keyed branches below.
+    if (notificationType === 'availability_refresh_reminder') {
+      navigateToWeeklyCheckInFromOutside('push');
+      Logger.logUserAction('push_notification_deep_link', {
+        type: notificationType,
+        redirect: 'weekly_checkin',
       });
       return;
     }
