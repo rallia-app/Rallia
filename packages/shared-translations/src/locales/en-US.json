@@ -4918,6 +4918,7 @@
         "notConfirmed": "That player hasn't confirmed for this session.",
         "notOnSheet": "That player isn't on the sheet anymore.",
         "sameMatch": "Those two already face each other.",
+        "wouldDuplicate": "That would put someone in two games in the same round.",
         "stale": "The sheet changed. Refresh and try again."
       }
     },

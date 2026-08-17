@@ -1,9 +1,12 @@
 -- ============================================
 -- Leagues — swapping a player on the match sheet
 -- ============================================
--- Covers 20260807340000: session_swap_player. Four players make two pairings,
--- so both the paired-for-paired trade and the bye-player substitution have
--- somewhere to happen, and a fifth sits on a bye.
+-- Covers 20260807340000 and 20260817000000: session_swap_player. Four players
+-- make two pairings, so both the paired-for-paired trade and the bye-player
+-- substitution have somewhere to happen, and a fifth sits on a bye.
+--
+-- Block 6 is the multi-round regression: a one-round sheet is the only shape
+-- the round-blind version handled, which is exactly why this suite missed it.
 --
 -- Run against a fresh local stack:
 --   npm run db:reset && npm run db:seed
@@ -32,6 +35,23 @@ LANGUAGE sql AS $$
    WHERE session_id = p_session AND is_drill = false
      AND (p_user = ANY (team_a_user_ids) OR p_user = ANY (team_b_user_ids))
    LIMIT 1;
+$$;
+
+/** Their pairing in one specific round, or NULL when they bye that round. */
+CREATE OR REPLACE FUNCTION pg_temp.match_of_round(p_session uuid, p_user uuid, p_round integer)
+RETURNS uuid LANGUAGE sql AS $$
+  SELECT id FROM session_matches
+   WHERE session_id = p_session AND is_drill = false AND round_number = p_round
+     AND (p_user = ANY (team_a_user_ids) OR p_user = ANY (team_b_user_ids))
+   LIMIT 1;
+$$;
+
+/** Any row on the sheet with the same player on both sides. */
+CREATE OR REPLACE FUNCTION pg_temp.self_play_rows(p_session uuid) RETURNS bigint
+LANGUAGE sql AS $$
+  SELECT count(*) FROM session_matches
+   WHERE session_id = p_session AND is_drill = false
+     AND team_a_user_ids && team_b_user_ids;
 $$;
 
 -- Event creation went staff-only in 20260812150000 ("Rallia runs every event
@@ -114,9 +134,9 @@ BEGIN
       FROM session_matches WHERE session_id = v_sess.id AND is_drill = false LIMIT 1;
     v_m1 := pg_temp.match_of(v_sess.id, v_a);
 
-    v_sess := public.session_swap_player(v_sess.id, v_a, v_bye, v_sess.version);
+    v_sess := public.session_swap_player(v_sess.id, v_m1, v_a, v_bye, v_sess.version);
 
-    IF pg_temp.match_of(v_sess.id, v_bye) <> v_m1 THEN
+    IF pg_temp.match_of(v_sess.id, v_bye) IS DISTINCT FROM v_m1 THEN
         RAISE EXCEPTION 'the bye player did not take the slot';
     END IF;
     IF pg_temp.match_of(v_sess.id, v_a) IS NOT NULL THEN
@@ -135,9 +155,10 @@ BEGIN
      WHERE session_id = v_sess.id AND is_drill = false AND id <> v_m1 LIMIT 1;
     v_m2 := pg_temp.match_of(v_sess.id, v_b);
 
-    v_sess := public.session_swap_player(v_sess.id, v_a, v_b, v_sess.version);
+    v_sess := public.session_swap_player(v_sess.id, v_m1, v_a, v_b, v_sess.version);
 
-    IF pg_temp.match_of(v_sess.id, v_a) <> v_m2 OR pg_temp.match_of(v_sess.id, v_b) <> v_m1 THEN
+    IF pg_temp.match_of(v_sess.id, v_a) IS DISTINCT FROM v_m2
+       OR pg_temp.match_of(v_sess.id, v_b) IS DISTINCT FROM v_m1 THEN
         RAISE EXCEPTION 'the two players did not trade pairings';
     END IF;
     RAISE NOTICE 'ok 2: two paired players trade places';
@@ -146,7 +167,7 @@ BEGIN
     -- 3. a stale version is refused
     -- ------------------------------------------------------------------
     BEGIN
-        PERFORM public.session_swap_player(v_sess.id, v_a, v_b, v_sess.version - 1);
+        PERFORM public.session_swap_player(v_sess.id, v_m2, v_a, v_b, v_sess.version - 1);
         RAISE EXCEPTION 'a stale version was accepted';
     EXCEPTION WHEN SQLSTATE 'P0001' THEN
         IF SQLERRM <> 'OPTIMISTIC_LOCK_CONFLICT' THEN RAISE; END IF;
@@ -158,7 +179,7 @@ BEGIN
     -- ------------------------------------------------------------------
     BEGIN
         PERFORM public.session_swap_player(
-            v_sess.id, v_a, '00000000-0000-0000-0000-000000000001'::uuid, v_sess.version);
+            v_sess.id, v_m2, v_a, '00000000-0000-0000-0000-000000000001'::uuid, v_sess.version);
         RAISE EXCEPTION 'an unconfirmed player was accepted';
     EXCEPTION WHEN SQLSTATE 'P0001' THEN
         IF SQLERRM <> 'PLAYER_NOT_CONFIRMED' THEN RAISE; END IF;
@@ -179,11 +200,122 @@ BEGIN
     -- attempt to touch a settled row.
     BEGIN
         PERFORM public.session_swap_player(
-            v_sess.id, v_match.team_a_user_ids[1], v_b, v_sess.version);
+            v_sess.id, v_m2, v_match.team_a_user_ids[1], v_b, v_sess.version);
         RAISE EXCEPTION 'a scored pairing was swapped';
     EXCEPTION WHEN SQLSTATE 'P0001' THEN
         IF SQLERRM <> 'MATCH_ALREADY_PLAYED' THEN RAISE; END IF;
         RAISE NOTICE 'ok 5: a played pairing is no longer adjustable';
+    END;
+END $$;
+
+-- ======================================================================
+-- 6. multi-round regression: the reported "playing against himself"
+-- ======================================================================
+-- Five confirmed players over two rounds is the staging shape. Everyone who
+-- byes in one round plays in the other, so the round-blind version had a
+-- second row to land its reverse write on, and did.
+DO $$
+DECLARE
+    v_players uuid[];
+    v_org     uuid;
+    v_sport   uuid;
+    v_league  leagues;
+    v_season  seasons;
+    v_sess    sessions;
+    v_r1      session_matches;
+    v_out     uuid;
+    v_in      uuid;
+    i         integer;
+BEGIN
+    SELECT id INTO v_sport FROM sport WHERE name = 'tennis';
+    v_players := pg_temp.tennis_players(5);
+    v_org := v_players[1];
+
+    PERFORM pg_temp.as_user(v_org);
+    PERFORM pg_temp.staff_on(v_org);
+    v_league := public.league_create(
+        p_name => 'Swap test 2 rounds', p_sport_id => v_sport, p_join_mode => 'open');
+    PERFORM pg_temp.staff_off(v_org);
+
+    FOR i IN 2..5 LOOP
+        PERFORM pg_temp.as_user(v_players[i]);
+        PERFORM public.league_join(v_league.id);
+    END LOOP;
+
+    PERFORM pg_temp.as_user(v_org);
+    v_season := public.season_create(v_league.id, 'S2', current_date, current_date + 30);
+    v_season := public.season_open(v_season.id, v_season.version);
+    v_sess   := public.session_create(v_season.id, 'N2', now() + interval '3 days');
+
+    UPDATE sessions SET rounds = 2 WHERE id = v_sess.id;
+    SELECT * INTO v_sess FROM sessions WHERE id = v_sess.id;
+
+    v_sess := public.session_publish(v_sess.id, NULL, v_sess.version);
+
+    FOR i IN 1..5 LOOP
+        PERFORM pg_temp.as_user(v_players[i]);
+        PERFORM public.session_confirm_presence(v_sess.id, 'confirmed');
+    END LOOP;
+
+    PERFORM pg_temp.as_user(v_org);
+    v_sess := public.session_generate_sheet(v_sess.id, v_sess.version);
+
+    IF (SELECT count(DISTINCT round_number) FROM session_matches
+         WHERE session_id = v_sess.id AND is_drill = false) <> 2 THEN
+        RAISE EXCEPTION 'expected a two-round sheet';
+    END IF;
+
+    -- Take a round-1 pairing, and bring in whoever byes in round 1. That player
+    -- is necessarily paired in round 2, which is the second row the old version
+    -- reached for.
+    SELECT * INTO v_r1
+      FROM session_matches
+     WHERE session_id = v_sess.id AND is_drill = false AND round_number = 1
+     LIMIT 1;
+    v_out := v_r1.team_a_user_ids[1];
+
+    SELECT sp.user_id INTO v_in
+      FROM session_presence sp
+     WHERE sp.session_id = v_sess.id AND sp.status = 'confirmed'
+       AND pg_temp.match_of_round(v_sess.id, sp.user_id, 1) IS NULL
+     LIMIT 1;
+    IF v_in IS NULL THEN
+        RAISE EXCEPTION 'expected an odd roster to leave someone on a round-1 bye';
+    END IF;
+    IF pg_temp.match_of_round(v_sess.id, v_in, 2) IS NULL THEN
+        RAISE EXCEPTION 'expected the round-1 bye player to be paired in round 2';
+    END IF;
+
+    v_sess := public.session_swap_player(v_sess.id, v_r1.id, v_out, v_in, v_sess.version);
+
+    IF pg_temp.self_play_rows(v_sess.id) <> 0 THEN
+        RAISE EXCEPTION 'a player ended up facing himself';
+    END IF;
+    IF pg_temp.match_of_round(v_sess.id, v_in, 1) IS DISTINCT FROM v_r1.id THEN
+        RAISE EXCEPTION 'the arriving player did not take the round-1 slot';
+    END IF;
+    IF pg_temp.match_of_round(v_sess.id, v_out, 1) IS NOT NULL THEN
+        RAISE EXCEPTION 'the replaced player is still paired in round 1';
+    END IF;
+    -- Round 2 is none of this swap's business and must be untouched.
+    IF pg_temp.match_of_round(v_sess.id, v_in, 2) IS NULL THEN
+        RAISE EXCEPTION 'round 2 lost the arriving player';
+    END IF;
+    RAISE NOTICE 'ok 6: a multi-round swap leaves nobody facing himself';
+
+    -- ------------------------------------------------------------------
+    -- 7. the named row has to hold the player being taken out
+    -- ------------------------------------------------------------------
+    BEGIN
+        PERFORM public.session_swap_player(
+            v_sess.id,
+            (SELECT id FROM session_matches
+              WHERE session_id = v_sess.id AND is_drill = false AND round_number = 2 LIMIT 1),
+            v_out, v_in, v_sess.version);
+        RAISE EXCEPTION 'a swap named a row the leaving player is not in';
+    EXCEPTION WHEN SQLSTATE 'P0001' THEN
+        IF SQLERRM NOT IN ('PLAYER_NOT_ON_SHEET', 'SAME_MATCH') THEN RAISE; END IF;
+        RAISE NOTICE 'ok 7: the named pairing must hold the leaving player';
     END;
 END $$;
 

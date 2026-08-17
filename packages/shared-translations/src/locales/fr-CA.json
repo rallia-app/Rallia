@@ -4918,6 +4918,7 @@
         "notConfirmed": "Ce joueur n'a pas confirmé sa présence.",
         "notOnSheet": "Ce joueur n'est plus sur la feuille.",
         "sameMatch": "Ces deux-là s'affrontent déjà.",
+        "wouldDuplicate": "Ça mettrait quelqu'un dans deux parties de la même ronde.",
         "stale": "La feuille a changé. Rafraîchis pis réessaie."
       }
     },

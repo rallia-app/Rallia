@@ -14203,6 +14203,7 @@ export type Database = {
       }
       session_swap_player: {
         Args: {
+          p_match_id: string
           p_session_id: string
           p_user_in: string
           p_user_out: string

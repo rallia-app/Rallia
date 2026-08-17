@@ -786,14 +786,16 @@ export function useSwapSessionPlayer(sessionId: string, options: MutationOptions
   const invalidate = useSheetInvalidator();
   return useMutation({
     mutationFn: ({
+      matchId,
       userOut,
       userIn,
       versionWas,
     }: {
+      matchId: string;
       userOut: string;
       userIn: string;
       versionWas: number;
-    }) => swapSessionPlayer(sessionId, userOut, userIn, versionWas),
+    }) => swapSessionPlayer(sessionId, matchId, userOut, userIn, versionWas),
     onSuccess: result => {
       invalidate(sessionId);
       options.onSuccess?.(result);

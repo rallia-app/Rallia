@@ -532,6 +532,8 @@ export const SessionDetail: React.FC = () => {
       void SheetManager.show('session-swap-player', {
         payload: {
           sessionId,
+          matchId: m.id,
+          round: m.round_number,
           userOut,
           userOutName: nameOf(userOut),
           sessionVersion: sess.version,
