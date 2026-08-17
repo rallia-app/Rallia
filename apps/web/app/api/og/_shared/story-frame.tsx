@@ -27,8 +27,8 @@ export const IMMUTABLE_CACHE_HEADERS = {
 export type Fonts = {
   name: string;
   data: ArrayBuffer;
-  style: 'normal';
-  weight: 500 | 600 | 700;
+  style: 'normal' | 'italic';
+  weight: 500 | 600 | 700 | 800;
 }[];
 
 /** QR for the full link — stories get screenshotted and printed, and a scan
@@ -70,6 +70,20 @@ export function storyBackdrop() {
         background: `linear-gradient(175deg, #021b1a 0%, ${primary[950]} 38%, #0a4e48 78%, #0d5a52 100%)`,
       }}
     >
+      {/* Diagonal hairlines: breaks up the flat gradient without reading as a
+          texture of its own. Must stay the first layer, under the glows. */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          background:
+            'repeating-linear-gradient(-24deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 16px)',
+        }}
+      />
       <div
         style={{
           position: 'absolute',

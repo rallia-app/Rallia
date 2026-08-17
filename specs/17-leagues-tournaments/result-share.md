@@ -150,6 +150,33 @@ player row with avatar and seed chip; the record as stat tiles (won / lost, and
 Rallia points when the ledger has a row); the best-win line; a context line of
 dates, city and draw size; then the shared footer action card.
 
+### Visual language
+
+Redesigned 2026-08-16 against the `result-share-redesign` handoff. The pieces
+that carry it:
+
+- **Placement tone.** One `Tone` per placement supplies the hero colour, badge
+  ring, halo circle and ghost numeral, so a single lookup keeps the poster
+  internally consistent. Champion gold, finalist silver, semi/quarter teal,
+  everything else neutral.
+- **Italic hero.** Poppins ExtraBold Italic 800, uppercase, 124px, dropping to
+  96px past 12 characters. This is the only italic face the OG service loads;
+  it is fetched lazily in `lib/og-fonts.ts` alongside the others and must never
+  move to module scope.
+- **The ghost numeral** bleeding off the right edge is how many players were
+  still alive at that round (champion 1, finalist 2, semi 4, quarter 8), or the
+  pool rank for a pool exit. Rounds deeper than the quarters get nothing: "16"
+  at that scale says less than empty space does.
+- **Halo circles** are absolutely positioned on a fixed centre (`BADGE_CX/CY`),
+  not derived from the badge's flow position. Changing the heights above the
+  badge moves the badge but not the halo, so the two drift apart. Re-render and
+  check if you touch anything above the lockup.
+- **Skew.** The seed pill and the stat tiles skew `-8`/`-10deg` with their
+  contents counter-skewed back to upright. The champion's "won" tile is the one
+  solid gold surface on the poster.
+- **Confetti** is a fixed array, never randomised: the route has to render the
+  same bytes every time or the immutable cache is a lie.
+
 Two content rules that are not obvious from the layout:
 
 - **The headline follows the truth, not the enum.** A pool exit's ledger

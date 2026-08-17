@@ -83,21 +83,58 @@ async function getTournament(id: string): Promise<TournamentLite | null> {
   return data as unknown as TournamentLite;
 }
 
-/** Placement drives the whole poster's temperature. */
-const TONE: Record<string, { text: string; glow: string; ring: string }> = {
-  champion: { text: accent[400], glow: 'rgba(245,181,53,0.30)', ring: 'rgba(245,181,53,0.55)' },
-  finalist: { text: '#e2e8f0', glow: 'rgba(226,232,240,0.20)', ring: 'rgba(226,232,240,0.45)' },
-  semifinal: { text: primary[300], glow: 'rgba(107,220,201,0.20)', ring: 'rgba(107,220,201,0.45)' },
+/**
+ * Placement drives the whole poster's temperature: hero colour, badge ring,
+ * the halo circles behind the badge, and the ghost numeral bleeding off the
+ * right edge.
+ */
+interface Tone {
+  text: string;
+  glow: string;
+  /** Badge border. */
+  ring: string;
+  /** Innermost halo circle, a softer read of the same hue. */
+  halo: string;
+  /** The giant numeral behind everything. Barely there on purpose. */
+  ghost: string;
+}
+
+const TONE: Record<string, Tone> = {
+  champion: {
+    text: accent[400],
+    glow: 'rgba(245,181,53,0.32)',
+    ring: 'rgba(245,181,53,0.60)',
+    halo: 'rgba(245,181,53,0.30)',
+    ghost: 'rgba(245,181,53,0.07)',
+  },
+  finalist: {
+    text: '#e2e8f0',
+    glow: 'rgba(226,232,240,0.20)',
+    ring: 'rgba(226,232,240,0.50)',
+    halo: 'rgba(226,232,240,0.30)',
+    ghost: 'rgba(226,232,240,0.05)',
+  },
+  semifinal: {
+    text: primary[300],
+    glow: 'rgba(107,220,201,0.20)',
+    ring: 'rgba(107,220,201,0.50)',
+    halo: 'rgba(107,220,201,0.30)',
+    ghost: 'rgba(107,220,201,0.055)',
+  },
   quarterfinal: {
     text: primary[300],
     glow: 'rgba(107,220,201,0.18)',
-    ring: 'rgba(107,220,201,0.40)',
+    ring: 'rgba(107,220,201,0.50)',
+    halo: 'rgba(107,220,201,0.30)',
+    ghost: 'rgba(107,220,201,0.055)',
   },
 };
-const NEUTRAL_TONE = {
+const NEUTRAL_TONE: Tone = {
   text: neutral[200],
   glow: 'rgba(255,255,255,0.10)',
-  ring: 'rgba(255,255,255,0.28)',
+  ring: 'rgba(255,255,255,0.32)',
+  halo: 'rgba(255,255,255,0.30)',
+  ghost: 'rgba(255,255,255,0.045)',
 };
 
 const PLACEMENT_KEY: Record<string, string> = {
@@ -109,6 +146,14 @@ const PLACEMENT_KEY: Record<string, string> = {
   round_of_32: 'roundOf32',
   round_of_64: 'roundOf64',
   participated: 'participated',
+};
+
+/** How many were left standing at that round: the ghost numeral's whole point. */
+const GHOST_GLYPH: Record<string, string> = {
+  champion: '1',
+  finalist: '2',
+  semifinal: '4',
+  quarterfinal: '8',
 };
 
 const trophyGlyph = (size: number, stroke: string) => (
@@ -151,37 +196,187 @@ const medalGlyph = (size: number, stroke: string) => (
   </svg>
 );
 
-const statTile = (value: string, label: string, color: string) => (
+/** The badge's centre in the finished frame; every halo layer keys off it. */
+const BADGE_CX = 540;
+const BADGE_CY = 742;
+
+/** The round's survivor count, set huge and bled off the right edge. */
+const ghostNumeral = (glyph: string, color: string) => (
   <div
     style={{
+      position: 'absolute',
+      right: -40,
+      top: 150,
       display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: 4,
-      padding: '20px 40px',
-      borderRadius: 24,
-      background: 'rgba(255,255,255,0.06)',
-      border: '1px solid rgba(255,255,255,0.13)',
-      minWidth: 176,
+      fontFamily: 'Poppins',
+      fontStyle: 'italic',
+      fontWeight: 800,
+      fontSize: 640,
+      lineHeight: 1,
+      color,
     }}
   >
-    <span style={{ fontFamily: 'Poppins', fontSize: 62, fontWeight: 700, color, lineHeight: 1.1 }}>
-      {value}
-    </span>
-    <span
-      style={{
-        fontFamily: 'Poppins',
-        fontSize: 21,
-        fontWeight: 600,
-        color: neutral[400],
-        textTransform: 'uppercase',
-        letterSpacing: '0.14em',
-      }}
-    >
-      {label}
-    </span>
+    {glyph}
   </div>
 );
+
+/** Concentric rings radiating out of the badge, fading as they go. */
+const haloCircles = (halo: string) => (
+  <svg
+    width="1080"
+    height="1920"
+    viewBox="0 0 1080 1920"
+    fill="none"
+    style={{ position: 'absolute', top: 0, left: 0 }}
+  >
+    <circle cx={BADGE_CX} cy={BADGE_CY} r={150} stroke={halo} strokeWidth={3} />
+    <circle cx={BADGE_CX} cy={BADGE_CY} r={250} stroke="rgba(255,255,255,0.09)" strokeWidth={2} />
+    <circle cx={BADGE_CX} cy={BADGE_CY} r={380} stroke="rgba(255,255,255,0.06)" strokeWidth={2} />
+    <circle cx={BADGE_CX} cy={BADGE_CY} r={540} stroke="rgba(255,255,255,0.04)" strokeWidth={2} />
+  </svg>
+);
+
+/** Champion only: short spokes fanning off the top of the badge. */
+const championRays = () => (
+  <svg
+    width="1080"
+    height="1920"
+    viewBox="0 0 1080 1920"
+    fill="none"
+    style={{ position: 'absolute', top: 0, left: 0 }}
+  >
+    <g stroke="rgba(245,181,53,0.5)" strokeWidth={4} strokeLinecap="round">
+      <path d="M540 528 L540 488" />
+      <path d="M647 557 L667 522" />
+      <path d="M725 635 L760 615" />
+      <path d="M433 557 L413 522" />
+      <path d="M355 635 L320 615" />
+    </g>
+  </svg>
+);
+
+/** Champion only. Fixed placements: the render has to stay deterministic. */
+const CONFETTI: {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  rot: number;
+  color: string;
+  opacity: number;
+  round?: boolean;
+}[] = [
+  { x: 148, y: 424, w: 16, h: 22, rot: 22, color: '#f5b535', opacity: 0.75 },
+  { x: 872, y: 470, w: 15, h: 21, rot: -18, color: '#f2554b', opacity: 0.7 },
+  { x: 248, y: 610, w: 14, h: 20, rot: 40, color: '#f2554b', opacity: 0.65 },
+  { x: 938, y: 702, w: 12, h: 12, rot: 0, color: '#f5b535', opacity: 0.7, round: true },
+  { x: 182, y: 866, w: 13, h: 13, rot: 0, color: '#6bdcc9', opacity: 0.6, round: true },
+  { x: 818, y: 922, w: 15, h: 21, rot: 14, color: '#ffffff', opacity: 0.5 },
+  { x: 110, y: 1058, w: 15, h: 20, rot: -32, color: '#f5b535', opacity: 0.7 },
+  { x: 950, y: 1120, w: 14, h: 20, rot: 26, color: '#6bdcc9', opacity: 0.6 },
+];
+
+const confetti = () =>
+  CONFETTI.map((c, i) => (
+    <div
+      key={i}
+      style={{
+        position: 'absolute',
+        left: c.x,
+        top: c.y,
+        width: c.w,
+        height: c.h,
+        display: 'flex',
+        background: c.color,
+        opacity: c.opacity,
+        borderRadius: c.round ? 999 : 2,
+        transform: `rotate(${c.rot}deg)`,
+      }}
+    />
+  ));
+
+type TileVariant = 'gold' | 'solid' | 'muted' | 'accent';
+
+/** Skewed to match the seed pill; the content counter-skews back to upright. */
+const TILE: Record<TileVariant, { bg: string; border: string; value: string; label: string }> = {
+  gold: {
+    bg: 'linear-gradient(100deg, #ffc94d, #f5b535)',
+    border: 'none',
+    value: '#2b1a04',
+    label: '#4e3108',
+  },
+  solid: {
+    bg: 'rgba(255,255,255,0.09)',
+    border: '1px solid rgba(255,255,255,0.2)',
+    value: '#ffffff',
+    label: neutral[400],
+  },
+  muted: {
+    bg: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.13)',
+    value: neutral[300],
+    label: neutral[400],
+  },
+  accent: {
+    bg: 'rgba(255,255,255,0.09)',
+    border: '1px solid rgba(255,255,255,0.2)',
+    value: accent[400],
+    label: neutral[400],
+  },
+};
+
+const statTile = (value: string, label: string, variant: TileVariant) => {
+  const s = TILE[variant];
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '22px 48px',
+        borderRadius: 14,
+        background: s.bg,
+        border: s.border,
+        minWidth: 180,
+        transform: 'skewX(-8deg)',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 2,
+          transform: 'skewX(8deg)',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'Poppins',
+            fontSize: 66,
+            fontWeight: 700,
+            color: s.value,
+            lineHeight: 1.1,
+          }}
+        >
+          {value}
+        </span>
+        <span
+          style={{
+            fontFamily: 'Poppins',
+            fontSize: 21,
+            fontWeight: 600,
+            color: s.label,
+            textTransform: 'uppercase',
+            letterSpacing: '3px',
+          }}
+        >
+          {label}
+        </span>
+      </div>
+    </div>
+  );
+};
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -203,11 +398,13 @@ export async function GET(request: Request) {
   const {
     poppinsBold: poppinsBoldData,
     poppinsSemiBold: poppinsSemiBoldData,
+    poppinsExtraBoldItalic: poppinsExtraBoldItalicData,
     interMedium: interMediumData,
   } = await loadOgFonts();
   const fonts: Fonts = [
     { name: 'Poppins', data: poppinsBoldData, style: 'normal', weight: 700 },
     { name: 'Poppins', data: poppinsSemiBoldData, style: 'normal', weight: 600 },
+    { name: 'Poppins', data: poppinsExtraBoldItalicData, style: 'italic', weight: 800 },
     { name: 'Inter', data: interMediumData, style: 'normal', weight: 500 },
   ];
 
@@ -225,6 +422,14 @@ export async function GET(request: Request) {
       ? t('poolFinish', { rank: result.pool_rank, letter: result.pool_letter })
       : null;
   const heroLabel = poolLine ?? placementLabel;
+
+  // A pool finish names its own number, so the ghost mirrors it; a bracket exit
+  // shows how many were still alive at that round. Deeper rounds get nothing:
+  // "16" bleeding off the edge says less than empty space does.
+  const ghostGlyph =
+    result.stage === 'pool' && result.pool_rank
+      ? String(result.pool_rank)
+      : (GHOST_GLYPH[result.placement] ?? null);
 
   const rawName = tournament.name;
   const tName = rawName.length > 64 ? `${rawName.slice(0, 63)}…` : rawName;
@@ -271,6 +476,10 @@ export async function GET(request: Request) {
       }}
     >
       {storyBackdrop()}
+      {ghostGlyph && ghostNumeral(ghostGlyph, tone.ghost)}
+      {haloCircles(tone.halo)}
+      {isChampion && championRays()}
+      {isChampion && confetti()}
       {storyHeader(eyebrow)}
 
       {/* Equal spacers above and below optically center the result block:
@@ -281,9 +490,11 @@ export async function GET(request: Request) {
       <span
         style={{
           fontFamily: 'Poppins',
-          fontSize: 38,
+          fontSize: 33,
           fontWeight: 600,
           color: neutral[300],
+          textTransform: 'uppercase',
+          letterSpacing: '3px',
           maxWidth: 900,
           textAlign: 'center',
           marginTop: 30,
@@ -307,11 +518,11 @@ export async function GET(request: Request) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 172,
-            height: 172,
+            width: 196,
+            height: 196,
             borderRadius: 999,
             background: `radial-gradient(circle, ${tone.glow} 0%, transparent 70%)`,
-            border: `2px solid ${tone.ring}`,
+            border: `3px solid ${tone.ring}`,
           }}
         >
           {isChampion ? trophyGlyph(88, tone.text) : medalGlyph(80, tone.text)}
@@ -319,11 +530,14 @@ export async function GET(request: Request) {
         <span
           style={{
             fontFamily: 'Poppins',
-            fontSize: heroLabel.length > 18 ? 68 : 84,
-            fontWeight: 700,
+            fontStyle: 'italic',
+            fontSize: heroLabel.length > 12 ? 96 : 124,
+            fontWeight: 800,
             color: tone.text,
+            textTransform: 'uppercase',
+            textShadow: `0 0 80px ${tone.glow}, 0 12px 40px rgba(2,27,26,0.7)`,
             lineHeight: 1.06,
-            maxWidth: 960,
+            maxWidth: 990,
             textAlign: 'center',
           }}
         >
@@ -378,31 +592,49 @@ export async function GET(request: Request) {
             {(playerName || 'R').slice(0, 1).toUpperCase()}
           </div>
         )}
-        <span style={{ fontFamily: 'Poppins', fontSize: 44, fontWeight: 700, color: '#ffffff' }}>
+        {/* flexShrink:0 or a long name wraps to two lines inside the pill. */}
+        <span
+          style={{
+            fontFamily: 'Poppins',
+            fontSize: 44,
+            fontWeight: 700,
+            color: '#ffffff',
+            flexShrink: 0,
+          }}
+        >
           {playerName}
         </span>
         {result.seed_rank !== null && (
-          <span
+          <div
             style={{
-              fontFamily: 'Poppins',
-              fontSize: 24,
-              fontWeight: 600,
-              color: primary[200],
-              padding: '8px 20px',
-              borderRadius: 999,
-              background: 'rgba(107,220,201,0.14)',
+              display: 'flex',
+              padding: '8px 22px',
+              borderRadius: 6,
+              background: 'rgba(107,220,201,0.16)',
+              border: '1px solid rgba(107,220,201,0.3)',
+              transform: 'skewX(-10deg)',
             }}
           >
-            {t('seeded', { seed: result.seed_rank })}
-          </span>
+            <span
+              style={{
+                fontFamily: 'Poppins',
+                fontSize: 24,
+                fontWeight: 600,
+                color: primary[200],
+                transform: 'skewX(10deg)',
+              }}
+            >
+              {t('seeded', { seed: result.seed_rank })}
+            </span>
+          </div>
         )}
       </div>
 
       {/* The record */}
       <div style={{ display: 'flex', gap: 20, marginTop: 40 }}>
-        {statTile(String(result.wins), t('won'), '#ffffff')}
-        {statTile(String(result.losses), t('lost'), neutral[300])}
-        {result.points !== null && statTile(String(result.points), t('points'), accent[400])}
+        {statTile(String(result.wins), t('won'), isChampion ? 'gold' : 'solid')}
+        {statTile(String(result.losses), t('lost'), 'muted')}
+        {result.points !== null && statTile(String(result.points), t('points'), 'accent')}
       </div>
 
       {showBestWin && (
