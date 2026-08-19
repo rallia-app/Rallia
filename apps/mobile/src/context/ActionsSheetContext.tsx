@@ -19,10 +19,12 @@ import React, {
   useMemo,
   useState,
   useEffect,
+  useRef,
   ReactNode,
 } from 'react';
 import { SheetManager } from 'react-native-actions-sheet';
 import { useProfile } from '@rallia/shared-hooks';
+import { Logger } from '@rallia/shared-services';
 
 import type { TournamentEditData } from '../features/tournaments';
 import { EVENT_KINDS, type EventKind } from '../features/events/eventKinds';
@@ -164,7 +166,11 @@ interface ActionsSheetProviderProps {
 
 export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ children }) => {
   const { session } = useAuth();
-  const { profile, loading: profileLoading, refetch } = useProfile();
+  const { profile, loading: profileLoading, refetch, error: profileError } = useProfile();
+
+  // Bounded retry counter for profile fetch failures while the sheet is in
+  // loading mode; reset on each sheet open.
+  const profileRetryRef = useRef(0);
 
   // Content mode state - single source of truth
   const [contentMode, setContentMode] = useState<ActionsSheetMode>('auth');
@@ -207,6 +213,9 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
    * Compute the appropriate mode based on current auth/profile state
    */
   const computeInitialMode = useCallback((): ActionsSheetMode => {
+    // Fresh open = fresh retry budget for the loading-mode effect below.
+    profileRetryRef.current = 0;
+
     // No session = guest user = show auth
     if (!session?.user) {
       return 'auth';
@@ -215,6 +224,13 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
     // Session exists but profile is still loading = show loading (skeleton)
     // Do not show onboarding until we know the user's onboarding status
     if (profileLoading) {
+      return 'loading';
+    }
+
+    // Profile fetch errored = status UNKNOWN, not "new user". Stay in loading
+    // (the effect below retries); showing onboarding here sent onboarded
+    // players back through the signup wizard on a transient failure.
+    if (!profile && profileError) {
       return 'loading';
     }
 
@@ -230,14 +246,34 @@ export const ActionsSheetProvider: React.FC<ActionsSheetProviderProps> = ({ chil
 
     // Fully onboarded = show actions
     return 'actions';
-  }, [session?.user, profile, profileLoading]);
+  }, [session?.user, profile, profileLoading, profileError]);
 
-  // When sheet is in loading mode and profile finishes loading, transition to the correct mode
+  // When sheet is in loading mode and profile finishes loading, transition to
+  // the correct mode. Onboarding requires a DEFINITIVE "no profile row"
+  // (fetch settled without error); an errored fetch is retried, then falls
+  // back to actions so a veteran is never funneled into the signup wizard.
   useEffect(() => {
-    if (contentMode === 'loading' && !profileLoading) {
-      setContentMode(profile?.onboarding_completed ? 'actions' : 'onboarding');
+    if (contentMode !== 'loading' || profileLoading) return;
+
+    if (profile) {
+      setContentMode(profile.onboarding_completed ? 'actions' : 'onboarding');
+      return;
     }
-  }, [contentMode, profileLoading, profile?.onboarding_completed]);
+
+    if (!profileError) {
+      setContentMode('onboarding');
+      return;
+    }
+
+    if (profileRetryRef.current < 2) {
+      profileRetryRef.current += 1;
+      void refetch();
+      return;
+    }
+
+    Logger.warn('Profile unavailable after retries, falling back to actions mode');
+    setContentMode('actions');
+  }, [contentMode, profileLoading, profile, profileError, refetch]);
 
   /**
    * Open the sheet, computing the appropriate initial mode

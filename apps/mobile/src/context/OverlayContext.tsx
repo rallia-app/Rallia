@@ -22,13 +22,26 @@ import React, {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Logger } from '@rallia/shared-services';
 
-import { setSportSelectionComplete as syncSportSelectionToStore } from '#/navigation/deepLinkStore';
+import { supabase } from '#/lib/supabase';
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
 
 const SPORT_SELECTION_SHOWN_KEY = '@rallia/sport-selection-shown';
+
+// Force-resolve budget for the status check below. Must stay under
+// SplashGate's 5s safety timeout so the navigator is never revealed
+// while the status is still 'unknown' (it renders null until resolved).
+const SPORT_SELECTION_RESOLVE_TIMEOUT_MS = 4000;
+
+/**
+ * 'unknown' until the AsyncStorage flag AND the local Supabase session have
+ * been read. The old boolean initialized to false, which encoded "not read
+ * yet" and "new user" as the same value: every cold start mounted the
+ * navigator on PreOnboarding and relied on the splash to hide the swap.
+ */
+type SportSelectionStatus = 'unknown' | 'needed' | 'done';
 
 // =============================================================================
 // TYPES
@@ -51,6 +64,11 @@ interface OverlayContextType {
   isSplashComplete: boolean;
   /** Whether sport selection has been completed (or was already done for returning users) */
   isSportSelectionComplete: boolean;
+  /**
+   * Whether the sport-selection check has resolved. AppNavigator waits on
+   * this before mounting so initialRouteName is computed from a known value.
+   */
+  isSportSelectionResolved: boolean;
   /** Handle sport selection completion */
   onSportSelectionComplete: (orderedSports: OverlaySport[]) => void;
   /** Whether permissions have been handled (requested or skipped) */
@@ -77,7 +95,10 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   // ==========================================================================
   const [, setIsOnHomeScreen] = useState(false);
   const [isSplashComplete, setIsSplashComplete] = useState(false);
-  const [isSportSelectionComplete, setIsSportSelectionComplete] = useState(false);
+  const [sportSelectionStatus, setSportSelectionStatus] = useState<SportSelectionStatus>('unknown');
+
+  const isSportSelectionComplete = sportSelectionStatus === 'done';
+  const isSportSelectionResolved = sportSelectionStatus !== 'unknown';
 
   // Permissions are now requested inside the pre-onboarding wizard, so
   // by the time sport selection is complete, permission dialogs are done.
@@ -88,32 +109,67 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
   // ==========================================================================
   // CHECK IF SPORT SELECTION HAS BEEN COMPLETED
   // This determines whether to show SportSelectionScreen or Main in navigation
+  //
+  // An existing Supabase session overrides the flag: a signed-in player is
+  // never a first-time user, no matter what happened to the device flag
+  // (lost key, corrupt storage, stalled read). Only "no flag AND no session"
+  // may resolve to 'needed'. On timeout, resolve 'done': a true first launch
+  // has near-empty storage and resolves in milliseconds, while a stalled
+  // launch is almost certainly a returning user with a heavy cache, and a
+  // misrouted new user just browses Main as a guest until the next guarded
+  // action (or launch) re-gates them.
   // ==========================================================================
   useEffect(() => {
+    let resolved = false;
+    const resolve = (status: 'needed' | 'done', source: string) => {
+      if (resolved) return;
+      resolved = true;
+      if (status === 'needed') {
+        Logger.logNavigation('sport_selection_required', { trigger: source });
+      }
+      setSportSelectionStatus(status);
+    };
+
+    const timeout = setTimeout(() => {
+      Logger.warn('Sport selection status unresolved, failing toward the app', {
+        timeoutMs: SPORT_SELECTION_RESOLVE_TIMEOUT_MS,
+      });
+      resolve('done', 'timeout');
+    }, SPORT_SELECTION_RESOLVE_TIMEOUT_MS);
+
     const checkSportSelectionStatus = async () => {
       try {
-        const hasSeenOverlay = await AsyncStorage.getItem(SPORT_SELECTION_SHOWN_KEY);
-        if (hasSeenOverlay === 'true') {
-          // User has already completed sport selection
-          setIsSportSelectionComplete(true);
+        const [flag, sessionRes] = await Promise.all([
+          AsyncStorage.getItem(SPORT_SELECTION_SHOWN_KEY).catch((error: unknown) => {
+            Logger.error('Failed to read sport selection flag', error as Error);
+            return null;
+          }),
+          // Local read (storage/memory), no network.
+          supabase.auth.getSession().catch(() => null),
+        ]);
+        const hasSession = !!sessionRes?.data?.session;
+
+        if (flag === 'true' || hasSession) {
+          resolve('done', hasSession ? 'session' : 'flag');
+          if (hasSession && flag !== 'true') {
+            // Self-heal the flag so consumers that read it directly agree.
+            AsyncStorage.setItem(SPORT_SELECTION_SHOWN_KEY, 'true').catch(() => {});
+          }
         } else {
-          // First-time user: navigation will show SportSelectionScreen
-          Logger.logNavigation('sport_selection_required', { trigger: 'first_time_user' });
+          resolve('needed', 'first_time_user');
         }
       } catch (error) {
         Logger.error('Failed to check sport selection status', error as Error);
-        // On error, assume sport selection is needed (safer default)
+        resolve('needed', 'error');
+      } finally {
+        clearTimeout(timeout);
       }
     };
 
-    checkSportSelectionStatus();
-  }, []);
+    void checkSportSelectionStatus();
 
-  // Keep the module-level deep link store in sync so getStateFromPath
-  // can decide between Main and PreOnboarding synchronously.
-  useEffect(() => {
-    syncSportSelectionToStore(isSportSelectionComplete);
-  }, [isSportSelectionComplete]);
+    return () => clearTimeout(timeout);
+  }, []);
 
   // ==========================================================================
   // STATE HANDLERS
@@ -145,7 +201,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
 
     // Mark sport selection as complete (navigation will switch to Main).
     // Permissions are already handled inside the pre-onboarding wizard.
-    setIsSportSelectionComplete(true);
+    setSportSelectionStatus('done');
   }, []);
 
   // ==========================================================================
@@ -157,6 +213,7 @@ export const OverlayProvider: React.FC<OverlayProviderProps> = ({ children }) =>
     setSplashComplete: handleSetSplashComplete,
     isSplashComplete,
     isSportSelectionComplete,
+    isSportSelectionResolved,
     onSportSelectionComplete: handleSportSelectionComplete,
     permissionsHandled,
   };

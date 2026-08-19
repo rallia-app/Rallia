@@ -238,6 +238,7 @@
       "match_unfilled_recovery": "Game recovery",
       "play_rhythm_nudge": "Usual slot open",
       "tournament_registration_open": "Tournament registration open",
+      "tournament_registration_closing_soon": "Tournament registration closing soon",
       "nearby_match_available": "Nearby game",
       "player_kicked": "Removed from game",
       "player_left": "Player left",
@@ -472,6 +473,10 @@
       "tournament_registration_open": {
         "title": "Registration is open · {tournamentName}",
         "body": "Spots are limited. Tap to register."
+      },
+      "tournament_registration_closing_soon": {
+        "title": "Last chance · {tournamentName}",
+        "body": "Registration closes soon and spots are limited. Tap to register."
       },
       "nearby_match_available": {
         "title": "New {sportName} game nearby",
@@ -3514,6 +3519,12 @@
     "confirmScoreError": "Failed to confirm score",
     "scoreAlreadyProcessed": "This score has already been confirmed",
     "disputeScoreError": "Failed to dispute score",
+    "submittedAScore": "submitted a game score",
+    "winner": "Winner",
+    "vs": "vs",
+    "postedTo": "Posted to {network}",
+    "timeRemainingToRespond": "{hours}h {minutes}m remaining to respond",
+    "autoConfirmAfterDeadline": "Score will be auto-confirmed after the deadline",
     "dateAndTime": "Date & time",
     "duration": "Duration",
     "startTime": "Start",
@@ -4739,7 +4750,7 @@
     "createSeason": {
       "title": "Create a season",
       "gamesPerPlayerLabel": "Games per player, per session",
-      "gamesPerPlayerHint": "Some leagues play more than one game a night. Sessions open on this and can still differ.",
+      "gamesPerPlayerHint": "Some leagues play more than one game per session. Sessions open on this and can still differ.",
       "presets": {
         "hint": "Start from one of the four seasons, then adjust anything.",
         "winter": "Winter",
@@ -4846,6 +4857,7 @@
     }
   },
   "sessionDetail": {
+    "membersOnlyBounce": "That session is for members. Join the league to see it.",
     "title": "Session",
     "loadError": "Couldn't load session",
     "retry": "Try again",
@@ -4913,6 +4925,7 @@
         "notConfirmed": "That player hasn't confirmed for this session.",
         "notOnSheet": "That player isn't on the sheet anymore.",
         "sameMatch": "Those two already face each other.",
+        "wouldDuplicate": "That would put someone in two games in the same round.",
         "stale": "The sheet changed. Refresh and try again."
       }
     },
@@ -12137,6 +12150,28 @@
     "storyCta": "Register on Rallia",
     "storyDeadline": "Register by {date}",
     "storyScan": "Scan to register"
+  },
+  "tournamentResultOg": {
+    "eyebrow": "Result",
+    "placement": {
+      "champion": "Champion",
+      "finalist": "Finalist",
+      "semifinal": "Semi-finalist",
+      "quarterfinal": "Quarter-finalist",
+      "roundOf16": "Round of 16",
+      "roundOf32": "Round of 32",
+      "roundOf64": "Round of 64",
+      "participated": "Competitor"
+    },
+    "poolFinish": "{rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} in pool {letter}",
+    "drawSize": "{count}-player draw",
+    "won": "Won",
+    "lost": "Lost",
+    "points": "Rallia points",
+    "bestWin": "Best win: {name}",
+    "seeded": "Seed {seed}",
+    "cta": "Play on Rallia",
+    "scan": "Scan to join"
   },
   "feedback": {
     "title": "Feedback",

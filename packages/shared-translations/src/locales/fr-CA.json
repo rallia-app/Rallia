@@ -238,6 +238,7 @@
       "match_unfilled_recovery": "Relance de partie",
       "play_rhythm_nudge": "Créneau habituel libre",
       "tournament_registration_open": "Inscriptions au tournoi ouvertes",
+      "tournament_registration_closing_soon": "Fermeture des inscriptions au tournoi",
       "nearby_match_available": "Partie à proximité",
       "player_kicked": "Retiré de la partie",
       "player_left": "Joueur parti",
@@ -338,7 +339,7 @@
     "messages": {
       "match_invitation": {
         "title": "{playerName} t'invite à une partie de {sportName}",
-        "body": "{playerName} veut jouer le {matchDate}{startTime}{locationName}. Touche pour accepter."
+        "body": "{playerName} veut jouer le {matchDate}{startTime}{locationName}. Ça te dit?"
       },
       "match_join_request": {
         "title": "{playerName} veut rejoindre ta partie de {sportName}",
@@ -350,7 +351,7 @@
       },
       "match_join_rejected": {
         "title": "Ta demande n'a pas été approuvée",
-        "body": "Ta demande pour la partie de {sportName} le {matchDate} n'a pas été retenue cette fois. D'autres parties sont ouvertes près de chez toi. Touche pour les voir."
+        "body": "Ta demande pour la partie de {sportName} le {matchDate} n'a pas été retenue cette fois. D'autres parties sont ouvertes près de chez toi."
       },
       "match_player_joined": {
         "title": "{playerName} a rejoint ta partie",
@@ -359,11 +360,11 @@
       },
       "match_cancelled": {
         "title": "Ta partie de {sportName} a été annulée",
-        "body": "La partie de {sportName} le {matchDate}{locationName} a été annulée. Touche pour trouver une autre partie près de chez toi."
+        "body": "La partie de {sportName} le {matchDate}{locationName} a été annulée. Trouve-toi une autre partie près de chez toi."
       },
       "match_updated": {
         "title": "Attention, ta partie a changé",
-        "body": "Ta partie de {sportName} le {matchDate} a été mise à jour. Touche pour voir les nouveaux détails."
+        "body": "Ta partie de {sportName} le {matchDate} a été mise à jour. Va voir les nouveaux détails."
       },
       "match_starting_soon": {
         "title": "Ta partie commence {timeUntil}",
@@ -371,7 +372,7 @@
       },
       "match_check_in_available": {
         "title": "Enregistre-toi pour ta partie",
-        "body": "Touche pour t'enregistrer et confirmer ton arrivée à {locationName}."
+        "body": "Confirme ton arrivée à {locationName}."
       },
       "match_new_available": {
         "title": "Nouvelle partie de {sportName} dans ton groupe",
@@ -379,7 +380,7 @@
       },
       "player_kicked": {
         "title": "Retiré d'une partie",
-        "body": "Tu as été retiré de la partie de {sportName} le {matchDate}. Touche pour trouver une autre partie près de chez toi."
+        "body": "Tu as été retiré de la partie de {sportName} le {matchDate}. Trouve-toi une autre partie près de chez toi."
       },
       "player_left": {
         "title": "{playerName} a quitté ta partie",
@@ -399,19 +400,19 @@
       },
       "reminder": {
         "title": "Partie à venir le {matchDate}",
-        "body": "Rappel : ta partie de {sportName} le {matchDate}{startTime}{locationName}. Touche pour les détails."
+        "body": "Rappel : ta partie de {sportName} le {matchDate}{startTime}{locationName}."
       },
       "payment": {
         "title": "Mise à jour de paiement",
-        "body": "Ton statut de paiement a changé. Touche pour voir les détails."
+        "body": "Ton statut de paiement a changé. Va voir les détails."
       },
       "support": {
         "title": "Message du soutien Rallia",
-        "body": "Notre équipe t'a répondu. Touche pour lire."
+        "body": "Notre équipe t'a répondu. Va lire sa réponse."
       },
       "system": {
         "title": "Mise à jour Rallia",
-        "body": "Touche pour en savoir plus."
+        "body": "Va voir les détails."
       },
       "feedback_request": {
         "title": "Comment s'est passée ta partie avec {opponentNames}?",
@@ -423,23 +424,23 @@
       },
       "score_confirmation": {
         "title": "Confirme le score de ta partie",
-        "body": "{playerName} a soumis un score pour ta partie de {sportName}. Touche pour confirmer ou contester."
+        "body": "{playerName} a soumis un score pour ta partie de {sportName}. Confirme-le ou conteste-le."
       },
       "community_join_request": {
         "title": "{requesterName} veut rejoindre {communityName}",
-        "body": "Touche pour examiner et approuver sa demande."
+        "body": "Va examiner sa demande."
       },
       "community_join_accepted": {
         "title": "Te voilà membre de {communityName}",
-        "body": "Ta demande pour rejoindre {communityName} a été approuvée. Touche pour voir les parties à venir."
+        "body": "Ta demande pour rejoindre {communityName} a été approuvée. Va voir les parties à venir."
       },
       "community_join_rejected": {
         "title": "Demande pour {communityName} non approuvée",
-        "body": "Ta demande pour rejoindre {communityName} n'a pas été approuvée. Touche pour découvrir d'autres communautés près de chez toi."
+        "body": "Ta demande pour rejoindre {communityName} n'a pas été approuvée. Découvre d'autres communautés près de chez toi."
       },
       "reference_request_received": {
         "title": "{playerName} te demande de vérifier son niveau",
-        "body": "{playerName} t'a indiqué comme référence pour son niveau en {sportName}. Touche pour confirmer ou refuser."
+        "body": "{playerName} t'a indiqué comme référence pour son niveau en {sportName}. Confirme ou refuse sa demande."
       },
       "reference_request_accepted": {
         "title": "{playerName} a vérifié ton niveau",
@@ -447,11 +448,11 @@
       },
       "reference_request_declined": {
         "title": "{playerName} a refusé ta référence",
-        "body": "{playerName} n'a pas pu confirmer ton niveau en {sportName}. Touche pour demander à un autre joueur."
+        "body": "{playerName} n'a pas pu confirmer ton niveau en {sportName}. Demande à un autre joueur."
       },
       "match_spot_opened": {
         "title": "Une place s'est libérée en {sportName}",
-        "body": "Une place vient de se libérer le {matchDate}{startTime}{locationName}. Touche pour la prendre avant qu'elle disparaisse."
+        "body": "Une place vient de se libérer le {matchDate}{startTime}{locationName}. Prends-la vite!"
       },
       "court_booking_nudge": {
         "title": "Des terrains sont libres à {facilityName}",
@@ -459,19 +460,23 @@
       },
       "match_last_minute_spots": {
         "title": "Ça commence bientôt · {sportName} à {locationName}",
-        "body": "Une partie près de toi commence bientôt et il reste des places. Touche pour rejoindre."
+        "body": "Une partie près de toi commence bientôt et il reste des places. Embarque!"
       },
       "match_unfilled_recovery": {
         "title": "Ta partie ne s'est pas remplie",
-        "body": "Ça arrive. Touche pour voir les parties ouvertes et te remettre en jeu."
+        "body": "Ça arrive. Va voir les parties ouvertes et remets-toi en jeu."
       },
       "play_rhythm_nudge": {
         "title": "Ton créneau habituel est libre",
-        "body": "Une partie de {sportName}{locationName} cherche encore des joueurs. Touche pour rejoindre."
+        "body": "Une partie de {sportName}{locationName} cherche encore des joueurs. Rejoins-la!"
       },
       "tournament_registration_open": {
         "title": "Inscriptions ouvertes · {tournamentName}",
-        "body": "Les places sont limitées. Touche pour t'inscrire."
+        "body": "Les places sont limitées. Inscris-toi vite!"
+      },
+      "tournament_registration_closing_soon": {
+        "title": "Dernière chance · {tournamentName}",
+        "body": "Les inscriptions ferment bientôt et les places sont limitées. Inscris-toi vite!"
       },
       "nearby_match_available": {
         "title": "Nouvelle partie de {sportName} près de toi",
@@ -535,15 +540,15 @@
       },
       "booking_cancelled_by_org": {
         "title": "Ta réservation a été annulée",
-        "body": "{orgName} a annulé ta réservation de {courtName} le {bookingDate}. Touche pour réserver à nouveau."
+        "body": "{orgName} a annulé ta réservation de {courtName} le {bookingDate}. Réserve un autre créneau."
       },
       "membership_approved": {
         "title": "Adhésion approuvée à {orgName}",
-        "body": "Tu es maintenant membre de {orgName}. Touche pour découvrir les terrains et réservations."
+        "body": "Tu es maintenant membre de {orgName}. Découvre les terrains et les réservations."
       },
       "org_announcement": {
         "title": "Annonce de {orgName}",
-        "body": "{orgName} a partagé une nouvelle annonce. Touche pour lire."
+        "body": "{orgName} a partagé une nouvelle annonce. Va la lire."
       },
       "payouts_setup_required": {
         "title": "{amount} à recevoir",
@@ -567,7 +572,7 @@
       },
       "match_time_suggested": {
         "title": "{playerName} propose {suggestedStartTime}",
-        "body": "{playerName} ne peut pas jouer au {sportName} le {matchDate} à l'heure prévue et propose plutôt {suggestedStartTime}. Touche pour accepter ou refuser."
+        "body": "{playerName} ne peut pas jouer au {sportName} le {matchDate} à l'heure prévue et propose plutôt {suggestedStartTime}. Accepte ou refuse sa proposition."
       },
       "match_time_suggestion_accepted": {
         "title": "Ta proposition a été acceptée",
@@ -3357,7 +3362,7 @@
       "title": "Propose des moments pour jouer",
       "sportLabel": "Sport",
       "previewTitle": "Meilleures suggestions",
-      "previewHint": "Touche pour choisir les moments à proposer",
+      "previewHint": "Choisis les moments à proposer",
       "previewLoading": "On cherche des moments qui adonnent…",
       "previewEmpty": "Aucune plage à suggérer pour l'instant. Tu peux quand même en proposer une dans le chat.",
       "submit": "Proposer ces moments",
@@ -3514,6 +3519,12 @@
     "confirmScoreError": "Échec de la confirmation du score",
     "scoreAlreadyProcessed": "Ce score a déjà été confirmé",
     "disputeScoreError": "Échec de la contestation du score",
+    "submittedAScore": "a soumis un score de partie",
+    "winner": "Gagnant",
+    "vs": "vs",
+    "postedTo": "Publié dans {network}",
+    "timeRemainingToRespond": "{hours}h {minutes}m pour répondre",
+    "autoConfirmAfterDeadline": "Le score sera confirmé automatiquement après le délai",
     "dateAndTime": "Date et heure",
     "duration": "Durée",
     "startTime": "Début",
@@ -4739,7 +4750,7 @@
     "createSeason": {
       "title": "Créer une saison",
       "gamesPerPlayerLabel": "Parties par joueur, par séance",
-      "gamesPerPlayerHint": "Certaines ligues jouent plus d'une partie par soir. Les séances ouvrent là-dessus et peuvent quand même différer.",
+      "gamesPerPlayerHint": "Certaines ligues jouent plus d'une partie par séance. Les séances ouvrent là-dessus et peuvent quand même différer.",
       "presets": {
         "hint": "Pars d'une des quatre saisons, pis ajuste ce que tu veux.",
         "winter": "Hiver",
@@ -4846,6 +4857,7 @@
     }
   },
   "sessionDetail": {
+    "membersOnlyBounce": "Cette séance est réservée aux membres. Rejoins la ligue pour la voir.",
     "title": "Séance",
     "loadError": "Impossible de charger la séance",
     "retry": "Réessayer",
@@ -4913,6 +4925,7 @@
         "notConfirmed": "Ce joueur n'a pas confirmé sa présence.",
         "notOnSheet": "Ce joueur n'est plus sur la feuille.",
         "sameMatch": "Ces deux-là s'affrontent déjà.",
+        "wouldDuplicate": "Ça mettrait quelqu'un dans deux parties de la même ronde.",
         "stale": "La feuille a changé. Rafraîchis pis réessaie."
       }
     },
@@ -5415,7 +5428,7 @@
       "myMatch": {
         "title": "Ta prochaine partie",
         "vs": "contre {name}",
-        "hint": "Touche pour lier ta partie jouée",
+        "hint": "Lie ta partie jouée",
         "organize": "Organise ta partie",
         "organizeError": "Impossible d'ouvrir le chat de la partie. Réessaie.",
         "waiting": "En attente de ton prochain adversaire",
@@ -12137,6 +12150,28 @@
     "storyCta": "Inscris-toi sur Rallia",
     "storyDeadline": "Inscriptions jusqu'au {date}",
     "storyScan": "Scanne pour t'inscrire"
+  },
+  "tournamentResultOg": {
+    "eyebrow": "Résultat",
+    "placement": {
+      "champion": "Champion",
+      "finalist": "Finaliste",
+      "semifinal": "Demi-finaliste",
+      "quarterfinal": "Quart de finaliste",
+      "roundOf16": "Huitièmes de finale",
+      "roundOf32": "Seizièmes de finale",
+      "roundOf64": "Trente-deuxièmes de finale",
+      "participated": "Participant"
+    },
+    "poolFinish": "{rank, selectordinal, one {#er} other {#e}} de la poule {letter}",
+    "drawSize": "Tableau de {count}",
+    "won": "Gagnées",
+    "lost": "Perdues",
+    "points": "Points Rallia",
+    "bestWin": "Meilleure victoire : {name}",
+    "seeded": "Tête de série {seed}",
+    "cta": "Joue sur Rallia",
+    "scan": "Scanne pour jouer"
   },
   "feedback": {
     "title": "Commentaires",

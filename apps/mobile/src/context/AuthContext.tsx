@@ -24,13 +24,16 @@ import React, {
   PropsWithChildren,
 } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Session, AuthError, Provider, User } from '@supabase/supabase-js';
+import { isAuthApiError, isAuthSessionMissingError } from '@supabase/supabase-js';
 import { Logger, unregisterPushToken } from '@rallia/shared-services';
 
 import { supabase } from '#/lib/supabase';
 import { posthogClient } from '#/providers/PostHogProvider';
 import { clearMetaUser } from '#/lib/meta';
+import * as Analytics from '#/services/analytics';
 
 // =============================================================================
 // DEMO ACCOUNT FOR APP STORE REVIEW
@@ -149,6 +152,50 @@ async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): P
   throw lastError;
 }
 
+/**
+ * True only for errors that definitively mean the session is dead (user
+ * deleted, JWT rejected). Network failures, 5xx and 429 arrive as
+ * AuthRetryableFetchError and must never destroy a valid session.
+ */
+function isDefinitiveAuthError(error: unknown): boolean {
+  if (isAuthSessionMissingError(error)) return true;
+  return isAuthApiError(error) && [401, 403, 404].includes(error.status);
+}
+
+// =============================================================================
+// SESSION-END INSTRUMENTATION
+// =============================================================================
+
+// Last signed-in user marker. Present at a cold start with no session =
+// the session vanished from storage without any code path ending it.
+const LAST_KNOWN_USER_KEY = '@rallia/last-known-user-id';
+
+let lastMarkedUserId: string | null = null;
+
+/** Persist the last-known user (deduped) so vanished sessions are detectable. */
+function markSessionAlive(userId: string): void {
+  if (lastMarkedUserId === userId) return;
+  lastMarkedUserId = userId;
+  AsyncStorage.setItem(
+    LAST_KNOWN_USER_KEY,
+    JSON.stringify({ userId, at: new Date().toISOString() })
+  ).catch(() => {});
+}
+
+/**
+ * Record WHY a session ended (Sentry breadcrumb via Logger + PostHog event)
+ * and clear the marker so the end is only reported once.
+ */
+function recordSessionEnd(
+  reason: Analytics.SessionEndReason,
+  details?: { trigger?: string; error_name?: string; error_status?: number; last_seen_at?: string }
+): void {
+  Logger.warn('Session ended', { reason, ...details });
+  Analytics.sessionEnded({ reason, ...details });
+  lastMarkedUserId = null;
+  AsyncStorage.removeItem(LAST_KNOWN_USER_KEY).catch(() => {});
+}
+
 /** Auth context value type */
 export type AuthContextType = {
   // State
@@ -222,7 +269,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         .single();
 
       if (profile?.account_status === 'suspended') {
-        Logger.warn('Account suspended — signing user out');
+        recordSessionEnd('account_suspended', { trigger: 'suspend_check' });
         previousSessionRef.current = null; // Prevent sessionExpired from triggering
         setAccountSuspended(true);
         await unregisterPushToken(userId).catch(error => {
@@ -260,16 +307,43 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
 
         if (initialSession && isSubscribed) {
-          // Validate session by checking if user still exists in database
-          const {
-            data: { user },
-            error: userError,
-          } = await supabase.auth.getUser();
+          // Validate the session by checking the user still exists server-side.
+          // Only a DEFINITIVE rejection may clear it: getUser() also returns
+          // errors for plain network failures, and treating those as "user
+          // deleted" silently destroyed valid sessions on flaky cold starts.
+          // On transient errors we keep the session; a truly dead one surfaces
+          // as SIGNED_OUT (with the expiry toast) on the next token refresh.
+          let sessionIsDead = false;
+          let deadError: AuthError | null = null;
+          try {
+            const {
+              data: { user },
+              error: userError,
+            } = await supabase.auth.getUser();
 
-          if (userError || !user) {
-            Logger.warn(
-              'Invalid session detected (user deleted from database). Clearing session...'
-            );
+            if (userError && isDefinitiveAuthError(userError)) {
+              sessionIsDead = true;
+              deadError = userError;
+            } else if (userError || !user) {
+              Logger.warn('Could not validate session (transient error), keeping it', {
+                error: userError?.message,
+              });
+            }
+          } catch (validationError) {
+            Logger.warn('Session validation threw, keeping session', {
+              error:
+                validationError instanceof Error
+                  ? validationError.message
+                  : String(validationError),
+            });
+          }
+
+          if (sessionIsDead) {
+            recordSessionEnd('invalid_session', {
+              trigger: 'cold_start',
+              error_name: deadError?.name,
+              error_status: deadError?.status,
+            });
             try {
               await supabase.auth.signOut();
             } catch {
@@ -283,11 +357,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
             // suspended-account check in the background (it signs the user out
             // and clears the session if suspended). Awaiting it here serialized
             // ~6s into the cold-start request burst.
+            markSessionAlive(initialSession.user.id);
             setSession(initialSession);
             previousSessionRef.current = initialSession;
-            void checkAccountSuspended(user.id);
+            void checkAccountSuspended(initialSession.user.id);
           }
         } else if (isSubscribed) {
+          // No session in storage. A marker left by a previous launch means it
+          // vanished without any code path recording an end: the storage-loss
+          // mechanism this instrumentation exists to catch.
+          try {
+            const marker = await AsyncStorage.getItem(LAST_KNOWN_USER_KEY);
+            if (marker) {
+              const parsed = JSON.parse(marker) as { userId?: string; at?: string };
+              recordSessionEnd('session_missing_at_launch', {
+                trigger: 'cold_start',
+                error_name: error?.name,
+                last_seen_at: parsed.at,
+              });
+            }
+          } catch {
+            // Marker read is best-effort
+          }
           setSession(null);
         }
       } catch (error) {
@@ -316,7 +407,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (event === 'SIGNED_OUT' && previousSessionRef.current !== null && newSession === null) {
         // Check if this was due to token expiry (not manual sign out)
         // Manual sign out sets previousSessionRef to null before the event
-        Logger.warn('Session expired - user was signed out');
+        recordSessionEnd('unexpected_signed_out', { trigger: 'auth_listener' });
         setSessionExpired(true);
       }
 
@@ -339,6 +430,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // token fields from this context — the supabase client holds its own).
         // The ref below still gets the fresh session, and USER_UPDATED events
         // fall through to the unconditional setSession.
+        markSessionAlive(newSession.user.id);
         previousSessionRef.current = newSession;
         setSession(prev => (prev && prev.user.id === newSession.user.id ? prev : newSession));
         void checkAccountSuspended(newSession.user.id);
@@ -575,6 +667,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         Logger.error('Error signing out', error);
         return { success: false, error };
       }
+      recordSessionEnd('user_initiated');
       // Drop cached data tied to the previous user so it can't bleed into
       // the next session and so no auth-keyed query refetches as anon.
       queryClient.clear();

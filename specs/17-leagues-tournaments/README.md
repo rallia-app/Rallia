@@ -49,6 +49,7 @@ Pending schema deltas before league V6 (documented in [data-model.md § Schema d
 | [score-entry.md](./score-entry.md)               | Score format regexes, sport-aware validator, retirement/walkover, dispute resolution                        |
 | [round-deadlines.md](./round-deadlines.md)       | Per-round deadlines, countdown + nudges, automated walkover resolution ladder                               |
 | [ranking.md](./ranking.md)                       | Points, bonuses/malus, tie-breakers, ranking calculation, stored vs derived                                 |
+| [result-share.md](./result-share.md)             | Per-player result record, 9:16 result poster, public tournament page, share surfaces                        |
 | [notifications.md](./notifications.md)           | Per-event notification payloads, channels, i18n keys, deep-links, batching                                  |
 | [permissions.md](./permissions.md)               | Role × action matrix, RLS policy snippets                                                                   |
 | [data-model.md](./data-model.md)                 | Postgres DDL, enums, FKs, indexes, RLS, triggers, derived columns                                           |

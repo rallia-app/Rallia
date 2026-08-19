@@ -304,6 +304,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     currentStepId,
     totalSteps,
     isLoadingData,
+    isAlreadyOnboarded,
     formData,
     updateFormData,
     goToNextStep,
@@ -376,13 +377,23 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Image picker hook
   const { image: profileImage, pickImage } = useImagePicker();
 
+  // Self-defense: a veteran misrouted into the wizard (profile fetch hiccup
+  // upstream) exits straight through onComplete, which refetches the profile
+  // and closes the sheet. Never re-onboard an onboarded player.
+  useEffect(() => {
+    if (!isLoadingData && isAlreadyOnboarded) {
+      Logger.info('Onboarding wizard opened for already-onboarded user, exiting');
+      onComplete();
+    }
+  }, [isLoadingData, isAlreadyOnboarded, onComplete]);
+
   // Analytics: track onboarding start time for duration calculation
   const onboardingStartTimeRef = useRef(Date.now());
   useEffect(() => {
-    if (!isLoadingData) {
+    if (!isLoadingData && !isAlreadyOnboarded) {
       Analytics.onboardingStarted({ auth_provider: 'unknown' });
     }
-  }, [isLoadingData]);
+  }, [isLoadingData, isAlreadyOnboarded]);
 
   // Sync picked image to form data
   useEffect(() => {
@@ -1312,8 +1323,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     }
   };
 
-  // Show loading state while fetching existing data
-  if (isLoadingData) {
+  // Show loading state while fetching existing data, and while the
+  // already-onboarded exit effect runs (avoids flashing step 1).
+  if (isLoadingData || isAlreadyOnboarded) {
     return (
       <View
         style={[

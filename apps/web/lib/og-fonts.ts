@@ -1,6 +1,8 @@
 const FONT_URLS = {
   poppinsBold: 'https://fonts.gstatic.com/s/poppins/v24/pxiByp8kv8JHgFVrLCz7V1s.ttf',
   poppinsSemiBold: 'https://fonts.gstatic.com/s/poppins/v24/pxiByp8kv8JHgFVrLEj6V1s.ttf',
+  /** Poppins ExtraBold Italic — the result poster's hero and ghost numeral. */
+  poppinsExtraBoldItalic: 'https://fonts.gstatic.com/s/poppins/v24/pxiDyp8kv8JHgFVrJJLm111lEA.ttf',
   interMedium:
     'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf',
 } as const;
@@ -8,6 +10,7 @@ const FONT_URLS = {
 export interface OgFonts {
   poppinsBold: ArrayBuffer;
   poppinsSemiBold: ArrayBuffer;
+  poppinsExtraBoldItalic: ArrayBuffer;
   interMedium: ArrayBuffer;
 }
 
@@ -29,11 +32,13 @@ export function loadOgFonts(): Promise<OgFonts> {
   cache ??= Promise.all([
     fetchFont(FONT_URLS.poppinsBold),
     fetchFont(FONT_URLS.poppinsSemiBold),
+    fetchFont(FONT_URLS.poppinsExtraBoldItalic),
     fetchFont(FONT_URLS.interMedium),
   ])
-    .then(([poppinsBold, poppinsSemiBold, interMedium]) => ({
+    .then(([poppinsBold, poppinsSemiBold, poppinsExtraBoldItalic, interMedium]) => ({
       poppinsBold,
       poppinsSemiBold,
+      poppinsExtraBoldItalic,
       interMedium,
     }))
     .catch(err => {

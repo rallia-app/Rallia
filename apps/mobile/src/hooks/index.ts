@@ -13,6 +13,7 @@ export * from './usePushNotifications';
 export * from './useTourSequence';
 export * from './useSportSetup';
 export * from './useOpenExternalBooking';
+export * from './useStoreReviewPrompt';
 export * from './usePendingReferenceRequestsCount';
 export * from './useDeviceContacts';
 export * from './useSuggestionInviteHandler';

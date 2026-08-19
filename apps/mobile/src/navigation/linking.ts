@@ -13,11 +13,7 @@ import { type LinkingOptions, getStateFromPath } from '@react-navigation/native'
 import * as Linking from 'expo-linking';
 
 import type { RootStackParamList } from './types';
-import {
-  setPendingDeepLink,
-  isSportSelectionComplete,
-  type DeepLinkPayload,
-} from './deepLinkStore';
+import { setPendingDeepLink, type DeepLinkPayload } from './deepLinkStore';
 
 /** Known locale prefixes used by the web app (next-intl) */
 const LOCALE_PATTERN = /^\/(en|en-US|fr|fr-CA|fr-FR)\//;
@@ -132,14 +128,15 @@ export const linking: LinkingOptions<RootStackParamList> = {
   prefixes,
   // Strip locale prefixes and intercept deep link URLs before default routing
   getStateFromPath(path, options) {
-    const cleaned = path.replace(LOCALE_PATTERN, '/');
+    // rallia:// URLs arrive without the leading slash the https form has.
+    const withSlash = path.startsWith('/') ? path : `/${path}`;
+    const cleaned = withSlash.replace(LOCALE_PATTERN, '/');
 
-    // Check for deep link patterns — store the data and navigate to Main
+    // Home routes deep links; returning a state here bounces the user to the root.
     const payload = extractDeepLinkPayload(cleaned);
     if (payload) {
       setPendingDeepLink(payload);
-      const destination = isSportSelectionComplete() ? 'Main' : 'PreOnboarding';
-      return { routes: [{ name: destination }] };
+      return undefined;
     }
 
     return getStateFromPath(cleaned, options);

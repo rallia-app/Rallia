@@ -105,6 +105,13 @@ interface UseOnboardingWizardReturn {
   // Loading state
   isLoadingData: boolean;
 
+  /**
+   * The loaded profile already has onboarding_completed=true. An upstream
+   * misroute (transient profile-fetch failure classified as "new user") can
+   * land a veteran here; the wizard must exit instead of re-onboarding them.
+   */
+  isAlreadyOnboarded: boolean;
+
   // Form data
   formData: OnboardingFormData;
   updateFormData: (updates: Partial<OnboardingFormData>) => void;
@@ -278,6 +285,7 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
   const [formData, setFormData] = useState<OnboardingFormData>(INITIAL_FORM_DATA);
   const [isComplete, setIsComplete] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isAlreadyOnboarded, setIsAlreadyOnboarded] = useState(false);
   const [hasInitializedStep, setHasInitializedStep] = useState(false);
 
   // Computed values
@@ -362,6 +370,13 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
               return null;
             }),
           ]);
+
+        // Veteran landed here by mistake: signal the wizard to exit rather
+        // than walk them through signup again (which duplicates ratings and
+        // wipes favorites on completion).
+        if (profileRes.data?.onboarding_completed) {
+          setIsAlreadyOnboarded(true);
+        }
 
         const updates: Partial<OnboardingFormData> = {};
 
@@ -708,6 +723,7 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
     currentStepId,
     totalSteps,
     isLoadingData,
+    isAlreadyOnboarded,
     formData,
     updateFormData,
     goToNextStep,

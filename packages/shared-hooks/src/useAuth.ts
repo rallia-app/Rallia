@@ -1,6 +1,17 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase as sharedSupabase } from '@rallia/shared-services';
 import type { Session, AuthError, Provider, SupabaseClient } from '@supabase/supabase-js';
+import { isAuthApiError, isAuthSessionMissingError } from '@supabase/supabase-js';
+
+/**
+ * True only for errors that definitively mean the session is dead (user
+ * deleted, JWT rejected). Network failures, 5xx and 429 arrive as
+ * AuthRetryableFetchError and must never destroy a valid session.
+ */
+function isDefinitiveAuthError(error: unknown): boolean {
+  if (isAuthSessionMissingError(error)) return true;
+  return isAuthApiError(error) && [401, 403, 404].includes(error.status);
+}
 
 /** Supported OAuth providers */
 export type OAuthProvider = 'google' | 'apple' | 'facebook' | 'azure';
@@ -75,13 +86,26 @@ export const useAuth = (options?: UseAuthOptions) => {
         }
 
         if (initialSession && isSubscribed) {
-          // Validate session by checking if user still exists in database
-          const {
-            data: { user },
-            error: userError,
-          } = await supabase.auth.getUser();
+          // Validate the session by checking the user still exists server-side.
+          // Only a DEFINITIVE rejection may clear it: getUser() also returns
+          // errors for plain network failures, and treating those as "user
+          // deleted" silently destroyed valid sessions on flaky cold starts.
+          let sessionIsDead = false;
+          try {
+            const {
+              data: { user },
+              error: userError,
+            } = await supabase.auth.getUser();
+            if (userError && isDefinitiveAuthError(userError)) {
+              sessionIsDead = true;
+            } else if (userError || !user) {
+              console.warn('Could not validate session (transient error), keeping it');
+            }
+          } catch {
+            console.warn('Session validation threw, keeping session');
+          }
 
-          if (userError || !user) {
+          if (sessionIsDead) {
             // Session exists but user was deleted - clear the invalid session
             console.warn(
               '⚠️ Invalid session detected (user deleted from database). Clearing session...'
@@ -95,7 +119,7 @@ export const useAuth = (options?: UseAuthOptions) => {
               setSession(null);
             }
           } else {
-            // Valid session
+            // Valid session (or unverifiable: keep it, auth refresh will settle it)
             if (isSubscribed) {
               setSession(initialSession);
             }

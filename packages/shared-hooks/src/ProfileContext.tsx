@@ -92,7 +92,11 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
       } catch (err) {
         console.error('Error fetching profile:', err);
         setError(err as Error);
-        setProfile(null);
+        // Keep the last-known-good profile: nulling it here made a transient
+        // fetch error indistinguishable from "new user with no profile row",
+        // which routed onboarded players back into the signup wizard.
+        // `profile === null && error !== null` now means "unknown", while
+        // `profile === null && error === null` means "genuinely no row".
       } finally {
         setLoading(false);
       }

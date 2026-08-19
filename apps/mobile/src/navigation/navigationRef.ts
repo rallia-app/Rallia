@@ -138,3 +138,16 @@ export function navigateToSessionDetailFromOutside(sessionId: string, leagueId: 
     navigationRef.navigate('SessionDetail', { sessionId, leagueId });
   }
 }
+
+/**
+ * Navigate to the weekly check-in wizard from outside the NavigationContainer.
+ * Used for the `availability_refresh_reminder` push tap.
+ *
+ * Re-entering the modal route while it is already focused (or animating out)
+ * strands a touch-eating layer on iOS, so bail when it is already up.
+ */
+export function navigateToWeeklyCheckInFromOutside(source: string) {
+  if (navigationRef.isReady() && navigationRef.getCurrentRoute()?.name !== 'WeeklyCheckIn') {
+    navigationRef.navigate('WeeklyCheckIn', { source });
+  }
+}

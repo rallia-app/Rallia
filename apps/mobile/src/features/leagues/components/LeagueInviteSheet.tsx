@@ -16,7 +16,7 @@ import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
-import { Text, useToast, Button } from '@rallia/shared-components';
+import { Text, useToast, Button, ToastOverlay } from '@rallia/shared-components';
 import {
   useAuth,
   useReferral,
@@ -162,6 +162,9 @@ export function LeagueInviteSheet({ payload }: SheetProps<'league-invite'>) {
       gestureEnabled
       containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+      // Without this the reset/copy toasts render behind the sheet, so the
+      // confirmation never reaches the person who just tapped.
+      ExtraOverlayComponent={<ToastOverlay />}
     >
       <View style={styles.container}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>

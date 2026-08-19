@@ -251,6 +251,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       if (profile?.account_status === 'suspended') {
         Logger.warn('Suspended account attempted Google sign-in', { userId: data.user.id });
+        Analytics.sessionEnded({ reason: 'account_suspended', trigger: 'social_signin' });
         await supabase.auth.signOut().catch(() => {});
         setIsLoading(false);
         setLoadingProvider(null);
@@ -375,6 +376,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       if (profile?.account_status === 'suspended') {
         Logger.warn('Suspended account attempted Apple sign-in', { userId: data.user.id });
+        Analytics.sessionEnded({ reason: 'account_suspended', trigger: 'social_signin' });
         await supabase.auth.signOut().catch(() => {});
         setIsLoading(false);
         setLoadingProvider(null);
@@ -487,6 +489,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       if (profile?.account_status === 'suspended') {
         Logger.warn('Suspended account attempted Facebook sign-in', { userId: user.id });
+        Analytics.sessionEnded({ reason: 'account_suspended', trigger: 'social_signin' });
         await supabase.auth.signOut().catch(() => {});
         setIsLoading(false);
         setLoadingProvider(null);

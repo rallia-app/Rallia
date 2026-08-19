@@ -1255,8 +1255,18 @@ function MapStack() {
  */
 export default function AppNavigator() {
   const { t } = useTranslation();
-  const { isSportSelectionComplete } = useOverlay();
+  const { isSportSelectionComplete, isSportSelectionResolved } = useOverlay();
   const sharedOptions = getSharedScreenOptions();
+
+  // initialRouteName is read exactly once, at navigator state init. Mounting
+  // before the sport-selection status resolves committed every cold start to
+  // PreOnboarding and relied on the splash to hide the swap to Main. The
+  // splash (SplashGate) stays up while we hold; OverlayContext force-resolves
+  // well before SplashGate's safety timeout, so this can't strand a blank
+  // screen.
+  if (!isSportSelectionResolved) {
+    return null;
+  }
 
   return (
     <RootStack.Navigator

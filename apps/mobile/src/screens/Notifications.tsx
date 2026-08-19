@@ -432,6 +432,17 @@ const Notifications: React.FC = () => {
         Analytics.notificationMarkedRead({ type: notification.type, source: 'tap' });
       }
 
+      // The weekly check-in reminder targets a wizard, not a record, so it
+      // carries no target_id and has to route ahead of the gate below.
+      if (notification.type === 'availability_refresh_reminder') {
+        Logger.logUserAction('notification_weekly_checkin_tapped', {
+          notificationId: notification.id,
+          type: notification.type,
+        });
+        appNavigation.navigate('WeeklyCheckIn', { source: 'notification' });
+        return;
+      }
+
       // Navigate to target based on notification type and target_id
       if (notification.target_id && notification.type) {
         // Cancelled/unfilled games recover to Public Games with context instead

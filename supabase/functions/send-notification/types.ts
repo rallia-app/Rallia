@@ -73,6 +73,7 @@ export type NotificationType =
   | 'tournament_registration_removed'
   | 'tournament_bracket_published'
   | 'tournament_registration_open'
+  | 'tournament_registration_closing_soon'
   | 'tournament_match_completed'
   | 'tournament_match_ready'
   | 'tournament_updated'
@@ -272,6 +273,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   tournament_registration_removed: { email: false, push: true, sms: false },
   tournament_bracket_published: { email: false, push: true, sms: false },
   tournament_registration_open: { email: false, push: true, sms: false },
+  tournament_registration_closing_soon: { email: false, push: true, sms: false },
   tournament_match_completed: { email: false, push: true, sms: false },
   tournament_match_ready: { email: false, push: true, sms: false },
   tournament_updated: { email: false, push: true, sms: false },

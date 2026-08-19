@@ -33,6 +33,8 @@ const SHEET_ID = 'session-swap-player';
 
 export function SessionSwapPlayerActionSheet({ payload }: SheetProps<'session-swap-player'>) {
   const sessionId = payload?.sessionId ?? '';
+  const matchId = payload?.matchId ?? '';
+  const round = payload?.round ?? 1;
   const userOut = payload?.userOut ?? '';
   const userOutName = payload?.userOutName ?? '';
   const sessionVersion = payload?.sessionVersion ?? 0;
@@ -44,20 +46,21 @@ export function SessionSwapPlayerActionSheet({ payload }: SheetProps<'session-sw
   const { data: presence = [] } = useSessionPresence(sessionId);
   const { data: matches = [] } = useSessionMatches(sessionId);
 
-  // Everyone confirmed but the player leaving. Paired players are labelled as
-  // trades so the organizer knows the other pairing changes too.
+  // Everyone confirmed but the player leaving. "Paired" is per round, matching
+  // what the swap actually does: a trade only happens with someone booked in
+  // this round, and anyone else is on a bye here whatever they play elsewhere.
   const candidates = useMemo(() => {
-    const pairedUsers = new Set<string>();
+    const pairedThisRound = new Set<string>();
     for (const m of matches) {
-      if (m.is_drill) continue;
+      if (m.is_drill || m.round_number !== round) continue;
       for (const id of [...(m.team_a_user_ids ?? []), ...(m.team_b_user_ids ?? [])]) {
-        pairedUsers.add(id);
+        pairedThisRound.add(id);
       }
     }
     return presence
       .filter(p => p.status === 'confirmed' && p.user_id !== userOut)
-      .map(p => ({ ...p, isPaired: pairedUsers.has(p.user_id) }));
-  }, [presence, matches, userOut]);
+      .map(p => ({ ...p, isPaired: pairedThisRound.has(p.user_id) }));
+  }, [presence, matches, userOut, round]);
 
   const { mutate: swap, isPending } = useSwapSessionPlayer(sessionId, {
     onSuccess: () => {
@@ -74,7 +77,9 @@ export function SessionSwapPlayerActionSheet({ payload }: SheetProps<'session-sw
           MATCH_ALREADY_LINKED: 'sessionDetail.swap.errors.alreadyLinked',
           PLAYER_NOT_CONFIRMED: 'sessionDetail.swap.errors.notConfirmed',
           PLAYER_NOT_ON_SHEET: 'sessionDetail.swap.errors.notOnSheet',
+          MATCH_NOT_FOUND: 'sessionDetail.swap.errors.notOnSheet',
           SAME_MATCH: 'sessionDetail.swap.errors.sameMatch',
+          SWAP_WOULD_DUPLICATE_PLAYER: 'sessionDetail.swap.errors.wouldDuplicate',
           OPTIMISTIC_LOCK_CONFLICT: 'sessionDetail.swap.errors.stale',
         })
       );
@@ -85,9 +90,9 @@ export function SessionSwapPlayerActionSheet({ payload }: SheetProps<'session-sw
     (userIn: string) => {
       if (isPending) return;
       lightHaptic();
-      swap({ userOut, userIn, versionWas: sessionVersion });
+      swap({ matchId, userOut, userIn, versionWas: sessionVersion });
     },
-    [isPending, swap, userOut, sessionVersion]
+    [isPending, swap, matchId, userOut, sessionVersion]
   );
 
   const handleClose = useCallback(() => {

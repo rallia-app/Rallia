@@ -14,6 +14,29 @@ function capture(event: string, properties?: Record<string, JsonType>): void {
 
 // ---- Auth ----
 
+export type SessionEndReason =
+  | 'user_initiated'
+  | 'account_suspended'
+  | 'invalid_session'
+  | 'unexpected_signed_out'
+  | 'session_missing_at_launch';
+
+/**
+ * Fired whenever a session ends, with why. Splits the residual logout
+ * mechanisms apart in prod: 'unexpected_signed_out' = refresh failure or
+ * server-side revocation while running; 'session_missing_at_launch' =
+ * the stored session vanished between launches (storage loss).
+ */
+export function sessionEnded(props: {
+  reason: SessionEndReason;
+  trigger?: string;
+  error_name?: string;
+  error_status?: number;
+  last_seen_at?: string;
+}): void {
+  capture('session_ended', props);
+}
+
 export function signInStarted(props: { method: 'email' | 'google' | 'apple' | 'facebook' }): void {
   capture('sign_in_started', props);
 }
@@ -1217,4 +1240,37 @@ export function matchOrganizerMatchCreated(props: {
   price_cents: number | null;
 }): void {
   capture('match_organizer_match_created', props);
+}
+
+// ---- Store review prompt ----
+
+/**
+ * The native store review dialog was requested. Note this is "we asked", not
+ * "they saw", and never "they rated": neither store reports the outcome, so
+ * conversion is only ever inferable by lining these up against the weekly
+ * ratings delta in App Store Connect.
+ */
+export function reviewPromptRequested(props: {
+  trigger: string;
+  feedbacks_submitted: number | null;
+  prompts_in_window: number | null;
+  /**
+   * Star rating the player just gave their opponent, when the prompt rode on the
+   * feedback flow. Recorded but NEVER gated on: it is sentiment, and selecting
+   * who to ask by expected positivity is what both stores prohibit. Here purely
+   * so "do happier submitters convert better" can be answered with data.
+   */
+  opponent_star_rating?: number | null;
+}): void {
+  capture('review_prompt_requested', props);
+}
+
+/**
+ * A trigger fired but no prompt was shown. `reason` carries both server rules
+ * (throttled_year, not_enough_feedback, open_feedback, recent_bad_experience) and
+ * client ones (unsupported, backgrounded), so the two together are the whole
+ * funnel: every check emits exactly one of requested or suppressed.
+ */
+export function reviewPromptSuppressed(props: { trigger: string; reason: string }): void {
+  capture('review_prompt_suppressed', props);
 }

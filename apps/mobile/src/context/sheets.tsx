@@ -411,6 +411,10 @@ declare module 'react-native-actions-sheet' {
     'session-swap-player': SheetDefinition<{
       payload: {
         sessionId: string;
+        /** The pairing being edited. The swap is scoped to this row. */
+        matchId: string;
+        /** That row's round: a trade only happens inside the same round. */
+        round: number;
         /** The player leaving their pairing. */
         userOut: string;
         userOutName: string;

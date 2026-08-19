@@ -52,6 +52,7 @@ export * from './feedback';
 export * from './admin';
 export * from './referral';
 export * from './invitation';
+export * from './review';
 
 // Export default DatabaseService
 export { default } from './database';

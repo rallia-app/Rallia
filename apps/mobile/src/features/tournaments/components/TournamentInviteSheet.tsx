@@ -18,7 +18,7 @@ import * as Clipboard from 'expo-clipboard';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import QRCode from 'react-native-qrcode-svg';
-import { Text, useToast, Button } from '@rallia/shared-components';
+import { Text, useToast, Button, ToastOverlay } from '@rallia/shared-components';
 import {
   useAuth,
   useReferral,
@@ -190,6 +190,8 @@ export function TournamentInviteSheet({ payload }: SheetProps<'tournament-invite
       gestureEnabled
       containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
       indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+      // Without this the reset/copy/story toasts render behind the sheet.
+      ExtraOverlayComponent={<ToastOverlay />}
     >
       <View style={styles.container}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>

@@ -32,7 +32,7 @@ import path from 'node:path'
 const ds = path.resolve(process.cwd(), 'packages/design-system/src/tokens/colors.ts')
 const { primary, secondary, accent, base } = await import(ds)
 
-const { default: sharp } = await import(path.resolve(process.cwd(), 'node_modules/sharp/lib/index.js'))
+const { default: sharp } = await import('sharp')
 
 const W = 1080
 const H = 450

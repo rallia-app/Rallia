@@ -6007,6 +6007,35 @@ export type Database = {
           },
         ]
       }
+      player_review_prompt: {
+        Row: {
+          id: number
+          player_id: string
+          shown_at: string
+          trigger_name: string
+        }
+        Insert: {
+          id?: never
+          player_id: string
+          shown_at?: string
+          trigger_name: string
+        }
+        Update: {
+          id?: never
+          player_id?: string
+          shown_at?: string
+          trigger_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_review_prompt_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_sms_consent: {
         Row: {
           created_at: string
@@ -8976,6 +9005,50 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: true
             referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_closing_fanout_job: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: number
+          last_error: string | null
+          last_player_id: string | null
+          notified_count: number
+          status: string
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: never
+          last_error?: string | null
+          last_player_id?: string | null
+          notified_count?: number
+          status?: string
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: never
+          last_error?: string | null
+          last_player_id?: string | null
+          notified_count?: number
+          status?: string
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_closing_fanout_job_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
             referencedColumns: ["id"]
           },
         ]
@@ -12710,6 +12783,7 @@ export type Database = {
         }
         Returns: string
       }
+      lt_enqueue_tournament_closing_soon: { Args: never; Returns: number }
       lt_ensure_ranking_season: { Args: { p_at: string }; Returns: string }
       lt_event_earnings: {
         Args: { p_season_id?: string; p_tournament_id?: string }
@@ -12728,6 +12802,7 @@ export type Database = {
         }[]
       }
       lt_expire_stale_registration_payments: { Args: never; Returns: number }
+      lt_format_date_fr: { Args: { p_ts: string }; Returns: string }
       lt_get_or_create_session_pairing_chat_unchecked: {
         Args: { p_session_match_id: string }
         Returns: string
@@ -12812,6 +12887,30 @@ export type Database = {
       lt_registration_display_name: {
         Args: { p_registration_id: string }
         Returns: string
+      }
+      lt_registration_result: {
+        Args: { p_registration_id: string }
+        Returns: {
+          avatar_url: string
+          best_win_name: string
+          best_win_seed: number
+          display_name: string
+          field_size: number
+          forfeited: boolean
+          losses: number
+          partner_name: string
+          placement: string
+          points: number
+          pool_letter: string
+          pool_rank: number
+          referral_code: string
+          registration_id: string
+          seed_rank: number
+          stage: string
+          tournament_id: string
+          user_id: string
+          wins: number
+        }[]
       }
       lt_registration_users: { Args: { p_reg: string }; Returns: string[] }
       lt_release_candidates: {
@@ -13038,6 +13137,10 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: number
       }
+      process_tournament_closing_soon_fanout: {
+        Args: { p_batch_size?: number }
+        Returns: number
+      }
       process_tournament_registration_fanout: {
         Args: { p_batch_size?: number }
         Returns: number
@@ -13081,6 +13184,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      record_review_prompt_shown: {
+        Args: { p_trigger: string }
+        Returns: undefined
       }
       record_weekly_checkin: {
         Args: {
@@ -13188,6 +13295,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      review_prompt_eligibility: { Args: never; Returns: Json }
       search_conversation_messages: {
         Args: { p_conversation_id: string; p_limit?: number; p_query: string }
         Returns: {
@@ -14129,6 +14237,7 @@ export type Database = {
       }
       session_swap_player: {
         Args: {
+          p_match_id: string
           p_session_id: string
           p_user_in: string
           p_user_out: string
@@ -15027,6 +15136,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      tournament_my_result: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          avatar_url: string
+          best_win_name: string
+          best_win_seed: number
+          display_name: string
+          field_size: number
+          forfeited: boolean
+          losses: number
+          partner_name: string
+          placement: string
+          points: number
+          pool_letter: string
+          pool_rank: number
+          referral_code: string
+          registration_id: string
+          seed_rank: number
+          stage: string
+          tournament_id: string
+          user_id: string
+          wins: number
+        }[]
+      }
       tournament_open_registration: {
         Args: { p_tournament_id: string; p_version_was: number }
         Returns: {
@@ -15368,6 +15501,30 @@ export type Database = {
           released_transfer_id: string
           stripe_charge_id: string
           stripe_payment_intent_id: string
+        }[]
+      }
+      tournament_result_for_share: {
+        Args: { p_registration_id: string }
+        Returns: {
+          avatar_url: string
+          best_win_name: string
+          best_win_seed: number
+          display_name: string
+          field_size: number
+          forfeited: boolean
+          losses: number
+          partner_name: string
+          placement: string
+          points: number
+          pool_letter: string
+          pool_rank: number
+          referral_code: string
+          registration_id: string
+          seed_rank: number
+          stage: string
+          tournament_id: string
+          user_id: string
+          wins: number
         }[]
       }
       tournament_revoke_invite: {
@@ -16002,6 +16159,7 @@ export type Database = {
         | "tournament_dispute_escalated"
         | "tournament_pool_eliminated"
         | "tournament_action_required"
+        | "tournament_registration_closing_soon"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -16697,6 +16855,7 @@ export const Constants = {
         "tournament_dispute_escalated",
         "tournament_pool_eliminated",
         "tournament_action_required",
+        "tournament_registration_closing_soon",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],
