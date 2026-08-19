@@ -350,7 +350,11 @@
         "assets/images/**/*.{png,jpg,jpeg,webp}",
         "assets/animations/**/*.json",
         "../../node_modules/@expo-google-fonts/**/*.ttf",
-        "node_modules/@expo-google-fonts/**/*.ttf"
+        "node_modules/@expo-google-fonts/**/*.ttf",
+        "../../node_modules/@react-navigation/elements/**/*.png",
+        "node_modules/@react-navigation/elements/**/*.png",
+        "../../node_modules/@rnmapbox/maps/**/*.png",
+        "node_modules/@rnmapbox/maps/**/*.png"
       ]
     },
     "experiments": {
