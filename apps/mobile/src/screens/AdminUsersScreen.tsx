@@ -59,6 +59,7 @@ import { lightHaptic, getHumanName, getProfilePictureUrl } from '@rallia/shared-
 import type { RootStackParamList } from '#/navigation/types';
 import { useTranslation } from '#/hooks';
 import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
+import { formatDateShort } from '#/utils/dateFormatting';
 import { exportService } from '#/services/exportService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -84,7 +85,7 @@ interface FilterOption {
 
 const AdminUsersScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { theme } = useTheme();
   const toast = useToast();
   const isDark = theme === 'dark';
@@ -279,16 +280,9 @@ const AdminUsersScreen: React.FC = () => {
 
   // Format date
   const formatDate = useCallback(
-    (dateString: string | null): string => {
-      if (!dateString) return t('common.never' as TranslationKey);
-      const date = new Date(dateString);
-      return date.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    },
-    [t]
+    (dateString: string | null): string =>
+      dateString ? formatDateShort(dateString, locale) : t('common.never'),
+    [t, locale]
   );
 
   // Render user card

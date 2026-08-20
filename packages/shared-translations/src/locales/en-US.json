@@ -46,6 +46,7 @@
     "no": "No",
     "ok": "OK",
     "gotIt": "Got it",
+    "info": "Info",
     "close": "Close",
     "search": "Search",
     "filter": "Filter",
@@ -70,6 +71,7 @@
     "select": "Select",
     "required": "Required",
     "optional": "Optional",
+    "showAll": "Show all {count}",
     "showLess": "Show less",
     "resetToDefaults": "Reset to defaults",
     "gender": {
@@ -92,6 +94,7 @@
     "player": "Player",
     "verified": "Verified",
     "lastActive": "Last Active",
+    "never": "Never",
     "game": "Game",
     "more": "+{count} more",
     "share": "Share",
@@ -988,7 +991,7 @@
     "notSet": "Not set",
     "ratingDrop": {
       "title": "Lower your level?",
-      "message": "You're going from {{from}} to {{to}}. Tournaments with a prize will keep using {{from}} for the next 180 days, so this won't open up a lower category. Everything else updates right away.",
+      "message": "You're going from {from} to {to}. Tournaments with a prize will keep using {from} for the next 180 days, so this won't open up a lower category. Everything else updates right away.",
       "confirm": "Lower it"
     },
     "sections": {
@@ -4894,7 +4897,8 @@
       "withdrawn": "Removed. The next player on the waitlist moves up.",
       "remind": "Remind",
       "reminding": "Sending...",
-      "reminded": "Reminder sent to {{count}} player(s)",
+      "reminded": "Reminder sent to {count} players",
+      "reminded_one": "Reminder sent to {count} player",
       "remindTooSoon": "You already sent a reminder recently. Try again in a few hours.",
       "remindNobody": "Everyone has answered."
     },
@@ -7516,7 +7520,7 @@
       "empty": "No new notifications",
       "emptyDescription": "You have no {filter} at the moment.",
       "allCaughtUp": "All caught up!",
-      "unreadCount": "You have {count} unread {count, plural, one {notification} other {notifications}",
+      "unreadCount": "You have {count} unread {count, plural, one {notification} other {notifications}}",
       "viewAll": "View all notifications",
       "markAllRead": "Mark all as read",
       "newBooking": "New booking",
@@ -8417,7 +8421,7 @@
         "searchFacilitiesPlaceholder": "Search facilities...",
         "allSports": "All Sports",
         "clearFilters": "Clear Filters",
-        "facilitiesFiltered": "{filtered} of {total} {total, plural, one {Facility} other {Facilities}",
+        "facilitiesFiltered": "{filtered} of {total} {total, plural, one {Facility} other {Facilities}}",
         "noMatchingFacilities": "No facilities match your search",
         "backToOrganizations": "Back to Organizations",
         "facilityDetail": {
@@ -9147,7 +9151,7 @@
       "searchPlaceholder": "Search networks...",
       "noResults": "No networks found",
       "noResultsDescription": "Try adjusting your search or filters",
-      "totalNetworks": "{count, plural, one {# network} other {# networks}",
+      "totalNetworks": "{count, plural, one {# network} other {# networks}}",
       "empty": "No networks yet",
       "emptyDescription": "Networks will appear here once created",
       "tryDifferentSearch": "Try a different search term",
@@ -9186,7 +9190,7 @@
         "allSports": "All Sports"
       },
       "card": {
-        "members": "{count, plural, one {# member} other {# members}",
+        "members": "{count, plural, one {# member} other {# members}}",
         "group": "Group",
         "community": "Community",
         "certified": "Certified",
@@ -11000,7 +11004,7 @@
       "addInstructor": "Add Instructor",
       "assignedInstructors": "Assigned Instructors",
       "noInstructorsAssigned": "No instructors assigned to this program",
-      "instructorCount": "{count, plural, one {# instructor assigned} other {# instructors assigned}",
+      "instructorCount": "{count, plural, one {# instructor assigned} other {# instructors assigned}}",
       "addFirst": "Add your first instructor",
       "primary": "Lead",
       "setPrimary": "Set as lead instructor",
@@ -11011,7 +11015,7 @@
         "description": "Select instructors to assign to this program.",
         "noAvailable": "All instructors are already assigned to this program.",
         "createNew": "Create New Instructor",
-        "add": "Add {count, plural, one {# instructor} other {# instructors}"
+        "add": "Add {count, plural, one {# instructor} other {# instructors}}"
       },
       "errors": {
         "failedToLoad": "Failed to load instructors",
@@ -11234,6 +11238,8 @@
     "lastSpot": "Last spot!",
     "noSlotsForFilter": "No slots available for this time period",
     "showAllSlots": "Show all slots",
+    "slotCount": "{count} slots",
+    "slotCount_one": "{count} slot",
     "matchFilters": {
       "all": "All",
       "open": "Open",

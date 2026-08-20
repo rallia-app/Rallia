@@ -100,7 +100,7 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
     | undefined;
 
   const { colors, isDark } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { selectedSport } = useSport();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const toast = useToast();
@@ -402,12 +402,12 @@ export function CourtBookingActionSheet({ payload }: SheetProps<'court-booking'>
 
   // Format the date for display
   const formattedDate = useMemo(() => {
-    return slot.datetime.toLocaleDateString(undefined, {
+    return slot.datetime.toLocaleDateString(locale, {
       weekday: 'long',
       month: 'short',
       day: 'numeric',
     });
-  }, [slot.datetime]);
+  }, [slot.datetime, locale]);
 
   // Check if price is free
   const isFree = displayPrice === 0 || displayPrice === undefined;

@@ -114,7 +114,7 @@ export const PendingExternalBookingProvider: React.FC<PendingExternalBookingProv
   const { openSheetForMatchCreationFromBooking } = useActionsSheet();
   const { updateSelectedMatch } = useMatchDetailSheet();
   const queryClient = useQueryClient();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const toast = useToast();
 
   // Track if confirmation is already being shown to prevent duplicates
@@ -234,7 +234,7 @@ export const PendingExternalBookingProvider: React.FC<PendingExternalBookingProv
           : court.courtName
         : undefined;
 
-      const dateLabel = booking.slot.datetime.toLocaleDateString(undefined, {
+      const dateLabel = booking.slot.datetime.toLocaleDateString(locale, {
         weekday: 'long',
         month: 'short',
         day: 'numeric',
@@ -252,7 +252,7 @@ export const PendingExternalBookingProvider: React.FC<PendingExternalBookingProv
 
       return { courtLabel, dateLabel, timeLabel, priceLabel };
     },
-    [t]
+    [t, locale]
   );
 
   // ---------------------------------------------------------------------------
@@ -353,7 +353,7 @@ export const PendingExternalBookingProvider: React.FC<PendingExternalBookingProv
 
         // Directory flow: existing sheet + wizard.
         const { facility, slot } = pendingBooking;
-        const slotDate = slot.datetime.toLocaleDateString(undefined, {
+        const slotDate = slot.datetime.toLocaleDateString(locale, {
           weekday: 'long',
           month: 'short',
           day: 'numeric',
@@ -386,6 +386,7 @@ export const PendingExternalBookingProvider: React.FC<PendingExternalBookingProv
     handleMatchDecline,
     buildMatchBookingFields,
     clearPendingBooking,
+    locale,
   ]);
 
   const contextValue: PendingExternalBookingContextType = {

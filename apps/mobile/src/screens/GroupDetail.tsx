@@ -376,9 +376,9 @@ export default function GroupDetailScreen() {
       if (diffMins < 60) return t('groups.time.minutesAgo', { count: diffMins });
       if (diffHours < 24) return t('groups.time.hoursAgo', { count: diffHours });
       if (diffDays < 7) return t('groups.time.daysAgo', { count: diffDays });
-      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
     },
-    [t]
+    [t, locale]
   );
 
   // Group activities by day
@@ -400,7 +400,7 @@ export default function GroupDetailScreen() {
       } else if (date.toDateString() === yesterday.toDateString()) {
         dayLabel = t('groups.activityMessages.yesterday');
       } else {
-        dayLabel = date.toLocaleDateString(undefined, {
+        dayLabel = date.toLocaleDateString(locale, {
           weekday: 'long',
           month: 'short',
           day: 'numeric',
@@ -416,7 +416,7 @@ export default function GroupDetailScreen() {
     }
 
     return groups;
-  }, [activities, t]);
+  }, [activities, t, locale]);
 
   // Get activity message
   const getActivityMessage = useCallback(

@@ -103,6 +103,27 @@ export function formatDateTime(dateString: string | null, locale: Locale): strin
 }
 
 /**
+ * Format a date and time in the short form used by the admin screens
+ * (e.g., "Aug 19, 2026, 02:30 PM"). `hour12` is pinned per locale for the
+ * same reason as `formatTimeOfDay`.
+ * @param dateString - ISO date string or null
+ * @param locale - Locale code (e.g., 'en-US', 'fr-CA')
+ * @returns Formatted date-time string or empty string if dateString is null
+ */
+export function formatDateTimeShort(dateString: string | null, locale: Locale): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: locale.startsWith('en'),
+  }).format(date);
+}
+
+/**
  * Format relative time (e.g., "5m ago", "2h ago")
  * Note: This is a simple implementation. For more complex relative time formatting,
  * consider using a library like date-fns with locale support.

@@ -48,7 +48,6 @@ import {
   type AdminMatchSummary,
   type AdminBanInfo,
 } from '@rallia/shared-hooks';
-import type { TranslationKey } from '@rallia/shared-translations';
 import {
   lightTheme,
   darkTheme,
@@ -68,6 +67,7 @@ import {
 import type { RootStackParamList } from '#/navigation/types';
 import { useTranslation, useAuth } from '#/hooks';
 import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
+import { formatDateTimeShort } from '#/utils/dateFormatting';
 import { ConfirmationModal } from '#/components/ConfirmationModal';
 
 type RouteParams = RouteProp<RootStackParamList, 'AdminUserDetail'>;
@@ -83,7 +83,7 @@ const DEFAULT_AVATAR = 'https://www.gravatar.com/avatar/000000000000000000000000
 const AdminUserDetailScreen: React.FC = () => {
   const route = useRoute<RouteParams>();
   const navigation = useNavigation<NavigationProp>();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { theme } = useTheme();
   const { session } = useAuth();
   const isDark = theme === 'dark';
@@ -192,7 +192,7 @@ const AdminUserDetailScreen: React.FC = () => {
       changes.birth_date = editedProfile.birth_date;
 
     if (Object.keys(changes).length === 0) {
-      Alert.alert(t('common.info' as TranslationKey), t('admin.users.edit.noChanges'));
+      Alert.alert(t('common.info'), t('admin.users.edit.noChanges'));
       return;
     }
 
@@ -223,18 +223,9 @@ const AdminUserDetailScreen: React.FC = () => {
 
   // Format date
   const formatDate = useCallback(
-    (dateString: string | null): string => {
-      if (!dateString) return t('common.never' as TranslationKey);
-      const date = new Date(dateString);
-      return date.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    },
-    [t]
+    (dateString: string | null): string =>
+      dateString ? formatDateTimeShort(dateString, locale) : t('common.never'),
+    [t, locale]
   );
 
   // Handle ban user

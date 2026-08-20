@@ -1371,7 +1371,7 @@ export const MatchDetailSheet: React.FC = () => {
       matchFormat === 'doubles' ? t('match.format.doubles') : t('match.format.singles');
     const matchDate = (selectedMatch as { match_date?: string | null }).match_date;
     const dateStr = matchDate
-      ? new Date(matchDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      ? new Date(matchDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' })
       : '';
     const matchTitle = dateStr
       ? `${sportName} ${formatLabel} - ${dateStr}`
@@ -1383,7 +1383,16 @@ export const MatchDetailSheet: React.FC = () => {
         title: matchTitle,
       });
     }, 100);
-  }, [matchConversationId, selectedMatch, isReady, openActionsSheet, closeSheet, navigation]);
+  }, [
+    matchConversationId,
+    selectedMatch,
+    isReady,
+    openActionsSheet,
+    closeSheet,
+    navigation,
+    locale,
+    t,
+  ]);
 
   // Handle join match
   const handleJoinMatch = useCallback(async () => {

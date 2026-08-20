@@ -824,13 +824,13 @@ export default function MatchFiltersBar({
   const getDateDisplay = useCallback(() => {
     if (specificDate) {
       const d = new Date(specificDate + 'T00:00:00');
-      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
     }
     if (dateRange === 'all') {
       return t('publicMatches.filters.dateRange.label');
     }
     return getDateRangeLabel(dateRange);
-  }, [specificDate, dateRange, t, getDateRangeLabel]);
+  }, [specificDate, dateRange, t, locale, getDateRangeLabel]);
 
   // =============================================================================
   // DATE PICKER HANDLERS

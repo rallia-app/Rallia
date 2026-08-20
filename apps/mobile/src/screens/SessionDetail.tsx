@@ -318,7 +318,7 @@ export const SessionDetail: React.FC = () => {
     {
       onSuccess: count => {
         void successHaptic();
-        toast.success(t('sessionDetail.roster.reminded', { count: String(count) }));
+        toast.success(t('sessionDetail.roster.reminded', { count }));
       },
       onError: e => {
         void warningHaptic();

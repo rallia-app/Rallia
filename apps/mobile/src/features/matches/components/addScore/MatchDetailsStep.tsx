@@ -23,7 +23,7 @@ interface MatchDetailsStepProps {
 
 export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
   const { colors, isDark } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { formData, updateFormData } = useAddScore();
 
   const [matchDate, setMatchDate] = useState<Date>(formData.matchDate || new Date());
@@ -53,7 +53,7 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
   }, [matchDate, location, sport, updateFormData, onContinue]);
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString(undefined, {
+    return date.toLocaleDateString(locale, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

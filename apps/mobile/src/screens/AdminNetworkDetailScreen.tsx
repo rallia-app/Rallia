@@ -60,6 +60,7 @@ import {
 
 import { useTranslation } from '#/hooks';
 import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
+import { formatDateTimeShort } from '#/utils/dateFormatting';
 import type { RootStackParamList } from '#/navigation/types';
 
 type RouteParams = RouteProp<RootStackParamList, 'AdminNetworkDetail'>;
@@ -77,7 +78,7 @@ const DEFAULT_AVATAR = 'https://www.gravatar.com/avatar/000000000000000000000000
 const AdminNetworkDetailScreen: React.FC = () => {
   const route = useRoute<RouteParams>();
   const navigation = useNavigation<NavigationProp>();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { theme } = useTheme();
   const toast = useToast();
   const isDark = theme === 'dark';
@@ -132,18 +133,9 @@ const AdminNetworkDetailScreen: React.FC = () => {
 
   // Format date
   const formatDate = useCallback(
-    (dateString: string | null): string => {
-      if (!dateString) return t('common.never' as TranslationKey);
-      const date = new Date(dateString);
-      return date.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    },
-    [t]
+    (dateString: string | null): string =>
+      dateString ? formatDateTimeShort(dateString, locale) : t('common.never'),
+    [t, locale]
   );
 
   // Handle certification toggle
@@ -334,7 +326,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
         <View style={styles.centered}>
           <Ionicons name="lock-closed" size={64} color={colors.textMuted} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.centeredTitle}>
-            {t('admin.accessDenied' as TranslationKey)}
+            {t('admin.errors.accessDenied')}
           </Text>
           <Text size="sm" color={colors.textSecondary} style={styles.centeredText}>
             {t('admin.networks.accessDeniedDescription')}
@@ -572,8 +564,9 @@ const AdminNetworkDetailScreen: React.FC = () => {
                 </Text>
                 {network.is_certified && network.certified_at && (
                   <Text size="xs" color={colors.textMuted}>
-                    {t('admin.networks.certification.certifiedAt')}{' '}
-                    {formatDate(network.certified_at)}
+                    {t('admin.networks.certification.certifiedAt', {
+                      date: formatDate(network.certified_at),
+                    })}
                     {network.certified_by_name && ` ${t('common.by')} ${network.certified_by_name}`}
                   </Text>
                 )}
@@ -738,7 +731,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
                 <Text size="sm" weight="medium" color={colors.accent}>
                   {showMembersExpanded
                     ? t('common.showLess')
-                    : t('common.showAll' as TranslationKey, { count: members.length })}
+                    : t('common.showAll', { count: members.length })}
                 </Text>
                 <Ionicons
                   name={showMembersExpanded ? 'chevron-up' : 'chevron-down'}
@@ -778,7 +771,7 @@ const AdminNetworkDetailScreen: React.FC = () => {
                 <Text size="sm" weight="medium" color={colors.accent}>
                   {showFacilitiesExpanded
                     ? t('common.showLess')
-                    : t('common.showAll' as TranslationKey, { count: facilities.length })}
+                    : t('common.showAll', { count: facilities.length })}
                 </Text>
                 <Ionicons
                   name={showFacilitiesExpanded ? 'chevron-up' : 'chevron-down'}
