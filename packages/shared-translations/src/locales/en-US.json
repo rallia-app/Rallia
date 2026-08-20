@@ -10,6 +10,18 @@
     "cta": "See the tournaments",
     "later": "Later"
   },
+  "serie2Announcement": {
+    "badge": "Série 2",
+    "title": "Série 1 has its champions",
+    "titleChampion": "You won Série 1",
+    "subtitleChampion": "The {label} draw is yours. Hats off! Série 2 is up next, with real prize money on the line. Defend your title.",
+    "subtitlePlayed": "In your {label} draw, {name} takes the title. Thanks for playing! Série 2 is up next: time for your rematch.",
+    "subtitleGeneric": "The first série is in the books. Série 2 is up next: draws by region and level, with real prize money on the line.",
+    "featuredTitle": "Your Série 2 draw",
+    "deadline": "Registration closes {date}. Spots are limited.",
+    "cta": "Register now",
+    "seeAll": "See all the draws"
+  },
   "suggestionCard": {
     "courtsAvailable": "{count} courts available"
   },

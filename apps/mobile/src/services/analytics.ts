@@ -842,6 +842,29 @@ export function serie1AnnouncementDismissed(): void {
   capture('serie1_announcement_dismissed');
 }
 
+// ---- Série 2 tournaments ----
+
+/** The Série 2 announcement screen was shown, at the given personalization
+ *  level: champion (viewer won their Série 1 draw), played, or generic. */
+export function serie2AnnouncementViewed(variant: 'champion' | 'played' | 'generic'): void {
+  capture('serie2_announcement_viewed', { variant });
+}
+
+/** The player tapped "See the tournaments" from the announcement. */
+export function serie2AnnouncementCtaPressed(): void {
+  capture('serie2_announcement_cta_pressed');
+}
+
+/** The player tapped a specific open draw row from the announcement. */
+export function serie2AnnouncementDrawPressed(tournamentId: string): void {
+  capture('serie2_announcement_draw_pressed', { tournament_id: tournamentId });
+}
+
+/** The player closed the announcement without visiting any tournament. */
+export function serie2AnnouncementDismissed(): void {
+  capture('serie2_announcement_dismissed');
+}
+
 // ---- Subscription ----
 
 export function paywallViewed(): void {

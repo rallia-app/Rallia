@@ -178,6 +178,61 @@ export async function listPublicTournaments(
   return toListItems((data ?? []) as ListRow[]);
 }
 
+/** One completed draw of a named series and its winner, for recap surfaces
+ *  like the Série 2 announcement popup. */
+export interface SeriesChampion {
+  tournamentId: string;
+  tournamentName: string;
+  completedAt: string | null;
+  championUserId: string;
+  championPartnerUserId: string | null;
+  championName: string;
+  championAvatarUrl: string | null;
+}
+
+/**
+ * Winners of a finished series: every completed public certified-organizer
+ * tournament whose name starts with `namePrefix` (e.g. 'Série 1'), with its
+ * champion. Wraps tournament_series_champions.
+ */
+type SeriesChampionRow =
+  Database['public']['Functions']['tournament_series_champions']['Returns'][number];
+
+export async function listSeriesChampions(namePrefix: string): Promise<SeriesChampion[]> {
+  const { data, error } = await supabase.rpc('tournament_series_champions', {
+    p_name_prefix: namePrefix,
+  });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as SeriesChampionRow[]).map(row => ({
+    tournamentId: row.tournament_id,
+    tournamentName: row.tournament_name,
+    completedAt: row.completed_at,
+    championUserId: row.champion_user_id,
+    championPartnerUserId: row.champion_partner_user_id ?? null,
+    championName: row.champion_name,
+    championAvatarUrl: row.champion_avatar_url ?? null,
+  }));
+}
+
+/**
+ * Of the given tournaments, the ids where the caller holds a live entry (as
+ * captain or doubles partner). One indexed read; RLS scopes it to own rows.
+ */
+export async function listMyRegisteredTournamentIds(
+  userId: string,
+  tournamentIds: string[]
+): Promise<string[]> {
+  if (!userId || tournamentIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('tournament_registrations')
+    .select('tournament_id')
+    .in('tournament_id', tournamentIds)
+    .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`)
+    .in('status', ['registered', 'pending', 'payment_pending']);
+  if (error) throw new Error(error.message);
+  return [...new Set((data ?? []).map(r => r.tournament_id))];
+}
+
 /**
  * List the caller's tournaments — ones they organize (any status, incl.
  * drafts) plus ones they hold an active registration in (as captain or
