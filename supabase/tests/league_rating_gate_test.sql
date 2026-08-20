@@ -79,6 +79,12 @@ BEGIN
         DO UPDATE SET active_rating_score_id = EXCLUDED.active_rating_score_id,
                       is_active = true;
     END LOOP;
+
+    -- The floor also accepts 180d history (20260820160000): pin the ledger
+    -- too, or a fixture's seeded history can clear a floor its pinned rating
+    -- must fail.
+    DELETE FROM player_rating_history
+     WHERE player_id IN (SELECT id FROM l_players) AND sport_id = v_sport;
 END $$;
 
 
