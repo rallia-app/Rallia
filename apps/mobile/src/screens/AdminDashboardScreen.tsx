@@ -148,7 +148,7 @@ const AdminDashboardScreen: React.FC = () => {
         <View style={styles.errorContainer}>
           <Ionicons name="lock-closed" size={48} color={colors.errorText} />
           <Text style={[styles.errorText, { color: colors.text }]}>
-            {t('admin.accessDenied' as TranslationKey)}
+            {t('admin.errors.accessDenied')}
           </Text>
         </View>
       </SafeAreaView>

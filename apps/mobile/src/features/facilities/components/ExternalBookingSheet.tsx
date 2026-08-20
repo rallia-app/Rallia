@@ -26,7 +26,7 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
   const source = payload?.source ?? 'external_sheet';
 
   const { colors, isDark } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const toast = useToast();
   const { selectedSport } = useSport();
   const { openExternalBooking } = useOpenExternalBooking();
@@ -104,12 +104,12 @@ export function ExternalBookingActionSheet({ payload }: SheetProps<'external-boo
 
   // Format date for display
   const formattedDate = useMemo(() => {
-    return slot?.datetime.toLocaleDateString(undefined, {
+    return slot?.datetime.toLocaleDateString(locale, {
       weekday: 'long',
       month: 'short',
       day: 'numeric',
     });
-  }, [slot?.datetime]);
+  }, [slot?.datetime, locale]);
 
   // Get court display name
   const getCourtDisplayName = useCallback(

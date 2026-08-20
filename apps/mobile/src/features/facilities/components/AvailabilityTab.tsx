@@ -15,13 +15,19 @@ import {
   primary,
   neutral,
 } from '@rallia/design-system';
+import type { Locale } from '@rallia/shared-translations';
 import type { FormattedSlot } from '@rallia/shared-hooks';
 import type { Court } from '@rallia/shared-types';
 import type { FacilityWithDetails } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
 import { SheetManager } from 'react-native-actions-sheet';
 
-import { useRequireOnboarding, type TranslationKey, type TranslationOptions } from '#/hooks';
+import {
+  useRequireOnboarding,
+  useTranslation,
+  type TranslationKey,
+  type TranslationOptions,
+} from '#/hooks';
 import { useActionsSheet } from '#/context';
 
 import AvailabilitySlotCard from './AvailabilitySlotCard';
@@ -71,7 +77,11 @@ type TimeFilter = 'all' | 'morning' | 'afternoon' | 'evening';
 /**
  * Groups slots by date and creates date items for the date picker
  */
-function groupSlotsByDate(slots: FormattedSlot[]): DateItem[] {
+function groupSlotsByDate(
+  slots: FormattedSlot[],
+  locale: Locale,
+  t: (key: TranslationKey, options?: TranslationOptions) => string
+): DateItem[] {
   const groups: Map<string, FormattedSlot[]> = new Map();
 
   slots.forEach(slot => {
@@ -93,11 +103,11 @@ function groupSlotsByDate(slots: FormattedSlot[]): DateItem[] {
 
     let label: string;
     if (isToday) {
-      label = 'Today';
+      label = t('common.time.today');
     } else if (isTomorrow) {
-      label = 'Tomorrow';
+      label = t('common.time.tomorrow');
     } else {
-      label = date.toLocaleDateString(undefined, {
+      label = date.toLocaleDateString(locale, {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
@@ -107,9 +117,9 @@ function groupSlotsByDate(slots: FormattedSlot[]): DateItem[] {
     return {
       dateKey,
       label,
-      dayOfWeek: date.toLocaleDateString(undefined, { weekday: 'short' }),
+      dayOfWeek: date.toLocaleDateString(locale, { weekday: 'short' }),
       dayNumber: date.getDate().toString(),
-      month: date.toLocaleDateString(undefined, { month: 'short' }),
+      month: date.toLocaleDateString(locale, { month: 'short' }),
       isToday,
       isTomorrow,
       slotCount: dateSlots.length,
@@ -358,6 +368,7 @@ export default function AvailabilityTab({
 }: AvailabilityTabProps) {
   // Guard for auth and onboarding
   const { guardAction } = useRequireOnboarding();
+  const { locale } = useTranslation();
   const { openSheetForMatchCreationFromBooking } = useActionsSheet();
 
   // Selected date and time filter
@@ -509,8 +520,8 @@ export default function AvailabilityTab({
   // Group slots by date (using sport-filtered slots)
   const dateItems = useMemo(() => {
     if (!slotsForSport) return [];
-    return groupSlotsByDate(slotsForSport);
-  }, [slotsForSport]);
+    return groupSlotsByDate(slotsForSport, locale, t);
+  }, [slotsForSport, locale, t]);
 
   // Set initial selected date
   React.useEffect(() => {
@@ -626,7 +637,7 @@ export default function AvailabilityTab({
         </Text>
         <View style={[styles.slotCountBadge, { backgroundColor: colors.primary + '15' }]}>
           <Text size="xs" weight="semibold" color={colors.primary}>
-            {filteredSlots.length} {filteredSlots.length === 1 ? 'slot' : 'slots'}
+            {t('facilityDetail.slotCount', { count: filteredSlots.length })}
           </Text>
         </View>
       </View>

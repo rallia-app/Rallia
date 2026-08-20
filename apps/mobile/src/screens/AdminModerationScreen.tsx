@@ -639,7 +639,7 @@ const AdminModerationScreen: React.FC = () => {
         <View style={styles.accessDenied}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.textMuted} />
           <Text style={[styles.accessDeniedText, { color: colors.textMuted }]}>
-            {t('admin.accessDenied' as TranslationKey)}
+            {t('admin.errors.accessDenied')}
           </Text>
         </View>
       </SafeAreaView>

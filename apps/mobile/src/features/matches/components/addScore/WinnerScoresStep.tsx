@@ -34,7 +34,7 @@ interface WinnerScoresStepProps {
 
 export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepProps) {
   const { colors, isDark } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { formData, updateFormData } = useAddScore();
   const { profile } = useProfile();
   const partner = formData.partner;
@@ -153,13 +153,13 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
   // Get match date formatted
   const matchDateFormatted = useMemo(() => {
     return formData.matchDate
-      ? formData.matchDate.toLocaleDateString(undefined, {
+      ? formData.matchDate.toLocaleDateString(locale, {
           month: 'short',
           day: 'numeric',
           year: 'numeric',
         })
       : t('addScore.winnerScores.today');
-  }, [formData.matchDate, t]);
+  }, [formData.matchDate, t, locale]);
 
   const canSubmit = isFriendly || winner !== null;
 

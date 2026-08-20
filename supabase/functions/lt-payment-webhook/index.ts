@@ -199,22 +199,70 @@ async function handleSucceeded(
   // Order matters: the ledger is marked succeeded first, so the paid-gate
   // trigger on tournament_registrations sees a succeeded payment for this row.
   if (!shouldFinalize(decision)) return;
+  let seated: unknown[] | null = null;
   if (row.tournament_registration_id) {
-    const { error } = await admin
+    const { data, error } = await admin
       .from('tournament_registrations')
       .update({ status: 'registered', approved_at: new Date().toISOString() })
       .eq('id', row.tournament_registration_id)
-      .eq('status', 'payment_pending');
+      .eq('status', 'payment_pending')
+      .select('id');
     if (error) throw error;
+    seated = data;
   } else if (row.season_user_id) {
     // 'enrolled' also fires the trigger that seeds this payer's ranking row.
-    const { error } = await admin
+    const { data, error } = await admin
       .from('season_members')
       .update({ status: 'enrolled', enrolled_at: new Date().toISOString() })
       .eq('id', row.season_user_id)
-      .eq('status', 'payment_pending');
+      .eq('status', 'payment_pending')
+      .select('id');
     if (error) throw error;
+    seated = data;
   }
+
+  // The filter matching nothing means the slot was no longer payment_pending:
+  // the player paid and was NOT seated. This was silent, which is why four
+  // Serie 2 payers went unnoticed until they complained. Never let it be quiet
+  // again — the money is real whether or not the flip landed.
+  if (seated !== null && seated.length === 0) {
+    console.error(
+      '[lt-payment-webhook] PAID BUT NOT SEATED: slot was not payment_pending at finalize. ' +
+        'Player charged, not registered. payment_id=%s pi=%s',
+      row.id,
+      pi.id
+    );
+  }
+}
+
+/**
+ * True when another ledger row for the SAME slot is still live (pending, or
+ * already succeeded). Used to keep a terminal event for a superseded attempt
+ * from releasing a reservation the player's current attempt depends on.
+ */
+async function hasLivePaymentForSlot(
+  admin: Admin,
+  row: { id: string; tournament_registration_id: string | null; season_user_id: string | null }
+): Promise<boolean> {
+  const column = row.tournament_registration_id ? 'tournament_registration_id' : 'season_user_id';
+  const value = row.tournament_registration_id ?? row.season_user_id;
+  if (!value) return false;
+
+  const { data, error } = await admin
+    .from('lt_registration_payment')
+    .select('id')
+    .eq(column, value)
+    .neq('id', row.id)
+    .in('status', ['pending', 'succeeded'])
+    .limit(1);
+  // Fail safe: if we can't tell, assume a live sibling and leave the slot
+  // alone. A leaked reservation is recoverable; a charged-but-unseated player
+  // is not, without a refund.
+  if (error) {
+    console.error('[lt-payment-webhook] live-sibling check failed, not releasing slot', error);
+    return true;
+  }
+  return (data?.length ?? 0) > 0;
 }
 
 async function handleTerminal(
@@ -231,12 +279,17 @@ async function handleTerminal(
     .maybeSingle();
   if (!row) return;
 
+  // Does a newer, live attempt hold this same slot? Retries reuse the
+  // registration/member row, so a terminal event for a superseded attempt must
+  // not evict the attempt that is currently paying for it.
+  const hasLiveSibling = await hasLivePaymentForSlot(admin, row);
+
   // Don't override a row that already succeeded/refunded (a late failure on a
   // retried PI), but never return early otherwise: the slot release below still
   // has to run. Skipping it is the same bug the succeeded path had — a delivery
   // that died between the ledger write and the release left the slot reserved
   // forever, and the reaper can't recover a terminal row (it only scans pending).
-  const decision = classifyTerminal(row.status as LedgerStatus, status);
+  const decision = classifyTerminal(row.status as LedgerStatus, status, hasLiveSibling);
   if (!decision.writeLedger && !decision.releaseSlot) return;
 
   if (decision.writeLedger) {
@@ -247,6 +300,13 @@ async function handleTerminal(
       .eq('id', row.id)
       .eq('status', row.status);
     if (error) throw error;
+  }
+
+  if (hasLiveSibling && !decision.releaseSlot) {
+    console.log(
+      '[lt-payment-webhook] terminal event on superseded payment %s; slot left to the live attempt',
+      row.id
+    );
   }
 
   // Free the reserved slot. Errors throw so the request 500s and Stripe retries;

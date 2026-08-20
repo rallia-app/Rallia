@@ -15559,6 +15559,18 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      tournament_series_champions: {
+        Args: { p_name_prefix: string }
+        Returns: {
+          champion_avatar_url: string
+          champion_name: string
+          champion_partner_user_id: string
+          champion_user_id: string
+          completed_at: string
+          tournament_id: string
+          tournament_name: string
+        }[]
+      }
       tournament_set_round_deadlines: {
         Args: { p_rounds: Json; p_tournament_id: string }
         Returns: {

@@ -59,12 +59,12 @@ import {
   type Sport,
 } from '@rallia/shared-hooks';
 import { Logger } from '@rallia/shared-services';
-import type { TranslationKey } from '@rallia/shared-translations';
 import { getCoverImageUrl, lightHaptic, selectionHaptic } from '@rallia/shared-utils';
 
 import { SportIcon } from '#/components/SportIcon';
 import { useTranslation } from '#/hooks';
 import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
+import { formatDateShort } from '#/utils/dateFormatting';
 import type { RootStackParamList } from '#/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -347,7 +347,7 @@ function FilterDropdown<T extends string>({
 
 const AdminNetworksScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { isAdmin, role } = useAdminStatus();
@@ -664,16 +664,9 @@ const AdminNetworksScreen: React.FC = () => {
 
   // Format date
   const formatDate = useCallback(
-    (dateString: string | null): string => {
-      if (!dateString) return t('common.never' as TranslationKey);
-      const date = new Date(dateString);
-      return date.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    },
-    [t]
+    (dateString: string | null): string =>
+      dateString ? formatDateShort(dateString, locale) : t('common.never'),
+    [t, locale]
   );
 
   // Get network type label
@@ -1128,7 +1121,7 @@ const AdminNetworksScreen: React.FC = () => {
         <View style={styles.accessDenied}>
           <Ionicons name="lock-closed" size={64} color={colors.textMuted} />
           <Text size="lg" weight="semibold" color={colors.text} style={styles.accessDeniedTitle}>
-            {t('admin.accessDenied' as TranslationKey)}
+            {t('admin.errors.accessDenied')}
           </Text>
           <Text size="sm" color={colors.textSecondary} style={styles.accessDeniedText}>
             {t('admin.networks.accessDeniedDescription')}

@@ -129,6 +129,7 @@ import { FacilitiesDirectory, FacilityDetail } from '#/features/facilities';
 import { MyBookingsScreen, BookingDetailScreen } from '#/features/bookings';
 import { InviteReferralScreen } from '#/screens/InviteReferralScreen';
 import { WeeklyCheckInScreen } from '#/features/weekly-checkin/WeeklyCheckInScreen';
+import { Serie2AnnouncementScreen } from '#/features/tournaments/announcement/Serie2AnnouncementScreen';
 
 import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
@@ -1720,6 +1721,16 @@ export default function AppNavigator() {
           headerShown: false,
           presentation: 'modal',
           gestureEnabled: false, // mandatory check-in — no swipe-to-dismiss
+        }}
+      />
+
+      <RootStack.Screen
+        name="Serie2Announcement"
+        getComponent={() => Serie2AnnouncementScreen}
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+          // Promo, not a flow: swipe-to-dismiss stays available.
         }}
       />
     </RootStack.Navigator>

@@ -10,6 +10,18 @@
     "cta": "Voir les tournois",
     "later": "Plus tard"
   },
+  "serie2Announcement": {
+    "badge": "Série 2",
+    "title": "La Série 1 a ses champions",
+    "titleChampion": "T'as gagné la Série 1",
+    "subtitleChampion": "Le tableau {label}, c'est toi qui l'as gagné. Chapeau! La Série 2 s'en vient, avec une vraie bourse à gagner. Défends ton titre.",
+    "subtitlePlayed": "Dans ton tableau {label}, c'est {name} qui repart avec le titre. Merci d'avoir embarqué! La Série 2 s'en vient: c'est le temps de ta revanche.",
+    "subtitleGeneric": "La première série est dans les livres. La Série 2 s'en vient: des tableaux par région et par calibre, avec une vraie bourse à gagner.",
+    "featuredTitle": "Ton tableau pour la Série 2",
+    "deadline": "Les inscriptions ferment le {date}. Les places sont limitées.",
+    "cta": "Je m'inscris",
+    "seeAll": "Voir tous les tableaux"
+  },
   "suggestionCard": {
     "courtsAvailable": "{count} terrains disponibles"
   },
@@ -46,6 +58,7 @@
     "no": "Non",
     "ok": "OK",
     "gotIt": "Compris",
+    "info": "Info",
     "close": "Fermer",
     "search": "Rechercher",
     "filter": "Filtrer",
@@ -60,6 +73,7 @@
     "select": "Sélectionner",
     "required": "Requis",
     "optional": "Optionnel",
+    "showAll": "Afficher les {count}",
     "showLess": "Afficher moins",
     "resetToDefaults": "Réinitialiser aux valeurs par défaut",
     "gender": {
@@ -82,6 +96,7 @@
     "player": "Joueur",
     "verified": "Vérifié",
     "lastActive": "Dernière activité",
+    "never": "Jamais",
     "game": "Partie",
     "more": "+{count} autres",
     "share": "Partager",
@@ -988,7 +1003,7 @@
     "notSet": "Non défini",
     "ratingDrop": {
       "title": "Baisser ta cote?",
-      "message": "Tu passes de {{from}} à {{to}}. Les tournois avec bourse vont continuer d'utiliser {{from}} pour les 180 prochains jours, ça t'ouvrira donc pas une catégorie plus basse. Le reste se met à jour tout de suite.",
+      "message": "Tu passes de {from} à {to}. Les tournois avec bourse vont continuer d'utiliser {from} pour les 180 prochains jours, ça t'ouvrira donc pas une catégorie plus basse. Le reste se met à jour tout de suite.",
       "confirm": "Baisser ma cote"
     },
     "sections": {
@@ -4894,7 +4909,8 @@
       "withdrawn": "Retiré. Le prochain de la liste d’attente monte.",
       "remind": "Relancer",
       "reminding": "Envoi...",
-      "reminded": "Relance envoyée à {{count}} joueur(s)",
+      "reminded": "Relance envoyée à {count} joueurs",
+      "reminded_one": "Relance envoyée à {count} joueur",
       "remindTooSoon": "Tu as déjà relancé récemment. Réessaie dans quelques heures.",
       "remindNobody": "Tout le monde a répondu."
     },
@@ -7516,7 +7532,7 @@
       "empty": "Aucune nouvelle notification",
       "emptyDescription": "Vous n'avez aucune {filter} pour le moment.",
       "allCaughtUp": "Vous êtes à jour!",
-      "unreadCount": "Vous avez {count} {count, plural, one {notification non lue} other {notifications non lues}",
+      "unreadCount": "Vous avez {count} {count, plural, one {notification non lue} other {notifications non lues}}",
       "viewAll": "Voir toutes les notifications",
       "markAllRead": "Tout marquer comme lu",
       "newBooking": "Nouvelle réservation",
@@ -8417,7 +8433,7 @@
         "searchFacilitiesPlaceholder": "Rechercher des sites de jeu...",
         "allSports": "Tous les sports",
         "clearFilters": "Effacer les filtres",
-        "facilitiesFiltered": "{filtered} sur {total} {total, plural, one {site de jeu} other {sites de jeu}",
+        "facilitiesFiltered": "{filtered} sur {total} {total, plural, one {site de jeu} other {sites de jeu}}",
         "noMatchingFacilities": "Aucun site de jeu ne correspond à votre recherche",
         "backToOrganizations": "Retour aux organisations",
         "facilityDetail": {
@@ -9147,7 +9163,7 @@
       "searchPlaceholder": "Rechercher des réseaux...",
       "noResults": "Aucun réseau trouvé",
       "noResultsDescription": "Essayez d'ajuster votre recherche ou vos filtres",
-      "totalNetworks": "{count, plural, one {# réseau} other {# réseaux}",
+      "totalNetworks": "{count, plural, one {# réseau} other {# réseaux}}",
       "empty": "Aucun réseau pour le moment",
       "emptyDescription": "Les réseaux apparaîtront ici une fois créés",
       "tryDifferentSearch": "Essayez un autre terme de recherche",
@@ -9186,7 +9202,7 @@
         "allSports": "Tous les sports"
       },
       "card": {
-        "members": "{count, plural, one {# membre} other {# membres}",
+        "members": "{count, plural, one {# membre} other {# membres}}",
         "group": "Groupe",
         "community": "Communauté",
         "certified": "Certifié",
@@ -11000,7 +11016,7 @@
       "addInstructor": "Ajouter un instructeur",
       "assignedInstructors": "Instructeurs assignés",
       "noInstructorsAssigned": "Aucun instructeur assigné à ce programme",
-      "instructorCount": "{count, plural, one {# instructeur assigné} other {# instructeurs assignés}",
+      "instructorCount": "{count, plural, one {# instructeur assigné} other {# instructeurs assignés}}",
       "addFirst": "Ajouter votre premier instructeur",
       "primary": "Principal",
       "setPrimary": "Définir comme instructeur principal",
@@ -11011,7 +11027,7 @@
         "description": "Sélectionnez les instructeurs à assigner à ce programme.",
         "noAvailable": "Tous les instructeurs sont déjà assignés à ce programme.",
         "createNew": "Créer un nouvel instructeur",
-        "add": "Ajouter {count, plural, one {# instructeur} other {# instructeurs}"
+        "add": "Ajouter {count, plural, one {# instructeur} other {# instructeurs}}"
       },
       "errors": {
         "failedToLoad": "Échec du chargement des instructeurs",
@@ -11234,6 +11250,8 @@
     "lastSpot": "Dernière place!",
     "noSlotsForFilter": "Aucun créneau disponible pour cette période",
     "showAllSlots": "Voir tous les créneaux",
+    "slotCount": "{count} créneaux",
+    "slotCount_one": "{count} créneau",
     "matchFilters": {
       "all": "Toutes",
       "open": "Ouvertes",

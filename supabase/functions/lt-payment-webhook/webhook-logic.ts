@@ -56,6 +56,19 @@ export function shouldFinalize(decision: SucceededDecision): boolean {
 //                 delivery that died between the ledger write and the release
 //                 left the slot reserved forever, and the reaper can't recover a
 //                 terminal row (it only scans 'pending').
+//
+// `hasLiveSibling` is the guard that stops a terminal event for an ABANDONED
+// attempt from evicting the player's CURRENT one. The slot is shared: a retry
+// reuses the same tournament_registrations / season_members row, so releasing it
+// on behalf of a superseded ledger row throws away a reservation that a newer,
+// live payment is relying on.
+//
+// This is what stranded the Serie 2 payers. Retrying checkout makes
+// lt-create-registration-payment cancel the previous PaymentIntent at Stripe;
+// the resulting payment_intent.canceled resolved to the OLD ledger row and
+// released the shared slot about a second after the new attempt reserved it.
+// The new payment then succeeded, and its finalize silently matched no rows
+// because the registration was already 'withdrawn'. Card charged, no seat.
 export interface TerminalDecision {
   writeLedger: boolean;
   releaseSlot: boolean;
@@ -63,12 +76,15 @@ export interface TerminalDecision {
 
 export function classifyTerminal(
   status: LedgerStatus,
-  target: 'failed' | 'cancelled'
+  target: 'failed' | 'cancelled',
+  hasLiveSibling: boolean
 ): TerminalDecision {
   // A payment that already succeeded (or was refunded) is never downgraded by a
   // late failure on a retried intent.
   if (status === 'succeeded' || status === 'refunded' || status === 'partially_refunded') {
     return { writeLedger: false, releaseSlot: false };
   }
-  return { writeLedger: status !== target, releaseSlot: true };
+  // Record the terminal status either way, but the slot belongs to the live
+  // attempt, not to this dead one.
+  return { writeLedger: status !== target, releaseSlot: !hasLiveSibling };
 }

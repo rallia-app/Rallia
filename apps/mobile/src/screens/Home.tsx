@@ -81,6 +81,7 @@ import {
 import { useCheckInContext } from '#/features/weekly-checkin/api';
 import { WEEKLY_CHECKIN_ENABLED } from '#/features/weekly-checkin/featureFlag';
 import { isWeeklyCheckInActive } from '#/features/weekly-checkin/isWizardActive';
+import { isSerie2AnnouncementActive } from '#/features/tournaments/announcement/isAnnouncementActive';
 import { CopilotStep, WalkthroughableView } from '#/context/TourContext';
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import {
@@ -645,7 +646,11 @@ const Home = () => {
           // prompt is periodic and deferrable, so it always yields. Same guard
           // Serie1AnnouncementAutoOpener and useApplyUpdateOnResume use. The
           // launch counter still ticks so it's eligible again next launch.
-          if (isWeeklyCheckInActive() || getSheetStack().length > 0) {
+          if (
+            isWeeklyCheckInActive() ||
+            isSerie2AnnouncementActive() ||
+            getSheetStack().length > 0
+          ) {
             Logger.logUserAction('referral_invite_suppressed_for_wizard', {
               openSheets: getSheetStack().length,
             });

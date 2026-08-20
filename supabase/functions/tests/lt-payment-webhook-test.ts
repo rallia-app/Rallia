@@ -60,29 +60,47 @@ Deno.test('only pending is ever promoted; only terminal/refunded skip finalize',
 // =============================================================================
 
 Deno.test('terminal on pending → write ledger + release slot', () => {
-  assertEquals(classifyTerminal('pending', 'failed'), { writeLedger: true, releaseSlot: true });
-  assertEquals(classifyTerminal('pending', 'cancelled'), { writeLedger: true, releaseSlot: true });
+  assertEquals(classifyTerminal('pending', 'failed', false), {
+    writeLedger: true,
+    releaseSlot: true,
+  });
+  assertEquals(classifyTerminal('pending', 'cancelled', false), {
+    writeLedger: true,
+    releaseSlot: true,
+  });
 });
 
 Deno.test('terminal on the same status → skip ledger, still release the slot', () => {
   // Re-delivery of the same failure: the ledger is already there, but the slot
   // release must still run (the bug was returning early and leaking the slot).
-  assertEquals(classifyTerminal('failed', 'failed'), { writeLedger: false, releaseSlot: true });
-  assertEquals(classifyTerminal('cancelled', 'cancelled'), {
+  assertEquals(classifyTerminal('failed', 'failed', false), {
+    writeLedger: false,
+    releaseSlot: true,
+  });
+  assertEquals(classifyTerminal('cancelled', 'cancelled', false), {
     writeLedger: false,
     releaseSlot: true,
   });
 });
 
 Deno.test('terminal on the other terminal status → rewrite + release', () => {
-  assertEquals(classifyTerminal('cancelled', 'failed'), { writeLedger: true, releaseSlot: true });
-  assertEquals(classifyTerminal('failed', 'cancelled'), { writeLedger: true, releaseSlot: true });
+  assertEquals(classifyTerminal('cancelled', 'failed', false), {
+    writeLedger: true,
+    releaseSlot: true,
+  });
+  assertEquals(classifyTerminal('failed', 'cancelled', false), {
+    writeLedger: true,
+    releaseSlot: true,
+  });
 });
 
 Deno.test('terminal on succeeded/refunded → no-op (never downgrade a paid row)', () => {
   for (const s of ['succeeded', 'refunded', 'partially_refunded'] as LedgerStatus[]) {
-    assertEquals(classifyTerminal(s, 'failed'), { writeLedger: false, releaseSlot: false });
-    assertEquals(classifyTerminal(s, 'cancelled'), { writeLedger: false, releaseSlot: false });
+    assertEquals(classifyTerminal(s, 'failed', false), { writeLedger: false, releaseSlot: false });
+    assertEquals(classifyTerminal(s, 'cancelled', false), {
+      writeLedger: false,
+      releaseSlot: false,
+    });
   }
 });
 
@@ -90,6 +108,54 @@ Deno.test('terminal always releases the slot unless the row is already paid', ()
   const paid: LedgerStatus[] = ['succeeded', 'refunded', 'partially_refunded'];
   for (const s of ALL_STATUSES) {
     const expectRelease = !paid.includes(s);
-    assertEquals(classifyTerminal(s, 'failed').releaseSlot, expectRelease, `status=${s}`);
+    assertEquals(classifyTerminal(s, 'failed', false).releaseSlot, expectRelease, `status=${s}`);
+  }
+});
+
+// =============================================================================
+// classifyTerminal — the superseded-attempt guard (the Serie 2 incident)
+// =============================================================================
+
+Deno.test("a superseded attempt never releases the live attempt's slot", () => {
+  // The exact production sequence: player retries checkout, the create function
+  // cancels the old PaymentIntent at Stripe, and the resulting
+  // payment_intent.canceled resolves to the OLD (already cancelled) ledger row
+  // about a second after the NEW attempt reserved the shared slot. Releasing
+  // here withdrew the live reservation, and the new payment then succeeded into
+  // a slot that was no longer payment_pending.
+  assertEquals(classifyTerminal('cancelled', 'cancelled', true), {
+    writeLedger: false,
+    releaseSlot: false,
+  });
+});
+
+Deno.test('a superseded pending attempt still records its terminal status', () => {
+  // The ledger must stay accurate even when the slot is left alone.
+  assertEquals(classifyTerminal('pending', 'failed', true), {
+    writeLedger: true,
+    releaseSlot: false,
+  });
+});
+
+Deno.test('with no live sibling the slot is still freed (no regression)', () => {
+  // The original behaviour must survive: a genuinely abandoned checkout with
+  // nothing newer behind it still frees its slot immediately.
+  assertEquals(classifyTerminal('pending', 'cancelled', false), {
+    writeLedger: true,
+    releaseSlot: true,
+  });
+});
+
+Deno.test('a live sibling never resurrects a succeeded/refunded row', () => {
+  for (const s of ['succeeded', 'refunded', 'partially_refunded'] as LedgerStatus[]) {
+    assertEquals(classifyTerminal(s, 'failed', true), { writeLedger: false, releaseSlot: false });
+  }
+});
+
+Deno.test('releaseSlot is never true when a live sibling holds the slot', () => {
+  // Property form of the incident: whatever the status, a live sibling wins.
+  for (const s of ALL_STATUSES) {
+    assertEquals(classifyTerminal(s, 'failed', true).releaseSlot, false, `status=${s}`);
+    assertEquals(classifyTerminal(s, 'cancelled', true).releaseSlot, false, `status=${s}`);
   }
 });
