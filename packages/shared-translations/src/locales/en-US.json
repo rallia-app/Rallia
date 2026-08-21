@@ -4442,7 +4442,8 @@
     "memberErrors": {
       "memberNotFound": "This member is no longer in the league.",
       "notRevocable": "This invitation can't be revoked anymore.",
-      "organizerImmune": "The organizer can't be removed from their own league."
+      "organizerImmune": "The organizer can't be removed from their own league.",
+      "staleRow": "This request just changed. We refreshed the list, try again."
     },
     "createErrors": {
       "invalidName": "That name won't work. Try a different one.",
@@ -4964,7 +4965,11 @@
         "title": "Someone will sit out",
         "message": "{count} players confirmed, which is an odd number, so one of them gets a bye this session. Remove or add a player first if you would rather they all play.",
         "cta": "Generate anyway"
-      }
+      },
+      "draftBanner": "Draft. Only you can see these pairings. Adjust them, then publish.",
+      "draftHint": "Regenerating reshuffles the unlocked pairings. Nothing reaches your members until you publish.",
+      "publish": "Publish the sheet",
+      "published": "Sheet published"
     },
     "score": {
       "title": "Enter score",
@@ -4989,7 +4994,8 @@
       "notCancellable": "This session can't be cancelled anymore.",
       "notWithdrawable": "This member can't be withdrawn at this point.",
       "notEnoughConfirmed": "Not enough confirmed players to build the match sheet.",
-      "sheetLocked": "Some games are locked or already scored, so the sheet can't be regenerated."
+      "sheetLocked": "Some games are locked or already scored, so the sheet can't be regenerated.",
+      "sheetEmpty": "There is no sheet to publish yet."
     },
     "linkPicker": {
       "title": "Link a played match",

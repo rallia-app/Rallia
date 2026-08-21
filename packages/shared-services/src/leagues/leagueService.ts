@@ -977,6 +977,21 @@ export async function regenerateSessionSheet(
 }
 
 /**
+ * Releases a draft sheet to the league members. A generated (or regenerated)
+ * sheet is organizer-only until this lands, which is what gives the organizer
+ * room to adjust pairings before anyone sees them. Idempotent server-side, so
+ * a double tap is harmless.
+ */
+export async function publishSessionSheet(sessionId: string, versionWas: number): Promise<Session> {
+  const { data, error } = await supabase.rpc('session_publish_sheet', {
+    p_session_id: sessionId,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as Session;
+}
+
+/**
  * Organizer substitution on one named pairing of a published sheet: `userOut`
  * leaves `matchId` and `userIn` takes the slot. If `userIn` was already paired
  * in that same round, the two trade; if they were on a bye that round, they

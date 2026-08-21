@@ -4442,7 +4442,8 @@
     "memberErrors": {
       "memberNotFound": "Ce membre ne fait plus partie de la ligue.",
       "notRevocable": "Cette invitation ne peut plus être révoquée.",
-      "organizerImmune": "L'organisateur ne peut pas être retiré de sa propre ligue."
+      "organizerImmune": "L'organisateur ne peut pas être retiré de sa propre ligue.",
+      "staleRow": "Cette demande vient de changer. On a rafraîchi la liste, réessaie."
     },
     "createErrors": {
       "invalidName": "Ce nom ne fonctionne pas. Essaies-en un autre.",
@@ -4964,7 +4965,11 @@
         "title": "Un joueur va être exempté",
         "message": "{count} joueurs ont confirmé, un nombre impair, donc un d’eux sera exempté pour cette séance. Retire ou ajoute un joueur d’abord si tu préfères qu’ils jouent tous.",
         "cta": "Générer quand même"
-      }
+      },
+      "draftBanner": "Brouillon. Toi seul vois ces pairages. Ajuste-les, puis publie.",
+      "draftHint": "Régénérer rebrasse les pairages non verrouillés. Rien ne se rend à tes membres tant que tu n'as pas publié.",
+      "publish": "Publier la feuille",
+      "published": "Feuille publiée"
     },
     "score": {
       "title": "Entrer le pointage",
@@ -4989,7 +4994,8 @@
       "notCancellable": "Cette séance ne peut plus être annulée.",
       "notWithdrawable": "Ce membre ne peut plus être retiré à ce stade-ci.",
       "notEnoughConfirmed": "Pas assez de joueurs confirmés pour générer la feuille de match.",
-      "sheetLocked": "Des parties sont verrouillées ou déjà comptées, la feuille ne peut pas être régénérée."
+      "sheetLocked": "Des parties sont verrouillées ou déjà comptées, la feuille ne peut pas être régénérée.",
+      "sheetEmpty": "Il n'y a pas encore de feuille à publier."
     },
     "linkPicker": {
       "title": "Lier une partie jouée",

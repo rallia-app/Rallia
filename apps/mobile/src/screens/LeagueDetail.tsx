@@ -150,7 +150,7 @@ import type {
 import type { LeagueEditData } from '../features/leagues';
 import { LeagueBanner } from '../features/leagues/components/LeagueBanner';
 import { useTranslation, useRequireOnboarding, type TranslationKey } from '../hooks';
-import { rpcErrorMessage } from '../utils/rpcErrorMessage';
+import { rpcErrorMessage, type RpcErrorOverrides } from '../utils/rpcErrorMessage';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
 
@@ -267,6 +267,27 @@ export const LeagueDetail: React.FC = () => {
     void refetchSeasons();
   }, [refetchLeague, refetchMembers, refetchMembership, refetchSeasons]);
 
+  /**
+   * Every organizer action on a member row carries that row's version, so a
+   * list that has drifted fails the optimistic lock. The shared copy tells the
+   * organizer to refresh and try again; refetching here is what makes that
+   * advice true, instead of leaving the retry to reuse the same stale version.
+   */
+  const memberActionError = useCallback(
+    (e: Error, overrides: RpcErrorOverrides = {}) => {
+      warningHaptic();
+      invalidateAll();
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          ...overrides,
+          OPTIMISTIC_LOCK_CONFLICT: 'leagueDetail.memberErrors.staleRow',
+          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
+        })
+      );
+    },
+    [toast, t, invalidateAll]
+  );
+
   const { mutate: joinLeague, isPending: isJoining } = useJoinLeague(leagueId, {
     onSuccess: m => {
       successHaptic();
@@ -316,15 +337,7 @@ export const LeagueDetail: React.FC = () => {
       toast.success(t('leagueDetail.memberApproved'));
       invalidateAll();
     },
-    onError: e => {
-      warningHaptic();
-      toast.error(
-        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
-          LEAGUE_FULL: 'leagueDetail.joinErrors.leagueFull',
-          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
-        })
-      );
-    },
+    onError: e => memberActionError(e, { LEAGUE_FULL: 'leagueDetail.joinErrors.leagueFull' }),
   });
 
   const { mutate: acceptInvite, isPending: isAccepting } = useAcceptLeagueInvite(leagueId, {
@@ -333,15 +346,7 @@ export const LeagueDetail: React.FC = () => {
       toast.success(t('leagueDetail.inviteAccepted'));
       invalidateAll();
     },
-    onError: e => {
-      warningHaptic();
-      toast.error(
-        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
-          NOT_INVITED: 'leagueDetail.joinErrors.notInvited',
-          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
-        })
-      );
-    },
+    onError: e => memberActionError(e, { NOT_INVITED: 'leagueDetail.joinErrors.notInvited' }),
   });
 
   const { mutate: revokeInvite, isPending: isRevoking } = useRevokeLeagueInvite(leagueId, {
@@ -350,30 +355,17 @@ export const LeagueDetail: React.FC = () => {
       toast.success(t('leagueDetail.inviteRevoked'));
       invalidateAll();
     },
-    onError: e => {
-      warningHaptic();
-      toast.error(
-        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
-          NOT_REVOCABLE: 'leagueDetail.memberErrors.notRevocable',
-          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
-        })
-      );
-    },
+    onError: e => memberActionError(e, { NOT_REVOCABLE: 'leagueDetail.memberErrors.notRevocable' }),
   });
 
   const onMemberLifecycleError = useCallback(
-    (e: Error) => {
-      warningHaptic();
-      toast.error(
-        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
-          ORGANIZER_CANNOT_LEAVE: 'leagueDetail.memberErrors.organizerImmune',
-          CANNOT_REMOVE_ORGANIZER: 'leagueDetail.memberErrors.organizerImmune',
-          CANNOT_SUSPEND_ORGANIZER: 'leagueDetail.memberErrors.organizerImmune',
-          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
-        })
-      );
-    },
-    [toast, t]
+    (e: Error) =>
+      memberActionError(e, {
+        ORGANIZER_CANNOT_LEAVE: 'leagueDetail.memberErrors.organizerImmune',
+        CANNOT_REMOVE_ORGANIZER: 'leagueDetail.memberErrors.organizerImmune',
+        CANNOT_SUSPEND_ORGANIZER: 'leagueDetail.memberErrors.organizerImmune',
+      }),
+    [memberActionError]
   );
 
   const { mutate: leaveLeagueMut, isPending: isLeaving } = useLeaveLeague(leagueId, {

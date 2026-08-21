@@ -58,6 +58,7 @@ import {
   openSeason,
   publishSession,
   recordSessionScore,
+  publishSessionSheet,
   regenerateSessionSheet,
   setSessionMatchLock,
   swapSessionPlayer,
@@ -774,6 +775,19 @@ export function useGenerateSessionSheet(sessionId: string, options: MutationOpti
       regenerate
         ? regenerateSessionSheet(sessionId, versionWas)
         : generateSessionSheet(sessionId, versionWas),
+    onSuccess: result => {
+      invalidate(sessionId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+export function usePublishSessionSheet(sessionId: string, options: MutationOptions<Session> = {}) {
+  const invalidate = useSheetInvalidator();
+  return useMutation({
+    mutationFn: ({ versionWas }: { versionWas: number }) =>
+      publishSessionSheet(sessionId, versionWas),
     onSuccess: result => {
       invalidate(sessionId);
       options.onSuccess?.(result);
