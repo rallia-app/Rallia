@@ -4709,6 +4709,10 @@
         "avoid_repeat": {
           "title": "Avoid repeats",
           "description": "Favours opponents each player has not faced yet this season."
+        },
+        "manual": {
+          "title": "Manual",
+          "description": "We lay out the rounds in confirmation order and choose nobody. You arrange the pairings, then publish the sheet."
         }
       },
       "validation": {

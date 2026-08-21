@@ -16237,6 +16237,7 @@ export type Database = {
         | "avoid_repeat"
         | "swiss"
         | "balanced_doubles"
+        | "manual"
       pairing_team: "a" | "b"
       payment_method:
         | "credit_card"
@@ -16935,6 +16936,7 @@ export const Constants = {
         "avoid_repeat",
         "swiss",
         "balanced_doubles",
+        "manual",
       ],
       pairing_team: ["a", "b"],
       payment_method: [

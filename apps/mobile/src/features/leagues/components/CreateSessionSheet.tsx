@@ -31,11 +31,13 @@ const SHEET_ID = 'create-session';
  * Pairing modes offered to an organizer. The enum also carries 'swiss' and
  * 'balanced_doubles', which the generator resolves to the same ranking order as
  * by_rank; offering them would promise a difference that does not exist.
+ * 'manual' is last on purpose: it is the escape hatch, not the default.
  */
 const PAIRING_MODES = [
   'by_rank',
   'random',
   'avoid_repeat',
+  'manual',
 ] as const satisfies readonly Enums<'pairing_mode'>[];
 
 /**

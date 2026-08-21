@@ -4709,6 +4709,10 @@
         "avoid_repeat": {
           "title": "Éviter les répétitions",
           "description": "Priorise les adversaires que chacun n'a pas encore affrontés cette saison."
+        },
+        "manual": {
+          "title": "Manuel",
+          "description": "On place les rondes dans l'ordre des confirmations sans choisir personne. Tu arranges les pairages, puis tu publies la feuille."
         }
       },
       "validation": {
