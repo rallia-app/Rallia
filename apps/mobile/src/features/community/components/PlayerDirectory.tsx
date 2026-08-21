@@ -376,10 +376,12 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
           Logger.info('Player removed from favorites', { playerId });
         } else {
           // Add to favorites
-          const { error } = await supabase.from('player_favorite').insert({
-            player_id: currentUserId,
-            favorite_player_id: playerId,
-          });
+          const { error } = await supabase
+            .from('player_favorite')
+            .upsert(
+              { player_id: currentUserId, favorite_player_id: playerId },
+              { onConflict: 'player_id,favorite_player_id', ignoreDuplicates: true }
+            );
 
           if (error) throw error;
           toast.success(t('playerDirectory.favorites.addedToFavorites'));
