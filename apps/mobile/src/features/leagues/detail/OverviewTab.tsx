@@ -55,6 +55,8 @@ interface OverviewTabProps {
     testID: string;
   }>;
   pendingMemberRows: PendingMemberRow[];
+  /** Highlights the viewer's own row in the standings. */
+  currentUserId: string | null;
   rankingSeason: Season | undefined;
   rankings: SeasonRankingWithProfile[];
   standingsSeasons: Season[];
@@ -79,6 +81,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   organizerName,
   organizerRows,
   pendingMemberRows,
+  currentUserId,
   rankingSeason,
   rankings,
   standingsSeasons,
@@ -233,6 +236,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </Text>
         </View>
         {rankings.slice(0, 12).map((r, i) => (
+          // My own line reads in the accent colour: "am I bold enough?" was
+          // real tester feedback, so the row does not rely on weight alone.
           <View
             key={r.id}
             style={[
@@ -241,12 +246,24 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 borderBottomColor: colors.border,
                 borderBottomWidth: StyleSheet.hairlineWidth,
               },
+              r.user_id === currentUserId && { backgroundColor: `${colors.primary}14` },
             ]}
           >
-            <Text size="sm" weight="semibold" color={colors.text} style={styles.standingRank}>
+            <Text
+              size="sm"
+              weight="semibold"
+              color={r.user_id === currentUserId ? colors.primary : colors.text}
+              style={styles.standingRank}
+            >
               {r.rank ?? i + 1}
             </Text>
-            <Text size="sm" color={colors.text} numberOfLines={1} style={styles.standingName}>
+            <Text
+              size="sm"
+              weight={r.user_id === currentUserId ? 'semibold' : 'regular'}
+              color={r.user_id === currentUserId ? colors.primary : colors.text}
+              numberOfLines={1}
+              style={styles.standingName}
+            >
               {r.profile
                 ? getHumanName(r.profile, t('leagueDetail.unknownMember'))
                 : t('leagueDetail.unknownMember')}
@@ -391,11 +408,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       </Section>
     )}
 
-    {/* Organizer utilities: quiet grouped rows, not competing cards. */}
-    {isOrganizer && organizerRows.length > 0 && (
+    {/* Organizer utilities — or, for a plain member, their own quiet
+        membership rows (leaving the league lives here, at the end of the
+        page, not beside the hero where a mis-tap can reach it). */}
+    {organizerRows.length > 0 && (
       <View style={styles.section}>
         <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.sectionTitle}>
-          {t('leagueDetail.dashboard.manageTitle').toUpperCase()}
+          {t(
+            isOrganizer
+              ? 'leagueDetail.dashboard.manageTitle'
+              : 'leagueDetail.dashboard.membershipTitle'
+          ).toUpperCase()}
         </Text>
         <View
           style={[

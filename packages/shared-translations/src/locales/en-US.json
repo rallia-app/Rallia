@@ -4499,7 +4499,9 @@
       "joinMode": "Join mode",
       "description": "Description",
       "venue": "Venue",
-      "ratingRange": "Rating range"
+      "ratingRange": "Rating range",
+      "capacity": "Capacity",
+      "scheduling": "Sessions"
     },
     "overview": {
       "infoTitle": "League info",
@@ -4534,7 +4536,9 @@
         "title": "Pending approval ({count})",
         "approveLabel": "Approve {name}",
         "rejectLabel": "Turn down {name}",
-        "queuedAt": "#{rank} in line for a spot"
+        "queuedAt": "#{rank} in line for a spot",
+        "queuedAtFirst": "1st in line for a spot",
+        "leagueFullHint": "The league is full ({seated}/{capacity}). Free a seat before approving."
       },
       "invited": {
         "title": "Invited · awaiting response ({count})",
@@ -4545,7 +4549,8 @@
         "suspendedTitle": "Suspended ({count})",
         "suspendLabel": "Suspend {name}",
         "removeLabel": "Remove {name}",
-        "reinstateLabel": "Reinstate {name}"
+        "reinstateLabel": "Reinstate {name}",
+        "suspendedUntil": "Suspended until {date}"
       },
       "memberTabs": {
         "confirmed": "Confirmed",
@@ -4561,7 +4566,8 @@
       },
       "openSeasonCta": {
         "description": "Opening a season lets members register and sessions begin"
-      }
+      },
+      "membershipTitle": "My spot"
     },
     "editModal": {
       "title": "Edit league",
@@ -4736,7 +4742,9 @@
       "inviteOnly": "Invite only",
       "oneSet": "Single set",
       "twoOfThree": "Best of 3",
-      "threeOfFive": "Best of 5"
+      "threeOfFive": "Best of 5",
+      "capacitySeats": "{count} spots",
+      "capacitySeatsWaitlist": "{count} spots + waitlist"
     },
     "actions": {
       "join": "Join league",
@@ -4883,7 +4891,8 @@
         "sharingUnavailable": "This league can't be shared by players. Ask the organizer for an invite.",
         "generic": "Couldn't prepare the invite link. Please try again."
       }
-    }
+    },
+    "queuedInLineFirst": "1st in line for a spot"
   },
   "sessionDetail": {
     "membersOnlyBounce": "That session is for members. Join the league to see it.",

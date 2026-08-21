@@ -20,7 +20,7 @@ import { styles } from './detailStyles';
 interface DetailsTabProps {
   league: League;
   colors: ScreenColors;
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, options?: Record<string, string | number | boolean>) => string;
   ratingRangeLabel: string | null;
 }
 
@@ -55,6 +55,29 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({ league, colors, t, ratin
           colors={colors}
         />
       )}
+      {/* The cap was configured here but displayed nowhere: a member had no
+          way to see the league was full, and the organizer no reminder. */}
+      {league.member_capacity != null && (
+        <InfoRow
+          label={t('leagueDetail.labels.capacity')}
+          value={t(
+            league.waitlist_enabled
+              ? 'leagueDetail.values.capacitySeatsWaitlist'
+              : 'leagueDetail.values.capacitySeats',
+            { count: String(league.member_capacity) }
+          )}
+          colors={colors}
+        />
+      )}
+      <InfoRow
+        label={t('leagueDetail.labels.scheduling')}
+        value={t(
+          (league.default_rules as Record<string, unknown> | null)?.['sessionScheduling'] === 'flex'
+            ? 'leagueCreation.fields.scheduling.flex.title'
+            : 'leagueCreation.fields.scheduling.fixed.title'
+        )}
+        colors={colors}
+      />
     </Section>
   </View>
 );

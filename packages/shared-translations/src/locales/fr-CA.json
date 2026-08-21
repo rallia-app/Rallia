@@ -4499,7 +4499,9 @@
       "joinMode": "Mode d'adhésion",
       "description": "Description",
       "venue": "Lieu",
-      "ratingRange": "Plage de cote"
+      "ratingRange": "Plage de cote",
+      "capacity": "Capacité",
+      "scheduling": "Séances"
     },
     "overview": {
       "infoTitle": "Infos de la ligue",
@@ -4534,7 +4536,9 @@
         "title": "En attente ({count})",
         "approveLabel": "Approuver {name}",
         "rejectLabel": "Refuser {name}",
-        "queuedAt": "{rank}e en file pour une place"
+        "queuedAt": "{rank}e en file pour une place",
+        "queuedAtFirst": "1re en file pour une place",
+        "leagueFullHint": "La ligue est pleine ({seated}/{capacity}). Libère une place avant d'approuver."
       },
       "invited": {
         "title": "Invités · en attente de réponse ({count})",
@@ -4545,7 +4549,8 @@
         "suspendedTitle": "Suspendus ({count})",
         "suspendLabel": "Suspendre {name}",
         "removeLabel": "Retirer {name}",
-        "reinstateLabel": "Réactiver {name}"
+        "reinstateLabel": "Réactiver {name}",
+        "suspendedUntil": "Suspendu jusqu'au {date}"
       },
       "memberTabs": {
         "confirmed": "Confirmés",
@@ -4561,7 +4566,8 @@
       },
       "openSeasonCta": {
         "description": "Ouvrir une saison permet aux membres de s'inscrire et aux sessions de commencer"
-      }
+      },
+      "membershipTitle": "Ma place"
     },
     "editModal": {
       "title": "Modifier la ligue",
@@ -4736,7 +4742,9 @@
       "inviteOnly": "Sur invitation",
       "oneSet": "Une manche",
       "twoOfThree": "2 de 3",
-      "threeOfFive": "3 de 5"
+      "threeOfFive": "3 de 5",
+      "capacitySeats": "{count} places",
+      "capacitySeatsWaitlist": "{count} places + file d'attente"
     },
     "actions": {
       "join": "Rejoindre la ligue",
@@ -4883,7 +4891,8 @@
         "sharingUnavailable": "Cette ligue ne peut pas être partagée par les joueurs. Demande une invitation à l'organisateur.",
         "generic": "Impossible de préparer le lien d'invitation. Réessaie."
       }
-    }
+    },
+    "queuedInLineFirst": "1re en file pour une place"
   },
   "sessionDetail": {
     "membersOnlyBounce": "Cette séance est réservée aux membres. Rejoins la ligue pour la voir.",

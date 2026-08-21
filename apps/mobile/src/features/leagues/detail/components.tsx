@@ -732,10 +732,21 @@ export const PendingMembersSection: React.FC<{
   onReject: (memberId: string, version: number, name: string) => void;
   colors: ScreenColors;
   t: (k: TranslationKey, options?: Record<string, string>) => string;
-}> = ({ rows, onPlayerPress, onApprove, onReject, colors, t }) => {
+  /** Set when every seat is taken: approving will fail until one frees up,
+   *  so the organizer deserves the warning BEFORE the tap, not as an error. */
+  leagueFullHint?: string;
+}> = ({ rows, onPlayerPress, onApprove, onReject, colors, t, leagueFullHint }) => {
   if (rows.length === 0) return null;
   return (
     <View style={styles.pendingSection}>
+      {leagueFullHint ? (
+        <View style={[styles.leagueFullHint, { backgroundColor: colors.statusMutedBg }]}>
+          <Ionicons name="alert-circle-outline" size={14} color={colors.textMuted} />
+          <Text size="xs" color={colors.textMuted} style={styles.leagueFullHintText}>
+            {leagueFullHint}
+          </Text>
+        </View>
+      ) : null}
       <View
         style={[
           styles.card,
@@ -777,9 +788,11 @@ export const PendingMembersSection: React.FC<{
               <View style={styles.queueBadgeRow}>
                 <Ionicons name="list-outline" size={12} color={colors.textMuted} />
                 <Text size="xs" color={colors.textMuted}>
-                  {t('leagueDetail.dashboard.pendingRequests.queuedAt', {
-                    rank: String(queueRank),
-                  })}
+                  {queueRank === 1
+                    ? t('leagueDetail.dashboard.pendingRequests.queuedAtFirst')
+                    : t('leagueDetail.dashboard.pendingRequests.queuedAt', {
+                        rank: String(queueRank),
+                      })}
                 </Text>
               </View>
             )}
@@ -833,6 +846,8 @@ export const InvitedMembersSection: React.FC<{
 export type ManageMemberRow = {
   player: PlayerSearchResult;
   memberId: string;
+  /** Preformatted "Suspendu jusqu'au ..." line; suspended rows only. */
+  suspensionLine?: string;
   version: number;
   userId: string;
 };
@@ -915,30 +930,41 @@ export const SuspendedMembersSection: React.FC<{
           { backgroundColor: colors.cardBackground, borderColor: colors.border },
         ]}
       >
-        {rows.map(({ player, memberId, version }, i) => {
+        {rows.map(({ player, memberId, version, suspensionLine }, i) => {
           const name = getHumanName(player, '');
           return (
-            <ParticipantRow
-              key={memberId}
-              player={player}
-              onPress={onPlayerPress}
-              colors={colors}
-              showDivider={i > 0}
-              trailingActions={[
-                {
-                  icon: 'play-circle-outline',
-                  color: colors.statusPositiveText,
-                  accessibilityLabel: t('leagueDetail.dashboard.members.reinstateLabel', { name }),
-                  onPress: () => onReinstate(memberId, version, name),
-                },
-                {
-                  icon: 'remove-circle-outline',
-                  color: colors.danger,
-                  accessibilityLabel: t('leagueDetail.dashboard.members.removeLabel', { name }),
-                  onPress: () => onRemove(memberId, version, name),
-                },
-              ]}
-            />
+            <View key={memberId}>
+              <ParticipantRow
+                player={player}
+                onPress={onPlayerPress}
+                colors={colors}
+                showDivider={i > 0}
+                trailingActions={[
+                  {
+                    icon: 'play-circle-outline',
+                    color: colors.statusPositiveText,
+                    accessibilityLabel: t('leagueDetail.dashboard.members.reinstateLabel', {
+                      name,
+                    }),
+                    onPress: () => onReinstate(memberId, version, name),
+                  },
+                  {
+                    icon: 'remove-circle-outline',
+                    color: colors.danger,
+                    accessibilityLabel: t('leagueDetail.dashboard.members.removeLabel', { name }),
+                    onPress: () => onRemove(memberId, version, name),
+                  },
+                ]}
+              />
+              {suspensionLine ? (
+                <View style={styles.queueBadgeRow}>
+                  <Ionicons name="pause-circle-outline" size={12} color={colors.textMuted} />
+                  <Text size="xs" color={colors.textMuted}>
+                    {suspensionLine}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           );
         })}
       </View>

@@ -311,6 +311,17 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pendingSection: { marginBottom: spacingPixels[4] },
+  leagueFullHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    marginBottom: spacingPixels[2],
+  },
+  leagueFullHintText: {
+    flex: 1,
+  },
   queueBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',

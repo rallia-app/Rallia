@@ -34,7 +34,13 @@ import {
   neutral,
   secondary,
 } from '@rallia/design-system';
-import { lightHaptic, successHaptic, warningHaptic, getHumanName } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  successHaptic,
+  warningHaptic,
+  getHumanName,
+  getInitialName,
+} from '@rallia/shared-utils';
 import {
   useTheme,
   useAuth,
@@ -216,8 +222,24 @@ export const SessionDetail: React.FC = () => {
     [presence, t]
   );
 
+  // Sheet rows put two names and a score on one line; full names ellipsize
+  // into "Mathis Lef… 6-3 6-4 Marc Trem…". First name + last initial keeps
+  // both players readable, which was the testers' doubles ask verbatim.
+  const shortNameOf = useCallback(
+    (id: string): string => {
+      const profile = presence.find(p => p.user_id === id)?.profile;
+      return profile
+        ? getInitialName(profile, t('sessionDetail.unknownMember'))
+        : t('sessionDetail.unknownMember');
+    },
+    [presence, t]
+  );
+
   // Doubles rows carry two ids a side; joining with & covers both formats.
-  const teamLabel = useCallback((ids: string[]): string => ids.map(nameOf).join(' & '), [nameOf]);
+  const teamLabel = useCallback(
+    (ids: string[]): string => ids.map(shortNameOf).join(' & '),
+    [shortNameOf]
+  );
 
   const isDoubles = (sess?.formats_allowed?.[0] ?? 'singles') !== 'singles';
 
@@ -963,7 +985,7 @@ export const SessionDetail: React.FC = () => {
             <View
               style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
-              {isDraftSheet && (
+              {isDraftSheet && isOrganizer && (
                 <View style={[styles.draftBanner, { borderColor: colors.border }]}>
                   <Ionicons name="eye-off-outline" size={16} color={colors.textMuted} />
                   <Text size="xs" color={colors.textMuted} style={styles.draftBannerText}>
@@ -996,9 +1018,21 @@ export const SessionDetail: React.FC = () => {
                       <View style={styles.vsRow}>
                         <Text
                           size="base"
-                          weight={m.winner_team === 'a' ? 'bold' : 'regular'}
+                          weight={
+                            m.winner_team === 'a'
+                              ? 'bold'
+                              : !isScored(m) && userId && m.team_a_user_ids.includes(userId)
+                                ? 'semibold'
+                                : 'regular'
+                          }
                           color={
-                            isScored(m) && m.winner_team !== 'a' ? colors.textMuted : colors.text
+                            isScored(m)
+                              ? m.winner_team !== 'a'
+                                ? colors.textMuted
+                                : colors.text
+                              : userId && m.team_a_user_ids.includes(userId)
+                                ? colors.primary
+                                : colors.text
                           }
                           numberOfLines={1}
                           style={styles.vsName}
@@ -1012,9 +1046,21 @@ export const SessionDetail: React.FC = () => {
                         </Text>
                         <Text
                           size="base"
-                          weight={m.winner_team === 'b' ? 'bold' : 'regular'}
+                          weight={
+                            m.winner_team === 'b'
+                              ? 'bold'
+                              : !isScored(m) && userId && m.team_b_user_ids.includes(userId)
+                                ? 'semibold'
+                                : 'regular'
+                          }
                           color={
-                            isScored(m) && m.winner_team !== 'b' ? colors.textMuted : colors.text
+                            isScored(m)
+                              ? m.winner_team !== 'b'
+                                ? colors.textMuted
+                                : colors.text
+                              : userId && m.team_b_user_ids.includes(userId)
+                                ? colors.primary
+                                : colors.text
                           }
                           numberOfLines={1}
                           style={styles.vsName}
