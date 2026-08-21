@@ -585,7 +585,7 @@ const EligibilityStep: React.FC<{
             {errors.ratingRange}
           </Text>
         )}
-        <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+        <Text size="xs" color={colors.textMuted} style={styles.sectionHint}>
           {t('leagueCreation.fields.ratingGateHint' as TranslationKey)}
         </Text>
       </>
@@ -646,18 +646,22 @@ const EligibilityStep: React.FC<{
       <FieldLabel colors={colors}>
         {t('leagueCreation.fields.schedulingTitle' as TranslationKey)}
       </FieldLabel>
-      {SCHEDULING_MODES.map(mode => (
-        <OptionCard
-          key={mode}
-          icon={SCHEDULING_ICON[mode]}
-          title={t(`leagueCreation.fields.scheduling.${mode}.title` as TranslationKey)}
-          description={t(`leagueCreation.fields.scheduling.${mode}.description` as TranslationKey)}
-          selected={scheduling === mode}
-          onPress={() => setScheduling(mode)}
-          colors={colors}
-          testID={`league-scheduling-${mode}`}
-        />
-      ))}
+      <View style={styles.optionsColumn}>
+        {SCHEDULING_MODES.map(mode => (
+          <OptionCard
+            key={mode}
+            icon={SCHEDULING_ICON[mode]}
+            title={t(`leagueCreation.fields.scheduling.${mode}.title` as TranslationKey)}
+            description={t(
+              `leagueCreation.fields.scheduling.${mode}.description` as TranslationKey
+            )}
+            selected={scheduling === mode}
+            onPress={() => setScheduling(mode)}
+            colors={colors}
+            testID={`league-scheduling-${mode}`}
+          />
+        ))}
+      </View>
     </View>
 
     {/* The scoring formula: a base on the result, plus optional bonuses per set
@@ -707,46 +711,50 @@ const EligibilityStep: React.FC<{
       <FieldLabel colors={colors}>
         {t('leagueCreation.fields.bonusTitle' as TranslationKey)}
       </FieldLabel>
-      {BONUS_FIELDS.map(field => {
-        const on = bonusOn[field];
-        return (
-          <View key={field} style={styles.bonusGroup}>
-            <OptionCard
-              icon={BONUS_ICON[field]}
-              title={t(`leagueCreation.fields.bonus.${field}.title` as TranslationKey)}
-              description={t(`leagueCreation.fields.bonus.${field}.description` as TranslationKey)}
-              selected={on}
-              onPress={() => onToggleBonus(field)}
-              colors={colors}
-              testID={`league-bonus-${field}`}
-            />
-            {on && (
-              <View style={styles.bonusField}>
-                <Text size="xs" color={colors.textMuted}>
-                  {t(`leagueCreation.fields.bonus.${field}.label` as TranslationKey)}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    styles.bonusInput,
-                    {
-                      backgroundColor: colors.inputBackground,
-                      borderColor: errors.bonuses ? colors.error : colors.inputBorder,
-                      color: colors.text,
-                    },
-                  ]}
-                  value={points[field]}
-                  onChangeText={v => setPoints({ ...points, [field]: v })}
-                  keyboardType="number-pad"
-                  maxLength={3}
-                  returnKeyType="done"
-                  testID={`league-points-${field}`}
-                />
-              </View>
-            )}
-          </View>
-        );
-      })}
+      <View style={styles.optionsColumn}>
+        {BONUS_FIELDS.map(field => {
+          const on = bonusOn[field];
+          return (
+            <View key={field}>
+              <OptionCard
+                icon={BONUS_ICON[field]}
+                title={t(`leagueCreation.fields.bonus.${field}.title` as TranslationKey)}
+                description={t(
+                  `leagueCreation.fields.bonus.${field}.description` as TranslationKey
+                )}
+                selected={on}
+                onPress={() => onToggleBonus(field)}
+                colors={colors}
+                testID={`league-bonus-${field}`}
+              />
+              {on && (
+                <View style={styles.bonusField}>
+                  <Text size="xs" color={colors.textMuted}>
+                    {t(`leagueCreation.fields.bonus.${field}.label` as TranslationKey)}
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      styles.bonusInput,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: errors.bonuses ? colors.error : colors.inputBorder,
+                        color: colors.text,
+                      },
+                    ]}
+                    value={points[field]}
+                    onChangeText={v => setPoints({ ...points, [field]: v })}
+                    keyboardType="number-pad"
+                    maxLength={3}
+                    returnKeyType="done"
+                    testID={`league-points-${field}`}
+                  />
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
       {errors.bonuses && (
         <Text size="xs" color={colors.error} style={styles.errorText}>
           {errors.bonuses}
@@ -1154,6 +1162,13 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
     name,
     onClose,
     onSuccess,
+    // points and scheduling are read straight out of the closure. points only
+    // ever worked by accident: validateStep lists it, so a points edit
+    // recreated validateStep and with it this callback. scheduling had no such
+    // proxy, so changing only the scheduling mode left a stale value here and
+    // the save went out as an empty patch.
+    points,
+    scheduling,
     selectedSport,
     t,
     updateLeagueAsync,
@@ -1363,8 +1378,10 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacingPixels[1],
   },
-  bonusGroup: {
-    marginBottom: spacingPixels[2],
+  /** A hint that closes a section rather than a field: it needs the gap below
+   *  that a fieldGroup would otherwise have given it. */
+  sectionHint: {
+    marginBottom: spacingPixels[5],
   },
   bonusField: {
     gap: spacingPixels[1],
