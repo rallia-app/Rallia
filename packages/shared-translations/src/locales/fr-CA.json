@@ -727,6 +727,8 @@
     "deleteAccountFinalTitle": "Êtes-vous absolument certain ?",
     "deleteAccountFinalMessage": "Toutes vos données seront définitivement supprimées. Vous ne pourrez pas récupérer votre compte.",
     "deleteAccountSuccess": "Votre compte a été supprimé.",
+    "deleteAccountBlockedTitle": "Compte encore lié à des événements",
+    "deleteAccountBlockedMessage": "Votre compte est lié à des tournois ou des ligues (inscriptions, résultats ou paiements). Retirez-vous d'abord des événements en cours, puis écrivez-nous à contact@rallia.ca et nous finaliserons la suppression pour vous.",
     "contactSupport": "Contacter le support",
     "appInfo": "Info de l'app",
     "version": "Version",

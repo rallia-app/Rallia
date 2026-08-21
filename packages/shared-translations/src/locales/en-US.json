@@ -727,6 +727,8 @@
     "deleteAccountFinalTitle": "Are you absolutely sure?",
     "deleteAccountFinalMessage": "All your data will be permanently removed. You will not be able to recover your account.",
     "deleteAccountSuccess": "Your account has been deleted.",
+    "deleteAccountBlockedTitle": "Account still linked to events",
+    "deleteAccountBlockedMessage": "Your account is linked to tournament or league records (registrations, results or payments). Withdraw from any active events first, then write to contact@rallia.ca and we'll finish the deletion for you.",
     "contactSupport": "Contact Support",
     "appInfo": "App Info",
     "version": "Version",

@@ -10157,6 +10157,7 @@ export type Database = {
         Args: { p_match_result_id: string; p_player_id: string }
         Returns: boolean
       }
+      account_deletion_blockers: { Args: { p_user_id: string }; Returns: Json }
       admin_certify_network: {
         Args: {
           p_is_certified: boolean
