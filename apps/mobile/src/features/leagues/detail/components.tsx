@@ -71,6 +71,8 @@ export type LeagueRulesSummary = {
   pointWin?: number;
   pointLoss?: number;
   pointBye?: number;
+  pointPerSetWon?: number;
+  pointPerGameWon?: number;
   gamesPerPlayer?: number;
 };
 

@@ -49,7 +49,15 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import { lightHaptic, successHaptic, warningHaptic, getLeagueLogoUrl } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  successHaptic,
+  warningHaptic,
+  getLeagueLogoUrl,
+  parseScore,
+  matchPoints,
+  type RankingRules,
+} from '@rallia/shared-utils';
 import {
   useTheme,
   useCreateLeague,
@@ -100,15 +108,89 @@ export interface LeagueEditData {
 }
 
 /**
- * The three point values worth an organizer's attention. The rules jsonb holds
- * six more (draw, no-show, retirement and walkover variants); those keep the
- * sport defaults until someone asks for them.
+ * The base of the formula: what a result is worth on its own. The rules jsonb
+ * holds six more (draw, no-show, retirement and walkover variants); those keep
+ * the sport defaults until someone asks for them.
  */
 const POINT_FIELDS = ['pointWin', 'pointLoss', 'pointBye'] as const;
-type PointsForm = Record<(typeof POINT_FIELDS)[number], string>;
+
+/**
+ * The optional half: points per set and per game actually won, added on top of
+ * the result. 0 is off, which is how every league starts.
+ */
+const BONUS_FIELDS = ['pointPerSetWon', 'pointPerGameWon'] as const;
+
+const ALL_POINT_FIELDS = [...POINT_FIELDS, ...BONUS_FIELDS] as const;
+type PointField = (typeof ALL_POINT_FIELDS)[number];
+type PointsForm = Record<PointField, string>;
+
+const BONUS_ICON: Record<(typeof BONUS_FIELDS)[number], keyof typeof Ionicons.glyphMap> = {
+  pointPerSetWon: 'layers-outline',
+  pointPerGameWon: 'grid-outline',
+};
 
 /** Mirrors lt_league_default_rules, which seeds these at league_create. */
-const DEFAULT_POINTS: PointsForm = { pointWin: '10', pointLoss: '1', pointBye: '1' };
+const DEFAULT_POINTS: PointsForm = {
+  pointWin: '10',
+  pointLoss: '1',
+  pointBye: '1',
+  pointPerSetWon: '0',
+  pointPerGameWon: '0',
+};
+
+type BonusField = (typeof BONUS_FIELDS)[number];
+type BonusToggles = Record<BonusField, boolean>;
+
+/** The seed a bonus takes when switched on, so the toggle means something. */
+const BONUS_SEED: Record<BonusField, string> = {
+  pointPerSetWon: '3',
+  pointPerGameWon: '1',
+};
+
+/**
+ * Which bonuses a saved formula has on. A bonus is on when it pays something;
+ * the toggle then lives in its own state, so clearing the field to retype a
+ * value cannot collapse the row while the organizer is still in it.
+ */
+function togglesFromPoints(points: PointsForm): BonusToggles {
+  return {
+    pointPerSetWon: Number(points.pointPerSetWon.trim()) > 0,
+    pointPerGameWon: Number(points.pointPerGameWon.trim()) > 0,
+  };
+}
+
+/** The score the worked example runs on: a routine straight-sets win. */
+const EXAMPLE_SCORE = '6-4 6-2';
+
+/**
+ * What the current formula pays for one EXAMPLE_SCORE, both sides. Computed
+ * through the same reference implementation the SQL recalc mirrors, so the
+ * preview cannot drift from the standings. Null while any field is mid-edit.
+ */
+function formulaExample(points: PointsForm): { win: number; loss: number } | null {
+  const read = (k: PointField): number => Number(points[k].trim());
+  if (ALL_POINT_FIELDS.some(k => points[k].trim() === '' || !Number.isFinite(read(k)))) return null;
+  // Only the `completed` branch is exercised, so the outcome variants this
+  // form does not expose can be anything.
+  const rules: RankingRules = {
+    pointWin: read('pointWin'),
+    pointLoss: read('pointLoss'),
+    pointBye: read('pointBye'),
+    pointDraw: 0,
+    pointNoShow: 0,
+    pointRetirementWinner: 0,
+    pointRetirementLoser: 0,
+    pointWalkoverWinner: 0,
+    pointWalkoverLoser: 0,
+    pointPerSetWon: read('pointPerSetWon'),
+    pointPerGameWon: read('pointPerGameWon'),
+  };
+  const { aSets, bSets, aGames, bGames } = parseScore(EXAMPLE_SCORE);
+  return {
+    win: matchPoints(rules, 'completed', true, { sets: aSets, games: aGames }),
+    loss: matchPoints(rules, 'completed', false, { sets: bSets, games: bGames }),
+  };
+}
 
 /**
  * The walkover/retirement variants the form does NOT show, with their seeded
@@ -129,9 +211,15 @@ const LOSS_VARIANTS: VariantKey[] = ['pointRetirementLoser', 'pointWalkoverLoser
 
 function pointsFromRules(rules: Record<string, unknown> | null | undefined): PointsForm {
   if (!rules) return { ...DEFAULT_POINTS };
-  const read = (k: (typeof POINT_FIELDS)[number]): string =>
+  const read = (k: PointField): string =>
     typeof rules[k] === 'number' ? String(rules[k]) : DEFAULT_POINTS[k];
-  return { pointWin: read('pointWin'), pointLoss: read('pointLoss'), pointBye: read('pointBye') };
+  return {
+    pointWin: read('pointWin'),
+    pointLoss: read('pointLoss'),
+    pointBye: read('pointBye'),
+    pointPerSetWon: read('pointPerSetWon'),
+    pointPerGameWon: read('pointPerGameWon'),
+  };
 }
 
 export interface LeagueCreationWizardProps {
@@ -410,9 +498,13 @@ const EligibilityStep: React.FC<{
   setWaitlistEnabled: (v: boolean) => void;
   points: PointsForm;
   setPoints: (v: PointsForm) => void;
+  bonusOn: BonusToggles;
+  onToggleBonus: (field: BonusField) => void;
+  /** What the current formula pays for EXAMPLE_SCORE; null while mid-edit. */
+  example: { win: number; loss: number } | null;
   errors: Record<string, string | undefined>;
   colors: ThemeColors;
-  t: (k: TranslationKey) => string;
+  t: (k: TranslationKey, options?: Record<string, string | number | boolean>) => string;
 }> = ({
   minRating,
   setMinRating,
@@ -425,6 +517,9 @@ const EligibilityStep: React.FC<{
   setWaitlistEnabled,
   points,
   setPoints,
+  bonusOn,
+  onToggleBonus,
+  example,
   errors,
   colors,
   t,
@@ -524,8 +619,9 @@ const EligibilityStep: React.FC<{
       </View>
     )}
 
-    {/* Points system. Seasons snapshot these at creation, so an edit here only
-        reaches seasons created afterwards. */}
+    {/* The scoring formula: a base on the result, plus optional bonuses per set
+        and per game won. Seasons snapshot these at creation, so an edit here
+        only reaches seasons created afterwards. */}
     <View style={styles.fieldGroup}>
       <FieldLabel colors={colors}>
         {t('leagueCreation.fields.pointsTitle' as TranslationKey)}
@@ -562,6 +658,70 @@ const EligibilityStep: React.FC<{
       )}
       <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
         {t('leagueCreation.fields.pointsHint' as TranslationKey)}
+      </Text>
+    </View>
+
+    {/* The bonuses. Off by default: most leagues score the result alone. */}
+    <View style={styles.fieldGroup}>
+      <FieldLabel colors={colors}>
+        {t('leagueCreation.fields.bonusTitle' as TranslationKey)}
+      </FieldLabel>
+      {BONUS_FIELDS.map(field => {
+        const on = bonusOn[field];
+        return (
+          <View key={field} style={styles.bonusGroup}>
+            <OptionCard
+              icon={BONUS_ICON[field]}
+              title={t(`leagueCreation.fields.bonus.${field}.title` as TranslationKey)}
+              description={t(`leagueCreation.fields.bonus.${field}.description` as TranslationKey)}
+              selected={on}
+              onPress={() => onToggleBonus(field)}
+              colors={colors}
+              testID={`league-bonus-${field}`}
+            />
+            {on && (
+              <View style={styles.bonusField}>
+                <Text size="xs" color={colors.textMuted}>
+                  {t(`leagueCreation.fields.bonus.${field}.label` as TranslationKey)}
+                </Text>
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    styles.bonusInput,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      borderColor: errors.bonuses ? colors.error : colors.inputBorder,
+                      color: colors.text,
+                    },
+                  ]}
+                  value={points[field]}
+                  onChangeText={v => setPoints({ ...points, [field]: v })}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  returnKeyType="done"
+                  testID={`league-points-${field}`}
+                />
+              </View>
+            )}
+          </View>
+        );
+      })}
+      {errors.bonuses && (
+        <Text size="xs" color={colors.error} style={styles.errorText}>
+          {errors.bonuses}
+        </Text>
+      )}
+      {example && (
+        <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+          {t('leagueCreation.fields.formulaExample' as TranslationKey, {
+            score: EXAMPLE_SCORE,
+            win: String(example.win),
+            loss: String(example.loss),
+          })}
+        </Text>
+      )}
+      <Text size="xs" color={colors.textMuted} style={styles.fieldHint}>
+        {t('leagueCreation.fields.formulaForwardHint' as TranslationKey)}
       </Text>
     </View>
   </SheetScrollView>
@@ -628,6 +788,9 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
   );
   const [waitlistEnabled, setWaitlistEnabled] = useState(editLeague?.waitlistEnabled ?? false);
   const [points, setPoints] = useState<PointsForm>(() => pointsFromRules(editLeague?.defaultRules));
+  const [bonusOn, setBonusOn] = useState<BonusToggles>(() =>
+    togglesFromPoints(pointsFromRules(editLeague?.defaultRules))
+  );
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -720,10 +883,38 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
       ) {
         next.points = t('leagueCreation.validation.pointsInvalid' as TranslationKey);
       }
+      // The bonuses multiply a count of things won, so the server refuses a
+      // negative one. Same rule here, in the organizer's words.
+      if (
+        step === 3 &&
+        BONUS_FIELDS.some(f => {
+          const v = Number(points[f].trim());
+          return !Number.isInteger(v) || v < 0 || v > 100;
+        })
+      ) {
+        next.bonuses = t('leagueCreation.validation.bonusInvalid' as TranslationKey);
+      }
       setErrors(next);
       return Object.values(next).every(v => !v);
     },
     [name, minRating, maxRating, capacityInput, points, t]
+  );
+
+  // Switching a bonus off parks its value at 0, which is what "off" means to
+  // the recalc. Switching on seeds a value only when there is nothing to
+  // restore, so a bonus toggled off and back on keeps what it had.
+  const handleToggleBonus = useCallback(
+    (field: BonusField) => {
+      lightHaptic();
+      const next = !bonusOn[field];
+      const current = points[field].trim();
+      setBonusOn({ ...bonusOn, [field]: next });
+      setPoints({
+        ...points,
+        [field]: next ? (Number(current) > 0 ? points[field] : BONUS_SEED[field]) : '0',
+      });
+    },
+    [bonusOn, points]
   );
 
   const goNext = useCallback(() => {
@@ -787,7 +978,7 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
     // default_rules server-side, so an untouched key keeps whatever it had.
     const baseline = pointsFromRules(editLeague?.defaultRules);
     const changedPoints: Record<string, number> = {};
-    for (const field of POINT_FIELDS) {
+    for (const field of ALL_POINT_FIELDS) {
       if (points[field].trim() !== baseline[field]) {
         changedPoints[field] = Number(points[field].trim());
       }
@@ -1049,6 +1240,9 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
             setWaitlistEnabled={setWaitlistEnabled}
             points={points}
             setPoints={setPoints}
+            bonusOn={bonusOn}
+            onToggleBonus={handleToggleBonus}
+            example={formulaExample(points)}
             errors={errors}
             colors={colors}
             t={t}
@@ -1116,6 +1310,17 @@ const styles = StyleSheet.create({
   pointsField: {
     flex: 1,
     gap: spacingPixels[1],
+  },
+  bonusGroup: {
+    marginBottom: spacingPixels[2],
+  },
+  bonusField: {
+    gap: spacingPixels[1],
+    marginTop: spacingPixels[2],
+  },
+  bonusInput: {
+    alignSelf: 'flex-start',
+    minWidth: 96,
   },
   ratingScrollContent: {
     gap: spacingPixels[2],

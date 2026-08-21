@@ -1731,13 +1731,23 @@ export const LeagueDetail: React.FC = () => {
   // league defaults afterwards.
   const rules = readRules(openSeason?.rules ?? league.default_rules);
   const scoringLabel = rules.matchFormat ? MATCH_FORMAT_KEY[rules.matchFormat] : undefined;
+  // The formula, in one line: the result points, then whichever proportional
+  // bonuses the organizer turned on. A bonus of 0 is off and stays unsaid.
   const pointsLabel =
     rules.pointWin != null && rules.pointLoss != null
-      ? t('leagueDetail.overview.rulesPoints', {
-          win: String(rules.pointWin),
-          loss: String(rules.pointLoss),
-          bye: String(rules.pointBye ?? 0),
-        })
+      ? [
+          t('leagueDetail.overview.rulesPoints', {
+            win: String(rules.pointWin),
+            loss: String(rules.pointLoss),
+            bye: String(rules.pointBye ?? 0),
+          }),
+          ...((rules.pointPerSetWon ?? 0) > 0
+            ? [t('leagueDetail.overview.rulesBonusSet', { points: String(rules.pointPerSetWon) })]
+            : []),
+          ...((rules.pointPerGameWon ?? 0) > 0
+            ? [t('leagueDetail.overview.rulesBonusGame', { points: String(rules.pointPerGameWon) })]
+            : []),
+        ].join(' · ')
       : undefined;
 
   /** Organizer utilities, rendered as one quiet grouped list in the Overview. */

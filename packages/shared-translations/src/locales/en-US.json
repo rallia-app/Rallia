@@ -4505,7 +4505,9 @@
       "rulesTitle": "How it works",
       "rulesScoring": "Scoring format",
       "rulesPoints": "Win {win} · Loss {loss} · Bye {bye}",
-      "rulesPointsHint": "Standings points"
+      "rulesPointsHint": "Standings points",
+      "rulesBonusSet": "+{points} per set won",
+      "rulesBonusGame": "+{points} per game won"
     },
     "dashboard": {
       "organizedBy": "Organized by {name}",
@@ -5182,20 +5184,36 @@
       "memberCapacityHint": "How many players can hold a spot, including you. Leave empty for no limit.",
       "waitlistTitle": "Waitlist",
       "waitlistDescription": "When the league is full, new joiners line up and move in automatically when a spot opens.",
-      "pointsTitle": "Points system",
+      "pointsTitle": "Points per result",
       "points": {
         "pointWin": "Win",
         "pointLoss": "Loss",
         "pointBye": "Bye"
       },
-      "pointsHint": "What each result is worth in the standings. Seasons keep the values they were created with."
+      "pointsHint": "What each result is worth in the standings.",
+      "bonusTitle": "Bonuses",
+      "bonus": {
+        "pointPerSetWon": {
+          "title": "Sets won",
+          "description": "Every set a player takes adds points, on top of the result.",
+          "label": "Points per set"
+        },
+        "pointPerGameWon": {
+          "title": "Games won",
+          "description": "Every game inside a set adds points too, so a tight loss is worth more than a blowout.",
+          "label": "Points per game"
+        }
+      },
+      "formulaExample": "With this formula, a {score} win is worth {win} points and the loss {loss}.",
+      "formulaForwardHint": "Seasons keep the formula they were created with. A change here applies to the seasons you create next."
     },
     "validation": {
       "nameRequired": "League name is required",
       "nameTooLong": "Name must be 100 characters or fewer",
       "ratingRangeInvalid": "Maximum rating must be at or above the minimum",
       "capacityInvalid": "Enter a number of 1 or more",
-      "pointsInvalid": "Points must be whole numbers between -100 and 100"
+      "pointsInvalid": "Points must be whole numbers between -100 and 100",
+      "bonusInvalid": "Bonuses must be whole numbers between 0 and 100"
     },
     "errors": {
       "sportMismatch": "Switch to a sport on your profile before creating a league",

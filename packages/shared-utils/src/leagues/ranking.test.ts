@@ -35,27 +35,43 @@ describe('outcomePoints', () => {
 });
 
 describe('matchPoints', () => {
-  it('is the result alone when the league does not count games', () => {
-    expect(matchPoints(RULES, 'completed', true, 12)).toBe(10);
+  it('is the result alone when the league counts neither sets nor games', () => {
+    expect(matchPoints(RULES, 'completed', true, { sets: 2, games: 12 })).toBe(10);
   });
 
   it('adds the games won on top of the result', () => {
     const rules: RankingRules = { ...RULES, pointPerGameWon: 1 };
     // 6-4 6-2: winner takes 12 games, loser 6.
-    expect(matchPoints(rules, 'completed', true, 12)).toBe(22);
-    expect(matchPoints(rules, 'completed', false, 6)).toBe(7);
+    expect(matchPoints(rules, 'completed', true, { games: 12 })).toBe(22);
+    expect(matchPoints(rules, 'completed', false, { games: 6 })).toBe(7);
+  });
+
+  it('adds the sets won on top of the result', () => {
+    const rules: RankingRules = { ...RULES, pointPerSetWon: 3 };
+    // 6-4 4-6 6-2: winner takes 2 sets, loser 1.
+    expect(matchPoints(rules, 'completed', true, { sets: 2 })).toBe(16);
+    expect(matchPoints(rules, 'completed', false, { sets: 1 })).toBe(4);
+  });
+
+  it('stacks both bonuses, which is the formula most leagues describe', () => {
+    const rules: RankingRules = { ...RULES, pointPerSetWon: 3, pointPerGameWon: 1 };
+    const { aSets, aGames } = parseScore('6-4 6-2');
+    expect(matchPoints(rules, 'completed', true, { sets: aSets, games: aGames })).toBe(28);
   });
 
   it('separates a blowout from a grind, which is the point of the setting', () => {
     const rules: RankingRules = { ...RULES, pointPerGameWon: 1 };
-    const blowout = matchPoints(rules, 'completed', true, parseScore('6-0 6-0').aGames);
-    const grind = matchPoints(rules, 'completed', true, parseScore('7-6 6-7 7-6').aGames);
-    expect(grind).toBeGreaterThan(blowout);
+    const blowout = parseScore('6-0 6-0');
+    const grind = parseScore('7-6 6-7 7-6');
+    expect(matchPoints(rules, 'completed', true, { games: grind.aGames })).toBeGreaterThan(
+      matchPoints(rules, 'completed', true, { games: blowout.aGames })
+    );
   });
 
-  it('gives a walkover winner nothing extra, since no game was played', () => {
-    const rules: RankingRules = { ...RULES, pointPerGameWon: 1 };
-    expect(matchPoints(rules, 'walkover', true, parseScore(null).aGames)).toBe(10);
+  it('gives a walkover winner nothing extra, since nothing was played', () => {
+    const rules: RankingRules = { ...RULES, pointPerSetWon: 3, pointPerGameWon: 1 };
+    const { aSets, aGames } = parseScore(null);
+    expect(matchPoints(rules, 'walkover', true, { sets: aSets, games: aGames })).toBe(10);
   });
 });
 

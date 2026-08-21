@@ -4505,7 +4505,9 @@
       "rulesTitle": "Comment ça marche",
       "rulesScoring": "Format de pointage",
       "rulesPoints": "Victoire {win} · Défaite {loss} · Bye {bye}",
-      "rulesPointsHint": "Points au classement"
+      "rulesPointsHint": "Points au classement",
+      "rulesBonusSet": "+{points} par set gagné",
+      "rulesBonusGame": "+{points} par jeu gagné"
     },
     "dashboard": {
       "organizedBy": "Organisée par {name}",
@@ -5180,13 +5182,28 @@
       "memberCapacity": "Limite de membres",
       "memberCapacityPlaceholder": "Illimité",
       "memberCapacityHint": "Nombre de joueurs qui peuvent avoir une place, toi compris. Laisse vide pour aucune limite.",
-      "pointsTitle": "Système de pointage",
+      "pointsTitle": "Points par résultat",
       "points": {
         "pointWin": "Victoire",
         "pointLoss": "Défaite",
         "pointBye": "Bye"
       },
-      "pointsHint": "Ce que chaque résultat vaut au classement. Les saisons gardent les valeurs qu'elles avaient à leur création.",
+      "pointsHint": "Ce que chaque résultat vaut au classement.",
+      "bonusTitle": "Bonus",
+      "bonus": {
+        "pointPerSetWon": {
+          "title": "Sets gagnés",
+          "description": "Chaque set remporté ajoute des points, en plus du résultat.",
+          "label": "Points par set"
+        },
+        "pointPerGameWon": {
+          "title": "Jeux gagnés",
+          "description": "Chaque jeu à l'intérieur d'un set ajoute aussi des points, alors perdre de justesse vaut plus que se faire blanchir.",
+          "label": "Points par jeu"
+        }
+      },
+      "formulaExample": "Avec cette formule, une victoire {score} vaut {win} points et la défaite {loss}.",
+      "formulaForwardHint": "Les saisons gardent la formule qu'elles avaient à leur création. Un changement ici s'applique aux prochaines saisons.",
       "waitlistTitle": "Liste d'attente",
       "waitlistDescription": "Quand la ligue est pleine, les nouveaux se placent en file et entrent automatiquement dès qu'une place se libère."
     },
@@ -5195,7 +5212,8 @@
       "nameTooLong": "Le nom doit contenir 100 caractères ou moins",
       "ratingRangeInvalid": "La cote maximale doit être égale ou supérieure à la minimale",
       "capacityInvalid": "Entre un nombre de 1 ou plus",
-      "pointsInvalid": "Les points doivent être des nombres entiers entre -100 et 100"
+      "pointsInvalid": "Les points doivent être des nombres entiers entre -100 et 100",
+      "bonusInvalid": "Les bonus doivent être des nombres entiers entre 0 et 100"
     },
     "errors": {
       "sportMismatch": "Active ce sport sur ton profil avant de créer une ligue",
