@@ -11,10 +11,10 @@
  * Three variants: 'champion' (the viewer won their Série 1 draw), 'played'
  * (their draw's winner is named), 'generic' (they sat Série 1 out).
  *
- * The featured card and the primary CTA both push TournamentDetail on top
- * (back returns here); the ghost CTA dismisses and lands on the Compete hub,
- * switching the global sport to tennis first since that screen lists by
- * selected sport.
+ * Every exit dismisses the modal first: the featured card and the primary
+ * CTA land on TournamentDetail, the ghost CTA on the Compete hub, switching
+ * the global sport to tennis first since that screen lists by selected
+ * sport.
  */
 import React, { useCallback, useEffect, useRef } from 'react';
 import {
@@ -109,10 +109,13 @@ export function Serie2AnnouncementScreen() {
     ctaRef.current = true;
     serie2AnnouncementDrawPressed(featured.id);
     await switchToTennis();
-    navigation.navigate('TournamentDetail', {
-      tournamentId: featured.id,
-      tournamentName: featured.name,
-    });
+    navigation.goBack();
+    if (navigationRef.isReady()) {
+      navigationRef.navigate('TournamentDetail', {
+        tournamentId: featured.id,
+        tournamentName: featured.name,
+      });
+    }
   }, [featured, switchToTennis, navigation]);
 
   const handleSeeAll = useCallback(async () => {
