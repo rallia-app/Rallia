@@ -27,7 +27,7 @@ import {
   UserX,
   XCircle,
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { use, useCallback, useEffect, useState } from 'react';
 
 interface BookingDetail {
@@ -84,6 +84,7 @@ type BookingStatus =
 
 export default function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: bookingId } = use(params);
+  const locale = useLocale();
   const t = useTranslations('bookings');
 
   const [loading, setLoading] = useState(true);
@@ -363,7 +364,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t('detail.date')}</span>
               <span className="font-medium">
-                {new Date(booking.booking_date + 'T00:00:00').toLocaleDateString(undefined, {
+                {new Date(booking.booking_date + 'T00:00:00').toLocaleDateString(locale, {
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',

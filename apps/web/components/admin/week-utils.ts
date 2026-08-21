@@ -30,25 +30,25 @@ export function lastNDayStarts(n: number): string[] {
   });
 }
 
-export function formatWeekLabel(weekStart: string): string {
+export function formatWeekLabel(weekStart: string, locale: string): string {
   const start = new Date(`${weekStart}T00:00:00`);
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
-  const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const fmt = (d: Date) => d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
 /** Compact axis label for an ISO week start (the Monday, e.g. "May 5"). */
-export function shortWeekLabel(weekStart: string): string {
-  return new Date(`${weekStart}T00:00:00`).toLocaleDateString(undefined, {
+export function shortWeekLabel(weekStart: string, locale: string): string {
+  return new Date(`${weekStart}T00:00:00`).toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
   });
 }
 
 /** Compact axis label for a single ISO day (e.g. "May 5"). */
-export function shortDayLabel(dayStart: string): string {
-  return new Date(`${dayStart}T00:00:00`).toLocaleDateString(undefined, {
+export function shortDayLabel(dayStart: string, locale: string): string {
+  return new Date(`${dayStart}T00:00:00`).toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
   });

@@ -40,7 +40,7 @@ import {
   Trash2,
   User,
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface Facility {
@@ -198,11 +198,12 @@ function SlotPopover({
   onViewBooking: () => void;
   onDeleteBlock: () => void;
 }) {
+  const locale = useLocale();
   const t = useTranslations('availability.calendar');
   const tStatus = useTranslations('availability.calendar.legend');
   const tBlocks = useTranslations('blocks');
 
-  const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString(undefined, {
+  const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString(locale, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -323,6 +324,7 @@ function SlotPopover({
 type ViewMode = 'day' | 'week' | 'month';
 
 export default function AvailabilityCalendarPage() {
+  const locale = useLocale();
   const t = useTranslations('availability');
   const tDays = useTranslations('availability.days');
   const tCourtStatus = useTranslations('courts.status');
@@ -1210,7 +1212,7 @@ export default function AvailabilityCalendarPage() {
         <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle>
-              {selectedDate.toLocaleDateString(undefined, {
+              {selectedDate.toLocaleDateString(locale, {
                 weekday: 'long',
                 month: 'long',
                 day: 'numeric',
@@ -1531,7 +1533,7 @@ export default function AvailabilityCalendarPage() {
           <Card className="overflow-hidden">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl">
-                {selectedDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                {selectedDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
               </CardTitle>
               <CardDescription>{t('calendar.monthView.clickToViewDay')}</CardDescription>
             </CardHeader>
@@ -1694,7 +1696,7 @@ export default function AvailabilityCalendarPage() {
                             <div className="space-y-3">
                               <div className="flex items-center justify-between border-b pb-2">
                                 <span className="font-semibold">
-                                  {date.toLocaleDateString(undefined, {
+                                  {date.toLocaleDateString(locale, {
                                     weekday: 'short',
                                     month: 'short',
                                     day: 'numeric',
@@ -1805,7 +1807,7 @@ export default function AvailabilityCalendarPage() {
         <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle>
-              {weekDates[0].toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+              {weekDates[0].toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
             </CardTitle>
             <CardDescription>
               {weekDates[0].toLocaleDateString()} - {weekDates[6].toLocaleDateString()}
@@ -1852,7 +1854,7 @@ export default function AvailabilityCalendarPage() {
                                   : 'text-muted-foreground'
                             )}
                           >
-                            {date.toLocaleDateString(undefined, {
+                            {date.toLocaleDateString(locale, {
                               month: 'short',
                               day: 'numeric',
                             })}

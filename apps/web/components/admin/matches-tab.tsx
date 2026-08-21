@@ -1,7 +1,7 @@
 'use client';
 
 import { useMatchQualityAnalytics, type MatchQualityPoint } from '@rallia/shared-hooks';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
 import {
@@ -86,6 +86,7 @@ export function MatchesTab() {
 // ---------------------------------------------------------------------------
 
 function LifecycleFunnelCard() {
+  const locale = useLocale();
   const t = useTranslations('admin.analytics');
   const [days, setDays] = useState<DaysWindow>(30);
   const [segment, setSegment] = useState<Segment>('all');
@@ -168,7 +169,9 @@ function LifecycleFunnelCard() {
           trendBuckets.some(b => b.totals.created > 0) ? (
             <TrendFunnels
               buckets={trendBuckets}
-              labelOf={funnelView === 'daily' ? shortDayLabel : shortWeekLabel}
+              labelOf={s =>
+                funnelView === 'daily' ? shortDayLabel(s, locale) : shortWeekLabel(s, locale)
+              }
               progressNote={t(
                 funnelView === 'daily'
                   ? 'matchesTab.dailyInProgress'
@@ -194,6 +197,7 @@ function LifecycleFunnelCard() {
 // ---------------------------------------------------------------------------
 
 function FeedbackCard() {
+  const locale = useLocale();
   const t = useTranslations('admin.analytics');
   const [days, setDays] = useState<DaysWindow>(30);
   const [view, setView] = useState<FunnelView>('weekly');
@@ -230,7 +234,8 @@ function FeedbackCard() {
     { label: t('matchesTab.stepDone'), count: totals.feedbackDone },
   ] as const;
 
-  const labelOf = view === 'daily' ? shortDayLabel : shortWeekLabel;
+  const labelOf = (s: string) =>
+    view === 'daily' ? shortDayLabel(s, locale) : shortWeekLabel(s, locale);
   const trendPoints: TrendPoint[] = trendBuckets.map(({ start, totals: bt }) => {
     const e = bt.feedbackExpected;
     return {

@@ -16,19 +16,24 @@ import type {
   MessageWithSender,
 } from './chatTypes';
 
-// Formats a Postgres TIME string ("HH:MM:SS") into a locale-aware time string ("9:00 AM")
+// This title is persisted and read by every participant, so it is pinned to
+// en-US rather than the writing device's locale, matching the English format
+// labels below. Clients localize via getConversationDisplayName instead.
+const STORED_TITLE_LOCALE = 'en-US';
+
+// Formats a Postgres TIME string ("HH:MM:SS") into a time string ("9:00 AM")
 function formatMatchTime(pgTime: string): string {
   const [hours, minutes] = pgTime.split(':').map(Number);
   const d = new Date();
   d.setHours(hours, minutes, 0, 0);
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return d.toLocaleTimeString(STORED_TITLE_LOCALE, { hour: 'numeric', minute: '2-digit' });
 }
 
 // Formats a Postgres DATE ("YYYY-MM-DD") as "MMM d" in local time; building the
 // Date from parts avoids the UTC-midnight parse that shifts the day in -UTC zones.
 function formatMatchDate(pgDate: string): string {
   const [year, month, day] = pgDate.split('T')[0].split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+  return new Date(year, month - 1, day).toLocaleDateString(STORED_TITLE_LOCALE, {
     month: 'short',
     day: 'numeric',
   });

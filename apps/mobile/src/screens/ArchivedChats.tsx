@@ -28,7 +28,7 @@ const ArchivedChats = () => {
   const { colors, isDark } = useThemeStyles();
   const navigation = useAppNavigation();
   const { session } = useAuth();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const playerId = session?.user?.id;
 
   // Track selected conversation for reference
@@ -61,10 +61,10 @@ const ArchivedChats = () => {
     (conversation: ConversationPreview) => {
       navigation.navigate('ChatConversation', {
         conversationId: conversation.id,
-        title: getConversationDisplayName(conversation, t as (key: string) => string),
+        title: getConversationDisplayName(conversation, t as (key: string) => string, locale),
       });
     },
-    [navigation, t]
+    [navigation, t, locale]
   );
 
   const handleConversationLongPress = useCallback(

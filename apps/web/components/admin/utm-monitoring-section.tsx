@@ -7,7 +7,7 @@ import {
   type UtmLandingsResponse,
   type UtmSignupStat,
 } from '@rallia/shared-hooks';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
 
 import { FunnelStrip } from '@/components/admin/funnel-strip';
@@ -70,6 +70,7 @@ export function UtmMonitoringSection({
   onLastFetchedAt,
   refreshSignal = 0,
 }: UtmMonitoringSectionProps) {
+  const locale = useLocale();
   const t = useTranslations('admin.analytics');
   const refetchInterval = autoRefresh ? 60_000 : null;
   const days = WINDOW_TO_DAYS[window];
@@ -212,7 +213,7 @@ export function UtmMonitoringSection({
               data={chartData}
               series={chartSeries}
               height={340}
-              formatDay={day => formatDayLabel(day)}
+              formatDay={day => formatDayLabel(day, locale)}
             />
           ) : (
             <div className="h-[340px] flex items-center justify-center">
@@ -393,10 +394,10 @@ function useChartSeries(landings: UtmLandingsResponse | null, limit: number): Ch
   }, [landings, limit]);
 }
 
-function formatDayLabel(day: string): string {
+function formatDayLabel(day: string, locale: string): string {
   try {
     const d = new Date(day);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   } catch {
     return day;
   }

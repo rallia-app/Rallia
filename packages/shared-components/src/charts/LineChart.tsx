@@ -124,6 +124,9 @@ export interface LineChartProps {
   /** Whether to show the legend */
   showLegend?: boolean;
 
+  /** Current locale for x-axis date labels */
+  locale?: string;
+
   /** Format function for x-axis labels */
   formatXLabel?: (value: string) => string;
 
@@ -167,6 +170,7 @@ export const LineChart: React.FC<LineChartProps> = ({
   animated = true,
   noOfSections = 4,
   showLegend = false,
+  locale = 'en-US',
   formatXLabel,
   onDataPointPress,
 }) => {
@@ -205,7 +209,7 @@ export const LineChart: React.FC<LineChartProps> = ({
       value: item.value,
       label:
         index % labelInterval === 0
-          ? item.label || formatXLabel?.(item.date || '') || formatDateLabel(item.date)
+          ? item.label || formatXLabel?.(item.date || '') || formatDateLabel(item.date, locale)
           : '',
       labelTextStyle: {
         color: colors.textSecondary,
@@ -218,7 +222,7 @@ export const LineChart: React.FC<LineChartProps> = ({
         onDataPointPress?.(item, index);
       },
     }));
-  }, [data, formatXLabel, showDataPoints, onDataPointPress, colors.textSecondary]);
+  }, [data, formatXLabel, locale, showDataPoints, onDataPointPress, colors.textSecondary]);
 
   // For multiple series, we need to render multiple lines
   // gifted-charts supports this with data + data2 props
@@ -230,7 +234,7 @@ export const LineChart: React.FC<LineChartProps> = ({
     const primary =
       series[0]?.data.map(item => ({
         value: item.value,
-        label: item.label || formatXLabel?.(item.date || '') || formatDateLabel(item.date),
+        label: item.label || formatXLabel?.(item.date || '') || formatDateLabel(item.date, locale),
       })) || [];
 
     const secondary = series[1]?.data.map(item => ({
@@ -358,11 +362,11 @@ export const LineChart: React.FC<LineChartProps> = ({
 };
 
 // Format date string to short label
-function formatDateLabel(date?: string): string {
+function formatDateLabel(date?: string, locale: string = 'en-US'): string {
   if (!date) return '';
   try {
     const d = new Date(date);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   } catch {
     return date;
   }

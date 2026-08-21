@@ -21,7 +21,7 @@ import { BackButton } from '@/components/back-button';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { CalendarCheck, Loader2, Repeat } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -44,6 +44,7 @@ interface TimeSlot {
 }
 
 export default function NewBookingPage() {
+  const locale = useLocale();
   const t = useTranslations('bookings');
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -267,7 +268,7 @@ export default function NewBookingPage() {
 
   const formatDateDisplay = (dateStr: string): string => {
     const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString(undefined, {
+    return date.toLocaleDateString(locale, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',

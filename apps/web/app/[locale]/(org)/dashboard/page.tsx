@@ -16,7 +16,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 
 // Helper to get today's date in YYYY-MM-DD format
 function getTodayDateString(): string {
@@ -54,6 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function DashboardPage() {
   const t = await getTranslations('dashboard');
+  const locale = await getLocale();
   const supabase = await createClient();
 
   // Get authenticated user (auth check is done in layout)
@@ -360,7 +361,7 @@ export default async function DashboardPage() {
               <div>
                 <CardTitle className="text-lg">{t('todaySchedule.title')}</CardTitle>
                 <CardDescription>
-                  {new Date().toLocaleDateString(undefined, {
+                  {new Date().toLocaleDateString(locale, {
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',
