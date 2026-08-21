@@ -4718,6 +4718,13 @@
       "validation": {
         "nameRequired": "Session name is required",
         "future": "Pick a date and time in the future"
+      },
+      "window": {
+        "label": "Play window",
+        "description": "How long members have to play their games.",
+        "days": "{count} days",
+        "hint": "Members arrange their own games inside the window. It cannot outlast the gap to the next session.",
+        "range": "{from} to {to}"
       }
     },
     "values": {
@@ -5194,6 +5201,17 @@
       "memberCapacityHint": "How many players can hold a spot, including you. Leave empty for no limit.",
       "waitlistTitle": "Waitlist",
       "waitlistDescription": "When the league is full, new joiners line up and move in automatically when a spot opens.",
+      "schedulingTitle": "How sessions run",
+      "scheduling": {
+        "fixed": {
+          "title": "Fixed evenings",
+          "description": "Every session is one date at one time. Everyone plays together."
+        },
+        "flex": {
+          "title": "Flexible window",
+          "description": "Every session is a stretch of days. Members arrange their own games inside it."
+        }
+      },
       "pointsTitle": "Points per result",
       "points": {
         "pointWin": "Win",

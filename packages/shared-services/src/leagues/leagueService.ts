@@ -813,6 +813,9 @@ export async function createLeagueSession(input: {
   capacity?: number;
   rounds?: number;
   pairingMode?: Enums<'pairing_mode'>;
+  /** Set to make this a FLEX session: members play anywhere between
+   *  `scheduledAt` and this instead of turning up for one evening. */
+  playWindowEndsAt?: string;
 }): Promise<Session> {
   const { data, error } = await supabase.rpc('session_create', {
     p_season_id: input.seasonId,
@@ -825,6 +828,7 @@ export async function createLeagueSession(input: {
     p_capacity: input.capacity ?? null,
     p_rounds: input.rounds ?? 1,
     p_pairing_mode: input.pairingMode ?? 'by_rank',
+    p_play_window_ends_at: input.playWindowEndsAt ?? null,
   });
   if (error) throw new Error(error.message);
   return data as Session;
@@ -848,6 +852,9 @@ export async function createLeagueSessionSeries(input: {
   capacity?: number;
   rounds?: number;
   pairingMode?: Enums<'pairing_mode'>;
+  /** Makes every occurrence a FLEX session of this many days. The server caps
+   *  it at `repeatEveryDays` so two windows never claim the same days. */
+  windowDays?: number;
 }): Promise<Session[]> {
   const { data, error } = await supabase.rpc('session_create_series', {
     p_season_id: input.seasonId,
@@ -862,6 +869,7 @@ export async function createLeagueSessionSeries(input: {
     p_capacity: input.capacity ?? null,
     p_rounds: input.rounds ?? 1,
     p_pairing_mode: input.pairingMode ?? 'by_rank',
+    p_window_days: input.windowDays ?? null,
   });
   if (error) throw new Error(error.message);
   return (data ?? []) as Session[];

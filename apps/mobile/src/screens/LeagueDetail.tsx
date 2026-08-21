@@ -139,6 +139,7 @@ import {
   readRules,
   seasonRefundPolicyLine,
   seasonRefundZeroReason,
+  formatSessionWhen,
 } from '../features/leagues/detail/components';
 import type {
   ManageMemberRow,
@@ -1188,6 +1189,12 @@ export const LeagueDetail: React.FC = () => {
     [locale]
   );
 
+  const sessionWhen = useCallback(
+    (s: { scheduled_at: string; play_window_ends_at?: string | null }) =>
+      formatSessionWhen(s, locale, t),
+    [locale, t]
+  );
+
   const formatDateTime = useCallback(
     (isoOrDate: string | Date): string => {
       const d = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate;
@@ -1559,6 +1566,7 @@ export const LeagueDetail: React.FC = () => {
         seasonId: openSeason.id,
         leagueId,
         defaultRounds: seasonRules.gamesPerPlayer,
+        scheduling: seasonRules.sessionScheduling === 'flex' ? 'flex' : 'fixed',
       },
     });
   }, [openSeason, leagueId]);
@@ -2184,7 +2192,7 @@ export const LeagueDetail: React.FC = () => {
             isOrganizer={isOrganizer}
             openSeason={openSeason}
             seasonSessions={seasonSessions}
-            formatDateTime={formatDateTime}
+            formatSessionWhen={sessionWhen}
             sessionPill={sessionPill}
             handleOpenSession={handleOpenSession}
             handleOpenCreateSession={handleOpenCreateSession}

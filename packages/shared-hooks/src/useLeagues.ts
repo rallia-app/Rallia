@@ -622,6 +622,7 @@ export function useCreateSession(seasonId: string, options: MutationOptions<Sess
       capacity?: number;
       rounds?: number;
       pairingMode?: Enums<'pairing_mode'>;
+      playWindowEndsAt?: string;
     }) => createLeagueSession({ seasonId, ...input }),
     onSuccess: result => {
       qc.invalidateQueries({ queryKey: leagueKeys.sessions(seasonId) });
@@ -643,6 +644,7 @@ export function useCreateSessionSeries(seasonId: string, options: MutationOption
       capacity?: number;
       rounds?: number;
       pairingMode?: Enums<'pairing_mode'>;
+      windowDays?: number;
     }) => createLeagueSessionSeries({ seasonId, ...input }),
     onSuccess: result => {
       qc.invalidateQueries({ queryKey: leagueKeys.sessions(seasonId) });

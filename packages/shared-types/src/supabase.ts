@@ -8769,6 +8769,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
@@ -8798,6 +8799,7 @@ export type Database = {
           name: string
           odd_cardinality_mode?: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode?: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at?: string | null
           points_per_game?: number | null
           published_at?: string | null
           rounds?: number
@@ -8827,6 +8829,7 @@ export type Database = {
           name?: string
           odd_cardinality_mode?: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode?: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at?: string | null
           points_per_game?: number | null
           published_at?: string | null
           rounds?: number
@@ -12955,6 +12958,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
@@ -13905,6 +13909,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
@@ -13958,6 +13963,7 @@ export type Database = {
           p_facility_id?: string
           p_name: string
           p_pairing_mode?: Database["public"]["Enums"]["pairing_mode"]
+          p_play_window_ends_at?: string
           p_rounds?: number
           p_scheduled_at: string
           p_season_id: string
@@ -13981,6 +13987,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
@@ -14014,6 +14021,7 @@ export type Database = {
           p_season_id: string
           p_timezone?: string
           p_venue_name?: string
+          p_window_days?: number
         }
         Returns: {
           allow_guests: boolean
@@ -14032,6 +14040,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
@@ -14070,6 +14079,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
@@ -14112,6 +14122,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
@@ -14150,6 +14161,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
@@ -14225,6 +14237,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
@@ -14308,6 +14321,7 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number

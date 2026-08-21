@@ -4718,6 +4718,13 @@
       "validation": {
         "nameRequired": "Le nom de la séance est requis",
         "future": "Choisis une date et une heure à venir"
+      },
+      "window": {
+        "label": "Période de jeu",
+        "description": "Combien de temps les membres ont pour jouer leurs parties.",
+        "days": "{count} jours",
+        "hint": "Les membres organisent leurs parties dans la période. Elle ne peut pas dépasser l'écart jusqu'à la prochaine séance.",
+        "range": "Du {from} au {to}"
       }
     },
     "values": {
@@ -5192,6 +5199,17 @@
       "memberCapacity": "Limite de membres",
       "memberCapacityPlaceholder": "Illimité",
       "memberCapacityHint": "Nombre de joueurs qui peuvent avoir une place, toi compris. Laisse vide pour aucune limite.",
+      "schedulingTitle": "Comment se jouent les séances",
+      "scheduling": {
+        "fixed": {
+          "title": "Soirs fixes",
+          "description": "Chaque séance est une date à une heure précise. Tout le monde joue en même temps."
+        },
+        "flex": {
+          "title": "Période flexible",
+          "description": "Chaque séance est une plage de jours. Les membres organisent leurs parties dedans."
+        }
+      },
       "pointsTitle": "Points par résultat",
       "points": {
         "pointWin": "Victoire",

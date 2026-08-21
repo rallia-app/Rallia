@@ -74,12 +74,45 @@ export type LeagueRulesSummary = {
   pointPerSetWon?: number;
   pointPerGameWon?: number;
   gamesPerPlayer?: number;
+  sessionScheduling?: string;
 };
 
 export function readRules(value: unknown): LeagueRulesSummary {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as LeagueRulesSummary)
     : {};
+}
+
+/**
+ * When a session is played, in one line. A fixed session is an evening, so it
+ * reads as a date, a time and a length. A flex session is a window that can run
+ * for weeks, where the time of day means nothing, so it reads as a date range.
+ */
+export function formatSessionWhen(
+  session: {
+    scheduled_at: string;
+    play_window_ends_at?: string | null;
+    duration_minutes?: number | null;
+  },
+  locale: string,
+  t: (k: TranslationKey, options?: Record<string, string | number | boolean>) => string
+): string {
+  const start = new Date(session.scheduled_at);
+  if (!session.play_window_ends_at) {
+    const when = start.toLocaleString(locale, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    return session.duration_minutes ? `${when} · ${session.duration_minutes} min` : when;
+  }
+  const day = (d: Date): string => d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  return t('leagueDetail.sessions.window.range', {
+    from: day(start),
+    to: day(new Date(session.play_window_ends_at)),
+  });
 }
 
 export const LEAGUE_STATUS_KEY: Record<LeagueStatus, string> = {

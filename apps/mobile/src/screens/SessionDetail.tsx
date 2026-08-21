@@ -67,6 +67,7 @@ import { SheetDateField } from '#/components/SheetDateField';
 import { ConfirmationModal } from '#/components/ConfirmationModal';
 
 import { useTranslation, useScrollBottomInset, type TranslationKey } from '../hooks';
+import { formatSessionWhen } from '../features/leagues/detail/components';
 import { rpcErrorMessage } from '../utils/rpcErrorMessage';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
@@ -746,7 +747,7 @@ export const SessionDetail: React.FC = () => {
           <View style={styles.metaRow}>
             <Ionicons name="time-outline" size={16} color={colors.textMuted} />
             <Text size="sm" color={colors.textMuted}>
-              {formatDateTime(sess.scheduled_at)} · {sess.duration_minutes} min
+              {formatSessionWhen(sess, locale, t)}
             </Text>
           </View>
           {sess.venue_name ? (

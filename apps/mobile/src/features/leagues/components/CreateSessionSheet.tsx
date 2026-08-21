@@ -60,6 +60,15 @@ const REPEAT_OPTIONS = [
 type RepeatKey = (typeof REPEAT_OPTIONS)[number]['key'];
 const OCCURRENCE_OPTIONS = [4, 6, 8, 12] as const;
 
+/**
+ * How long a FLEX session stays open, in days. Only offered when the league
+ * runs flex; a fixed league's session is an evening and has no window. On a
+ * repeating series the choice is capped at the cadence, since two windows that
+ * overlap would have members owing games to both at once (the server refuses
+ * it outright with INVALID_PLAY_WINDOW).
+ */
+const WINDOW_DAY_OPTIONS = [3, 7, 14, 28] as const;
+
 export function CreateSessionActionSheet({ payload }: SheetProps<'create-session'>) {
   const seasonId = payload?.seasonId ?? '';
   const leagueId = payload?.leagueId ?? '';
@@ -74,6 +83,13 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
   // Opens on the season's own games-per-player, still overridable per session.
   const [rounds, setRounds] = useState<number>(payload?.defaultRounds ?? 1);
   const [repeat, setRepeat] = useState<RepeatKey>('once');
+  const isFlex = payload?.scheduling === 'flex';
+  const [windowDays, setWindowDays] = useState<number>(7);
+  const cadenceDays = REPEAT_OPTIONS.find(o => o.key === repeat)?.days ?? 0;
+  // A window can never outlast the gap to the next occurrence, so a tighter
+  // cadence pulls the selection down with it rather than leaving a chip
+  // selected that is no longer offered.
+  const effectiveWindowDays = cadenceDays > 0 ? Math.min(windowDays, cadenceDays) : windowDays;
   const [occurrences, setOccurrences] = useState<number>(6);
   const [scheduledAt, setScheduledAt] = useState<Date>(() => {
     const d = new Date();
@@ -180,9 +196,12 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
         capacity: resolvedCapacity,
         rounds,
         pairingMode,
+        windowDays: isFlex ? effectiveWindowDays : undefined,
       });
       return;
     }
+    const windowEnd = new Date(scheduledAt);
+    windowEnd.setDate(windowEnd.getDate() + effectiveWindowDays);
     createSession({
       name: trimmed,
       scheduledAt: scheduledAt.toISOString(),
@@ -190,6 +209,7 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
       capacity: resolvedCapacity,
       rounds,
       pairingMode,
+      playWindowEndsAt: isFlex ? windowEnd.toISOString() : undefined,
     });
   }, [
     name,
@@ -199,6 +219,8 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
     pairingMode,
     repeat,
     occurrences,
+    isFlex,
+    effectiveWindowDays,
     createSession,
     createSeries,
     toast,
@@ -350,6 +372,46 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
             </>
           )}
         </View>
+
+        {isFlex && (
+          <View style={styles.fieldGroup}>
+            <Text size="sm" weight="semibold" color={colors.text}>
+              {t('leagueDetail.sessions.window.label')}
+            </Text>
+            <Text size="xs" color={colors.textMuted}>
+              {t('leagueDetail.sessions.window.description')}
+            </Text>
+            <View style={styles.chipRow}>
+              {WINDOW_DAY_OPTIONS.filter(d => cadenceDays === 0 || d <= cadenceDays).map(d => (
+                <TouchableOpacity
+                  key={d}
+                  onPress={() => {
+                    lightHaptic();
+                    setWindowDays(d);
+                  }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: effectiveWindowDays === d }}
+                  testID={`session-window-${d}`}
+                  style={[
+                    styles.chip,
+                    { borderColor: effectiveWindowDays === d ? colors.primary : colors.border },
+                  ]}
+                >
+                  <Text
+                    size="sm"
+                    weight="semibold"
+                    color={effectiveWindowDays === d ? colors.primary : colors.text}
+                  >
+                    {t('leagueDetail.sessions.window.days', { count: String(d) })}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text size="xs" color={colors.textMuted}>
+              {t('leagueDetail.sessions.window.hint')}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.fieldGroup}>
           <Text size="sm" weight="semibold" color={colors.text}>

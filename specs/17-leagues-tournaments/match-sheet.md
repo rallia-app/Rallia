@@ -52,6 +52,18 @@ The organizer chooses the mode at session creation; `BALANCED_DOUBLES` and `BY_R
 
 ## Pairing modes
 
+### `MANUAL` (20260820180000)
+
+The system holds no opinion: the confirmed roster keeps the order the players
+responded in (`session_presence.responded_at`), and the organizer rearranges it
+with `session_swap_player` before publishing the sheet. Rounds, byes and the
+rotation are still generated, since those are structure rather than a choice
+about who meets whom.
+
+Reachability: a swap transposes two players inside a round, and transpositions
+generate every permutation, so any arrangement the organizer wants is reachable
+from the starting layout.
+
 ### `RANDOM`
 
 ```typescript

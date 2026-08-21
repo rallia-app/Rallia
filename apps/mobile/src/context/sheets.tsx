@@ -526,6 +526,9 @@ declare module 'react-native-actions-sheet' {
         leagueId: string;
         /** The season's gamesPerPlayer rule, so the form opens on it. */
         defaultRounds?: number;
+        /** The season's sessionScheduling rule: 'flex' asks for a play window
+         *  instead of an evening. */
+        scheduling?: 'fixed' | 'flex';
       };
     }>;
     'court-selection': SheetDefinition<{

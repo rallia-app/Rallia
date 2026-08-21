@@ -159,6 +159,23 @@ function togglesFromPoints(points: PointsForm): BonusToggles {
   };
 }
 
+/**
+ * How this league's sessions are scheduled. Fixed is an evening at a set time;
+ * flex is a window members arrange their own games inside, which can span days.
+ * Stored in default_rules, so it seeds every season created afterwards.
+ */
+const SCHEDULING_MODES = ['fixed', 'flex'] as const;
+type SchedulingMode = (typeof SCHEDULING_MODES)[number];
+
+const SCHEDULING_ICON: Record<SchedulingMode, keyof typeof Ionicons.glyphMap> = {
+  fixed: 'calendar-outline',
+  flex: 'infinite-outline',
+};
+
+function schedulingFromRules(rules: Record<string, unknown> | null | undefined): SchedulingMode {
+  return rules?.sessionScheduling === 'flex' ? 'flex' : 'fixed';
+}
+
 /** The score the worked example runs on: a routine straight-sets win. */
 const EXAMPLE_SCORE = '6-4 6-2';
 
@@ -496,6 +513,8 @@ const EligibilityStep: React.FC<{
   setCapacityInput: (v: string) => void;
   waitlistEnabled: boolean;
   setWaitlistEnabled: (v: boolean) => void;
+  scheduling: SchedulingMode;
+  setScheduling: (v: SchedulingMode) => void;
   points: PointsForm;
   setPoints: (v: PointsForm) => void;
   bonusOn: BonusToggles;
@@ -515,6 +534,8 @@ const EligibilityStep: React.FC<{
   setCapacityInput,
   waitlistEnabled,
   setWaitlistEnabled,
+  scheduling,
+  setScheduling,
   points,
   setPoints,
   bonusOn,
@@ -618,6 +639,26 @@ const EligibilityStep: React.FC<{
         />
       </View>
     )}
+
+    {/* How sessions are scheduled. Drives the session form: a fixed league asks
+        for an evening, a flex one asks for a window. */}
+    <View style={styles.fieldGroup}>
+      <FieldLabel colors={colors}>
+        {t('leagueCreation.fields.schedulingTitle' as TranslationKey)}
+      </FieldLabel>
+      {SCHEDULING_MODES.map(mode => (
+        <OptionCard
+          key={mode}
+          icon={SCHEDULING_ICON[mode]}
+          title={t(`leagueCreation.fields.scheduling.${mode}.title` as TranslationKey)}
+          description={t(`leagueCreation.fields.scheduling.${mode}.description` as TranslationKey)}
+          selected={scheduling === mode}
+          onPress={() => setScheduling(mode)}
+          colors={colors}
+          testID={`league-scheduling-${mode}`}
+        />
+      ))}
+    </View>
 
     {/* The scoring formula: a base on the result, plus optional bonuses per set
         and per game won. Seasons snapshot these at creation, so an edit here
@@ -788,6 +829,9 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
   );
   const [waitlistEnabled, setWaitlistEnabled] = useState(editLeague?.waitlistEnabled ?? false);
   const [points, setPoints] = useState<PointsForm>(() => pointsFromRules(editLeague?.defaultRules));
+  const [scheduling, setScheduling] = useState<SchedulingMode>(() =>
+    schedulingFromRules(editLeague?.defaultRules)
+  );
   const [bonusOn, setBonusOn] = useState<BonusToggles>(() =>
     togglesFromPoints(pointsFromRules(editLeague?.defaultRules))
   );
@@ -1004,7 +1048,13 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
     cascadeVariants('pointWin', WIN_VARIANTS);
     cascadeVariants('pointLoss', LOSS_VARIANTS);
 
-    const hasPointChanges = Object.keys(changedPoints).length > 0;
+    // One rules patch: league_update merges default_rules, so the points and
+    // the scheduling mode travel together and neither clobbers the other.
+    const changedRules: Record<string, unknown> = { ...changedPoints };
+    if (scheduling !== schedulingFromRules(editLeague?.defaultRules)) {
+      changedRules.sessionScheduling = scheduling;
+    }
+    const hasRuleChanges = Object.keys(changedRules).length > 0;
 
     // ---- Edit mode: diff against the original and PATCH only what changed ----
     if (isEditMode && editLeague) {
@@ -1023,7 +1073,7 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
           patch.memberCapacity = memberCapacity;
         if (effectiveWaitlist !== (editLeague.waitlistEnabled ?? false))
           patch.waitlistEnabled = effectiveWaitlist;
-        if (hasPointChanges) patch.defaultRules = changedPoints;
+        if (hasRuleChanges) patch.defaultRules = changedRules;
 
         // The server rejects an empty patch, so a no-op save just closes.
         if (Object.keys(patch).length === 0) {
@@ -1062,7 +1112,7 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
         minRating: minRating ?? undefined,
         maxRating: maxRating ?? undefined,
         logoUrl: resolvedLogoUrl ?? undefined,
-        rulesOverride: hasPointChanges ? changedPoints : undefined,
+        rulesOverride: hasRuleChanges ? changedRules : undefined,
       });
       // league_create has no capacity params; apply them with a follow-up
       // patch. If this second call fails the league still exists (the update
@@ -1238,6 +1288,8 @@ export const LeagueCreationWizard: React.FC<LeagueCreationWizardProps> = ({
             setCapacityInput={setCapacityInput}
             waitlistEnabled={waitlistEnabled}
             setWaitlistEnabled={setWaitlistEnabled}
+            scheduling={scheduling}
+            setScheduling={setScheduling}
             points={points}
             setPoints={setPoints}
             bonusOn={bonusOn}
