@@ -5,7 +5,6 @@
 
 import { supabase } from '../supabase';
 import type { PlayerOnlineStatus, SearchMessageResult, ConversationPreview } from './chatTypes';
-import { getPlayerConversations } from './conversationService';
 
 // ============================================================================
 // DISPLAY NAME UTILITY
@@ -260,13 +259,19 @@ async function getSenderNames(senderIds: string[]): Promise<Map<string, string>>
 // ============================================================================
 
 /**
- * Get unread message count for a player across all conversations
+ * Total unread messages across non-archived conversations (chat tab badge).
  */
 export async function getTotalUnreadCount(playerId: string): Promise<number> {
-  const conversations = await getPlayerConversations(playerId);
-  return conversations
-    .filter(conv => !conv.is_archived)
-    .reduce((total, conv) => total + conv.unread_count, 0);
+  const { data, error } = await supabase.rpc('get_total_unread_count', {
+    p_player_id: playerId,
+  });
+
+  if (error) {
+    console.error('Error fetching total unread count:', error);
+    return 0;
+  }
+
+  return data ?? 0;
 }
 
 /**

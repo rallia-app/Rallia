@@ -11898,6 +11898,7 @@ export type Database = {
       get_top_network_activity: {
         Args: { p_limit?: number }
         Returns: {
+      get_total_unread_count: { Args: { p_player_id: string }; Returns: number }
           activity_count: number
           last_activity_at: string
           member_count: number
