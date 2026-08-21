@@ -10340,13 +10340,6 @@ export type Database = {
         }
         Returns: string
       }
-      debug_check_conversation_participant: {
-        Args: { p_conversation_id: string; p_player_id: string }
-        Returns: {
-          is_participant: boolean
-          participant_count: number
-        }[]
-      }
       derive_zone_from_location: {
         Args: { p_location: unknown }
         Returns: string
@@ -11898,7 +11891,6 @@ export type Database = {
       get_top_network_activity: {
         Args: { p_limit?: number }
         Returns: {
-      get_total_unread_count: { Args: { p_player_id: string }; Returns: number }
           activity_count: number
           last_activity_at: string
           member_count: number
@@ -11906,6 +11898,7 @@ export type Database = {
           network_name: string
         }[]
       }
+      get_total_unread_count: { Args: { p_player_id: string }; Returns: number }
       get_tournament_co_organizers: {
         Args: { p_tournament_id: string }
         Returns: {
