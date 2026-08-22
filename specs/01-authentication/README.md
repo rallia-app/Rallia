@@ -36,11 +36,13 @@ flowchart TD
 
 ## Sub-documents
 
-| Document                                 | Description                                                                    |
-| ---------------------------------------- | ------------------------------------------------------------------------------ |
-| [sign-in-log-in.md](./sign-in-log-in.md) | Authentication methods and flows (bottom sheet modal, social login, email OTP) |
-| [pre-onboarding.md](./pre-onboarding.md) | Initial sport selection overlay (pre-auth) and sport selection architecture    |
-| [onboarding.md](./onboarding.md)         | Full profile creation wizard (5-step progressive flow)                         |
+| Document                                         | Description                                                                                                                |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| [sign-in-log-in.md](./sign-in-log-in.md)         | Authentication methods and flows (bottom sheet modal, social login, email OTP)                                             |
+| [pre-onboarding.md](./pre-onboarding.md)         | Initial sport selection overlay (pre-auth) and sport selection architecture                                                |
+| [onboarding.md](./onboarding.md)                 | Full profile creation wizard (5-step progressive flow)                                                                     |
+| [onboarding-minimum.md](./onboarding-minimum.md) | The invariant every onboarding path must satisfy (postal code, rated sport, favourites) and how it is enforced server-side |
+| [web-onboarding.md](./web-onboarding.md)         | Create the account on the web, install, sign in once, land on Home; attribution on the account                             |
 
 ## User Stories
 
