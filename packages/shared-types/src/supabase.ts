@@ -10259,6 +10259,7 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: undefined
       }
+      complete_onboarding: { Args: { p_player_id?: string }; Returns: Json }
       compute_fee_tax_cents: { Args: { p_fee_cents: number }; Returns: number }
       compute_service_fee_cents: {
         Args: {
@@ -11188,6 +11189,7 @@ export type Database = {
               users_count: number
             }[]
           }
+      get_onboarding_gaps: { Args: { p_player_id?: string }; Returns: string[] }
       get_opponents_for_notification: {
         Args: { p_match_id: string; p_player_id: string }
         Returns: {
@@ -13085,6 +13087,7 @@ export type Database = {
           tier: string
         }[]
       }
+      min_favorite_facilities: { Args: never; Returns: number }
       mo_opponent_agrees: { Args: { p_message_id: string }; Returns: number }
       momentum_bucket: {
         Args: { p_key: string; p_user: string }
