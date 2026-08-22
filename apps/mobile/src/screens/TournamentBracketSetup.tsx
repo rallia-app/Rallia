@@ -393,7 +393,7 @@ export default function TournamentBracketSetup() {
 
   // Bottom inset goes in the ScrollView's contentContainerStyle, not on the
   // wrapper, so content scrolls under the home indicator instead of stopping
-  // above it.
+  // above it. The pinned footer claims the bottom edge itself.
   return (
     <SafeAreaView style={[styles.flex, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView
@@ -483,7 +483,7 @@ export default function TournamentBracketSetup() {
                     {nameByRegId.get(regId) ?? '—'}
                   </Text>
                   {seedMeta(regId) ? (
-                    <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+                    <Text size="xs" color={colors.textMuted} numberOfLines={2}>
                       {seedMeta(regId)}
                     </Text>
                   ) : null}
@@ -635,7 +635,8 @@ export default function TournamentBracketSetup() {
       </ScrollView>
 
       {/* Publish */}
-      <View
+      <SafeAreaView
+        edges={['bottom']}
         style={[
           styles.footer,
           { backgroundColor: colors.background, borderTopColor: colors.border },
@@ -662,7 +663,7 @@ export default function TournamentBracketSetup() {
             </>
           )}
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
 
       <ConfirmationModal
         visible={confirmVisible}
