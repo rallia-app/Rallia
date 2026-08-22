@@ -6,9 +6,11 @@
  * round-1 preview, then publish — which generates the bracket, flips the
  * tournament to in_progress, and notifies participants.
  *
- * Seeding is optional: the list defaults to registration order. Seed order
- * fully determines first-round pairings, so reordering here IS the bracket
- * tweak. Publish is the irreversible commit.
+ * The organizer picks which ladder seeds the draw (Circuit Rallia points,
+ * rating, sign-up order, or manual) and can still drag any entry afterwards,
+ * which switches the tournament to manual. Seed order fully determines
+ * first-round pairings, so what is on this screen IS the bracket. Publish is
+ * the irreversible commit.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -27,11 +29,19 @@ import {
   useProfilesByIds,
   useTournamentBracketPreview,
   useTournamentPoolPreview,
+  useTournamentSeedSuggestions,
   useSetTournamentSeeds,
+  useSetTournamentSeedingMode,
   useGenerateTournamentBracket,
   useGenerateTournamentPools,
 } from '@rallia/shared-hooks';
-import type { PreviewBracketMatch, PreviewPoolSlot } from '@rallia/shared-services';
+import type {
+  PreviewBracketMatch,
+  PreviewPoolSlot,
+  SeedingMode,
+  TournamentSeedSuggestion,
+} from '@rallia/shared-services';
+import { SEEDING_MODES } from '@rallia/shared-services';
 
 import { useThemeStyles, useTranslation, useScrollBottomInset } from '../hooks';
 import { ConfirmationModal } from '../components/ConfirmationModal';
@@ -125,25 +135,76 @@ export default function TournamentBracketSetup() {
     return map;
   }, [registered, profiles]);
 
-  // Local seed order (registration ids). Defaults to seed_rank then registration time.
-  const [order, setOrder] = useState<string[]>([]);
-  const initializedRef = useRef(false);
-  useEffect(() => {
-    if (initializedRef.current || registered.length === 0) return;
-    const sorted = [...registered]
-      .sort((a, b) => {
-        const sa = a.seed_rank ?? Number.MAX_SAFE_INTEGER;
-        const sb = b.seed_rank ?? Number.MAX_SAFE_INTEGER;
-        if (sa !== sb) return sa - sb;
-        const ta = new Date(a.registered_at).getTime();
-        const tb = new Date(b.registered_at).getTime();
-        if (ta !== tb) return ta - tb;
-        return a.id.localeCompare(b.id);
-      })
-      .map(r => r.id);
-    setOrder(sorted);
-    initializedRef.current = true;
-  }, [registered]);
+  // Effective seed order from the server, per the tournament's seeding_mode.
+  // Same ladder the publish RPCs read, so the list always shows what would be
+  // published if the organizer changed nothing.
+  const suggestionsQuery = useTournamentSeedSuggestions(params.tournamentId, !!tournament);
+  const {
+    data: suggestions,
+    isFetched: suggestionsFetched,
+    isError: suggestionsFailed,
+  } = suggestionsQuery;
+
+  // The active ladder. A local pick wins over the cached tournament row so the
+  // picker never flashes the previous mode while the detail query refetches.
+  const [modeOverride, setModeOverride] = useState<SeedingMode | null>(null);
+  const mode: SeedingMode =
+    modeOverride ?? (tournament?.seeding_mode as SeedingMode | undefined) ?? 'circuit';
+  const suggestionByRegId = useMemo(() => {
+    const map = new Map<string, TournamentSeedSuggestion>();
+    for (const s of suggestions ?? []) map.set(s.registration_id, s);
+    return map;
+  }, [suggestions]);
+
+  // Local seed order (registration ids). Derived from the server's order until
+  // the organizer drags something, from which point the local list is
+  // authoritative until they switch ladders again.
+  const [orderOverride, setOrderOverride] = useState<string[] | null>(null);
+
+  const fallbackOrder = useCallback(
+    () =>
+      [...registered]
+        .sort((a, b) => {
+          const sa = a.seed_rank ?? Number.MAX_SAFE_INTEGER;
+          const sb = b.seed_rank ?? Number.MAX_SAFE_INTEGER;
+          if (sa !== sb) return sa - sb;
+          const ta = new Date(a.registered_at).getTime();
+          const tb = new Date(b.registered_at).getTime();
+          if (ta !== tb) return ta - tb;
+          return a.id.localeCompare(b.id);
+        })
+        .map(r => r.id),
+    [registered]
+  );
+
+  // Server order, with any registered entry the RPC did not list appended in
+  // its fallback position rather than dropped off the draw.
+  const orderFrom = useCallback(
+    (rows: TournamentSeedSuggestion[] | undefined) => {
+      const fallback = fallbackOrder();
+      const suggested = [...(rows ?? [])]
+        .sort((a, b) => a.suggested_seed - b.suggested_seed)
+        .map(s => s.registration_id)
+        .filter(id => registered.some(r => r.id === id));
+      if (suggested.length === 0) return fallback;
+      return [...suggested, ...fallback.filter(id => !suggested.includes(id))];
+    },
+    [fallbackOrder, registered]
+  );
+
+  // Empty until the suggestions settle, so the list never flashes an order the
+  // publish RPCs would not use. A failed read falls back to the local sort.
+  const serverOrder = useMemo(
+    () => (suggestionsFetched || suggestionsFailed ? orderFrom(suggestions) : []),
+    [orderFrom, suggestions, suggestionsFetched, suggestionsFailed]
+  );
+  // A hand-ordered list is kept, but never at the cost of dropping an entry:
+  // anything no longer registered falls out and anything new is appended.
+  const order = useMemo(() => {
+    if (!orderOverride) return serverOrder;
+    const live = orderOverride.filter(id => registered.some(r => r.id === id));
+    return [...live, ...serverOrder.filter(id => !live.includes(id))];
+  }, [orderOverride, serverOrder, registered]);
 
   const isPool = tournament?.bracket_type === 'pool_knockout';
   const canPreview = tournament?.status === 'registration_closed' && registered.length >= 2;
@@ -156,6 +217,7 @@ export default function TournamentBracketSetup() {
     !!canPreview && !!isPool
   );
   const setSeeds = useSetTournamentSeeds();
+  const setSeedingMode = useSetTournamentSeedingMode();
   const generate = useGenerateTournamentBracket();
   const generatePools = useGenerateTournamentPools();
 
@@ -193,7 +255,10 @@ export default function TournamentBracketSetup() {
       const next = [...order];
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
-      setOrder(next);
+      setOrderOverride(next);
+      // tournament_set_seeds flips the tournament to manual; mirror it now so
+      // the picker does not keep advertising a ladder nobody is running.
+      setModeOverride('manual');
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => persistSeeds(next), SEED_PERSIST_DEBOUNCE_MS);
     },
@@ -205,6 +270,53 @@ export default function TournamentBracketSetup() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
+
+  // Switching ladders. The server clears or freezes seed_rank depending on the
+  // mode, so the list is re-read from the RPC rather than reordered locally.
+  const pickMode = useCallback(
+    async (next: SeedingMode) => {
+      if (!tournament || next === mode || setSeedingMode.isPending) return;
+      void lightHaptic();
+      const previous = mode;
+      setModeOverride(next);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      try {
+        await setSeedingMode.mutateAsync({
+          tournamentId: params.tournamentId,
+          mode: next,
+          versionWas: tournament.version,
+        });
+        // Hand the list back to the server: the new ladder decides the order.
+        setOrderOverride(null);
+        await suggestionsQuery.refetch();
+      } catch {
+        setModeOverride(previous);
+        void warningHaptic();
+        toast.error(t('bracketSetup.modeError'));
+      }
+    },
+    [tournament, mode, setSeedingMode, params.tournamentId, suggestionsQuery, toast, t]
+  );
+
+  // Subline under each entry: the numbers the active ladder is reading. Sign-up
+  // and manual draws ignore both, so showing them would imply they mattered.
+  const seedMeta = useCallback(
+    (regId: string) => {
+      if (mode !== 'circuit' && mode !== 'rating') return null;
+      const s = suggestionByRegId.get(regId);
+      if (!s) return null;
+      const parts = [
+        s.circuit_points > 0
+          ? t('bracketSetup.circuitPoints').replace('{points}', String(s.circuit_points))
+          : t('bracketSetup.noCircuitPoints'),
+      ];
+      if (s.rating !== null && s.rating !== undefined) {
+        parts.push(t('bracketSetup.ratingValue').replace('{rating}', Number(s.rating).toFixed(1)));
+      }
+      return parts.join(' · ');
+    },
+    [suggestionByRegId, mode, t]
+  );
 
   // Round-1 matchups for the preview, in bracket order.
   const round1 = useMemo(
@@ -263,7 +375,8 @@ export default function TournamentBracketSetup() {
     }
   }, [tournament, order, params.tournamentId, setSeeds, generate, navigation, toast, t]);
 
-  const publishing = setSeeds.isPending || generate.isPending || generatePools.isPending;
+  const publishing =
+    setSeeds.isPending || generate.isPending || generatePools.isPending || setSeedingMode.isPending;
 
   if (!tournament) {
     return (
@@ -295,8 +408,42 @@ export default function TournamentBracketSetup() {
           </Text>
         </View>
 
-        {/* Seeds */}
+        {/* Seeding ladder */}
         <View style={styles.sectionHeader}>
+          <Text size="xs" weight="bold" color={colors.textSecondary} style={styles.sectionLabel}>
+            {t('bracketSetup.modeLabel')}
+          </Text>
+        </View>
+        <View style={styles.modeGroup}>
+          {SEEDING_MODES.map(m => (
+            <TouchableOpacity
+              key={m}
+              onPress={() => void pickMode(m)}
+              disabled={publishing}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: mode === m }}
+              testID={`seeding-mode-${m}`}
+              style={[
+                styles.modeOption,
+                { borderColor: mode === m ? accent : colors.border },
+                publishing && styles.disabled,
+              ]}
+            >
+              <View style={styles.modeOptionText}>
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {t(`bracketSetup.modes.${m}.title`)}
+                </Text>
+                <Text size="xs" color={colors.textMuted} lineHeight="tight">
+                  {t(`bracketSetup.modes.${m}.description`)}
+                </Text>
+              </View>
+              {mode === m && <Ionicons name="checkmark-circle" size={20} color={accent} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Seeds */}
+        <View style={[styles.sectionHeader, styles.seedsHeader]}>
           <Text size="xs" weight="bold" color={colors.textSecondary} style={styles.sectionLabel}>
             {t('bracketSetup.seedsLabel')}
           </Text>
@@ -331,15 +478,16 @@ export default function TournamentBracketSetup() {
                     {idx + 1}
                   </Text>
                 </View>
-                <Text
-                  size="base"
-                  weight="medium"
-                  color={colors.text}
-                  style={styles.seedName}
-                  numberOfLines={1}
-                >
-                  {nameByRegId.get(regId) ?? '—'}
-                </Text>
+                <View style={styles.seedName}>
+                  <Text size="base" weight="medium" color={colors.text} numberOfLines={1}>
+                    {nameByRegId.get(regId) ?? '—'}
+                  </Text>
+                  {seedMeta(regId) ? (
+                    <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+                      {seedMeta(regId)}
+                    </Text>
+                  ) : null}
+                </View>
                 <View style={[styles.seedControls, { backgroundColor: colors.background }]}>
                   <TouchableOpacity
                     onPress={() => reorder(idx, 0)}
@@ -554,6 +702,19 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[2],
   },
   previewHeader: { marginTop: spacingPixels[6] },
+  seedsHeader: { marginTop: spacingPixels[5] },
+
+  // Seeding-ladder picker
+  modeGroup: { gap: spacingPixels[2] },
+  modeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[3],
+  },
+  modeOptionText: { flex: 1, gap: spacingPixels[1] },
   sectionLabel: { textTransform: 'uppercase', letterSpacing: 0.6 },
   countPill: {
     minWidth: 22,
@@ -585,7 +746,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  seedName: { flex: 1 },
+  seedName: { flex: 1, gap: spacingPixels[0.5] },
   seedControls: {
     flexDirection: 'row',
     alignItems: 'center',

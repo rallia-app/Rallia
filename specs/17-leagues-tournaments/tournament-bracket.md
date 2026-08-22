@@ -129,14 +129,60 @@ function seedPositions(N: number): number[] {
 
 ### Resolving the seed list
 
-1. Take all `tournament_registrations` with status `registered`.
-2. If `seeding_enabled = true`:
-   - Sort first by organizer-assigned `seed_rank` ascending (`NULL` last).
-   - Then by player's certified `rating_score` for the tournament's sport, descending.
-   - Then by `self_declared_rank` ascending (`NULL` last).
-   - Then by `registered_at` ascending (FIFO).
-3. If `seeding_enabled = false`: shuffle deterministically using `tournament.id` as RNG seed (so reproducible).
-4. The first `max_seeds` players are "seeded"; the remainder are unseeded.
+Implemented by `lt_tournament_seed_order(tournament_id)` (migrations
+`20260822120000_lt_circuit_seeding` and `20260822140000_lt_seeding_modes`),
+read by `tournament_preview_bracket`, `tournament_preview_pools`,
+`tournament_generate_bracket`, `tournament_generate_pools`, and exposed to the
+organizer screen as `tournament_seed_suggestions`.
+
+`tournaments.seeding_mode` picks which ladder runs. In every mode the
+organizer-assigned `seed_rank` leads (ascending, `NULL` last), then:
+
+| Mode                | Order after `seed_rank`                                                                |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| `circuit` (default) | Circuit Rallia points DESC, then rating DESC (`NULL` last), then `registered_at`, `id` |
+| `rating`            | rating DESC (`NULL` last), then Circuit points DESC, then `registered_at`, `id`        |
+| `signup`            | `registered_at`, `id`                                                                  |
+| `manual`            | `registered_at`, `id` (the organizer is expected to set every `seed_rank`)             |
+
+**Circuit points** come from the rolling-window board
+(`tournament_ranked_board`) of the tournament's sport and board: singles
+tournaments read the singles board, doubles and mixed read the doubles board
+(same derivation as `tg_trp_set_board`). A doubles entry counts the **sum** of
+both partners' points. **Rating** is read through the canonical
+`player_sport.active_rating_score_id` path; a doubles entry uses the partners'
+average.
+
+### Switching modes
+
+`tournament_set_seeding_mode(tournament_id, mode, version_was)` is organizer
+only, refuses once `tournament_matches` exist, and does not bump
+`tournament.version`. Two rules keep the picker honest:
+
+- Switching to a **computed** mode (`circuit` / `rating` / `signup`) clears
+  every `seed_rank`. A leftover manual order would outrank the mode the
+  organizer just picked and the switch would look broken.
+- Switching to **`manual`** freezes the order the previous mode was producing
+  into `seed_rank`, so "I'll take it from here" starts from what was on screen.
+- `tournament_set_seeds` flips the mode to `manual`: hand-ordering the field
+  _is_ choosing manual.
+
+### Stamping at publish
+
+`tournament_generate_bracket` / `tournament_generate_pools` stamp
+`seed_rank = 1..N` from the effective order when the organizer left any entry
+blank, so the seeding that went into the draw is on the record rather than
+recomputed later against a board that keeps moving. A field the organizer
+already ordered is left untouched; the audit payload carries `auto_seeded`.
+
+The organizer screen (`TournamentBracketSetup`) shows the mode picker, the
+Circuit points and rating behind each entry (for the two modes that read
+them), and lets the organizer drag any entry, which writes back through
+`tournament_set_seeds`.
+
+Not implemented: `seeding_enabled = false` (the deterministic shuffle
+described in earlier drafts of this spec) and `self_declared_rank` as a
+tiebreaker; `max_seeds` is not read. Every entry carries a seed number today.
 
 ### BYE placement
 

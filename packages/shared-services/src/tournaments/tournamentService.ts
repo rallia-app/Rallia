@@ -1205,6 +1205,66 @@ export async function previewTournamentPools(tournamentId: string): Promise<Prev
 }
 
 /**
+ * One registered entry in the effective seed order, with the Circuit Rallia
+ * points and active rating behind it. `seed_rank` is the organizer's override
+ * (null until tournament_set_seeds ran); `suggested_seed` is the position the
+ * publish RPCs will use: seed_rank, then Circuit points (partners summed on
+ * the doubles board), then rating, then sign-up order.
+ */
+export type TournamentSeedSuggestion = {
+  registration_id: string;
+  suggested_seed: number;
+  seed_rank: number | null;
+  circuit_points: number;
+  circuit_rank: number | null;
+  rating: number | null;
+};
+
+/**
+ * Effective seed order for the bracket-setup screen (organizer only). Same
+ * ladder the preview and publish RPCs read, so what the organizer sees is
+ * what gets published unless they reorder.
+ */
+export async function getTournamentSeedSuggestions(
+  tournamentId: string
+): Promise<TournamentSeedSuggestion[]> {
+  const { data, error } = await supabase.rpc('tournament_seed_suggestions', {
+    p_tournament_id: tournamentId,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentSeedSuggestion[];
+}
+
+/**
+ * Which ladder seeds a draw. `circuit` ranks on Circuit Rallia points,
+ * `rating` on the players' rating, `signup` on registration order, `manual`
+ * on whatever the organizer arranged. An organizer seed_rank still overrides
+ * the computed order in every mode.
+ */
+export const SEEDING_MODES = ['circuit', 'rating', 'signup', 'manual'] as const;
+export type SeedingMode = (typeof SEEDING_MODES)[number];
+
+/**
+ * Organizer picks the seeding ladder. Switching to a computed mode drops any
+ * hand-ordered seeds; switching to `manual` freezes the order the previous
+ * mode produced so the organizer keeps their starting point. Refused once the
+ * draw exists. Does not bump tournament.version.
+ */
+export async function setTournamentSeedingMode(
+  tournamentId: string,
+  mode: SeedingMode,
+  versionWas: number
+): Promise<Tournament> {
+  const { data, error } = await supabase.rpc('tournament_set_seeding_mode', {
+    p_tournament_id: tournamentId,
+    p_mode: mode,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as Tournament;
+}
+
+/**
  * Organizer publishes the pool phase of a pool_knockout tournament: inserts
  * every round-robin pool match and flips the tournament to in_progress.
  */

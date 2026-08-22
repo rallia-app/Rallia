@@ -5315,7 +5315,30 @@
   },
   "bracketSetup": {
     "title": "Préparer le tableau",
-    "intro": "Le classement est optionnel. L'ordre ci-dessous détermine les duels du premier tour, donc place tes meilleurs joueurs en haut. Les numéros de tête de série sont visibles par tout le monde.",
+    "intro": "Choisis comment le tableau est classé, puis réorganise qui tu veux à la main. L'ordre détermine les duels du premier tour et les numéros sont visibles par tout le monde.",
+    "modeLabel": "Méthode de classement",
+    "modeError": "Impossible de changer le classement. Réessaie.",
+    "modes": {
+      "circuit": {
+        "title": "Circuit Rallia",
+        "description": "Le sommet du Circuit est classé en premier. La cote départage."
+      },
+      "rating": {
+        "title": "Cote",
+        "description": "La meilleure cote est classée en premier. Les points Circuit départagent."
+      },
+      "signup": {
+        "title": "Ordre d'inscription",
+        "description": "Le premier inscrit est tête de série 1. Rien d'autre ne compte."
+      },
+      "manual": {
+        "title": "Manuel",
+        "description": "Tu établis l'ordre toi-même."
+      }
+    },
+    "circuitPoints": "Circuit Rallia · {points} pts",
+    "noCircuitPoints": "Pas encore de points Circuit",
+    "ratingValue": "Cote {rating}",
     "seedsLabel": "Têtes de série",
     "previewLabel": "Premier tour",
     "previewSummary": "{players} joueurs · {rounds} tours · {byes} exempts",

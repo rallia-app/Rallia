@@ -5315,7 +5315,30 @@
   },
   "bracketSetup": {
     "title": "Set up bracket",
-    "intro": "Seeding is optional. The order below sets the first-round pairings, so move your strongest players to the top. Seed numbers are visible to everyone.",
+    "intro": "Pick how the draw gets seeded, then reorder anyone by hand. The order sets the first-round pairings, and seed numbers are visible to everyone.",
+    "modeLabel": "Seeding method",
+    "modeError": "Couldn't change the seeding. Please try again.",
+    "modes": {
+      "circuit": {
+        "title": "Circuit Rallia",
+        "description": "Top of the Circuit ranking is seeded first. Rating breaks ties."
+      },
+      "rating": {
+        "title": "Rating",
+        "description": "Highest rating is seeded first. Circuit points break ties."
+      },
+      "signup": {
+        "title": "Sign-up order",
+        "description": "First to register is seed 1. Nothing else counts."
+      },
+      "manual": {
+        "title": "Manual",
+        "description": "You set the order yourself."
+      }
+    },
+    "circuitPoints": "Circuit Rallia · {points} pts",
+    "noCircuitPoints": "No Circuit points yet",
+    "ratingValue": "Rating {rating}",
     "seedsLabel": "Seeds",
     "previewLabel": "First round",
     "previewSummary": "{players} players · {rounds} rounds · {byes} byes",
