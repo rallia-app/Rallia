@@ -1,10 +1,18 @@
 import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
-import { MIN_AVAILABILITY_CELLS, meetsMinimumAge } from '@rallia/shared-utils';
+import {
+  MIN_AVAILABILITY_CELLS,
+  MIN_FAVORITE_FACILITIES,
+  meetsMinimumAge,
+} from '@rallia/shared-utils';
 
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { isPlayerAppEnabled } from '@/lib/app/player-app-enabled';
-import { writeWebOnboardingProfile } from '@/lib/web-onboarding/profile';
+import {
+  OnboardingIncompleteError,
+  completeOnboarding,
+  writeWebOnboardingProfile,
+} from '@/lib/web-onboarding/profile';
 import {
   isValidAvailabilityCell,
   writeFavoriteFacilities,
@@ -60,7 +68,9 @@ const CompleteSchema = z.object({
     .array(z.object({ day: z.string(), hour: z.number().int() }))
     .min(MIN_AVAILABILITY_CELLS, { message: 'AVAILABILITY_REQUIRED' })
     .refine(cells => cells.every(isValidAvailabilityCell), { message: 'AVAILABILITY_INVALID' }),
-  favoriteFacilityIds: z.array(uuidLike).min(2, { message: 'FAVORITES_REQUIRED' }),
+  favoriteFacilityIds: z
+    .array(uuidLike)
+    .min(MIN_FAVORITE_FACILITIES, { message: 'FAVORITES_REQUIRED' }),
 });
 
 /**
@@ -143,6 +153,7 @@ export async function POST(request: NextRequest) {
 
     await writePlayerAvailability(admin, user.id, body.availability);
     await writeFavoriteFacilities(admin, user.id, body.sportId, body.favoriteFacilityIds);
+    await completeOnboarding(admin, user.id);
 
     return NextResponse.json({ ok: true });
   } catch (error) {
@@ -159,6 +170,10 @@ export async function POST(request: NextRequest) {
         { error: matched ?? 'INVALID_REQUEST', details: error.issues },
         { status: 400 }
       );
+    }
+
+    if (error instanceof OnboardingIncompleteError) {
+      return NextResponse.json({ error: error.code, missing: error.missing }, { status: 422 });
     }
 
     const message = error instanceof Error ? error.message : 'An error occurred';

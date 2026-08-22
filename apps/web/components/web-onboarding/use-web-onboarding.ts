@@ -3,6 +3,7 @@
 import { usePostalCodeGeocode, useAuth, type PlaceDetails } from '@rallia/shared-hooks';
 import { GENDER_VALUES } from '@rallia/shared-types';
 import {
+  MIN_FAVORITE_FACILITIES,
   formatPostalCodeInput,
   meetsMinimumAge,
   type RatingSystemCode,
@@ -13,15 +14,19 @@ import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js
 import { createClient } from '@/lib/supabase/client';
 
 /** Steps this hook owns. Callers add their own terminal steps (success, review, …). */
-export type OnboardingStep = 'auth' | 'consent' | 'personal' | 'rating' | 'location';
+export type OnboardingStep = 'auth' | 'consent' | 'personal' | 'rating' | 'location' | 'favorites';
 
-/** The four profile-building steps, in order. `auth` sits outside the stepper. */
+/** The profile-building steps, in order. `auth` sits outside the stepper. */
 export const PROFILE_STEPS: Array<{ id: OnboardingStep; labelKey: string }> = [
   { id: 'consent', labelKey: 'consent' },
   { id: 'personal', labelKey: 'profile' },
   { id: 'rating', labelKey: 'level' },
   { id: 'location', labelKey: 'location' },
+  { id: 'favorites', labelKey: 'favorites' },
 ];
+
+/** The step that submits the profile; everything the server needs is collected by then. */
+export const FINAL_PROFILE_STEP: OnboardingStep = 'favorites';
 
 /** Same steps with consent lifted out, for callers that ask for it at the very end. */
 const PROFILE_STEPS_WITHOUT_CONSENT = PROFILE_STEPS.filter(s => s.id !== 'consent');
@@ -47,6 +52,8 @@ export type OnboardingProfilePayload = {
     /** Full street address, when the player chose to give one. */
     address?: string;
   };
+  /** At least MIN_FAVORITE_FACILITIES, for `sportId`. */
+  favoriteFacilityIds: string[];
 };
 
 /** Minimal translator shape — both `webJoin` and `webBook` satisfy it. */
@@ -85,7 +92,7 @@ export interface UseWebOnboardingOptions {
     lastName?: string | null;
   }>;
   /**
-   * Called once the location step validates, with the full profile payload.
+   * Called once the favourites step validates, with the full profile payload.
    * Return the step to land on; throw to surface an error on the current step.
    */
   onSubmitProfile: (payload: OnboardingProfilePayload) => Promise<OnboardingStep | string | void>;
@@ -97,10 +104,15 @@ export interface UseWebOnboardingOptions {
    * once someone has seen what they are agreeing to. The caller then calls
    * `acceptPolicies()` itself before completing.
    *
-   * Left off for the join and booking gates: those submit the profile at the location
+   * Left off for the join and booking gates: those submit the profile at the favourites
    * step, so consent has to be recorded before it.
    */
   deferConsent?: boolean;
+  /**
+   * Facilities ticked before the player reaches the favourites step: the game's facility
+   * on the join gate, the facility being booked on the booking gate. Read once on mount.
+   */
+  preselectedFacilityIds?: string[];
 }
 
 export function useWebOnboarding({
@@ -112,6 +124,7 @@ export function useWebOnboarding({
   onSubmitProfile,
   mapSubmitError,
   deferConsent = false,
+  preselectedFacilityIds,
 }: UseWebOnboardingOptions) {
   const supabase = useMemo(() => createClient(), []);
   const { signInWithProvider, signInWithEmail, verifyOtp } = useAuth({ client: supabase });
@@ -154,6 +167,11 @@ export function useWebOnboarding({
   // Optional precise address. When set, its coordinates win over the postal code's
   // centroid — that is the whole point of asking for it.
   const [address, setAddress] = useState('');
+
+  // Favorites
+  const [favoriteFacilityIds, setFavoriteFacilityIds] = useState<string[]>(
+    () => preselectedFacilityIds ?? []
+  );
 
   const profileSteps = deferConsent ? PROFILE_STEPS_WITHOUT_CONSENT : PROFILE_STEPS;
   const profileStepIndex = profileSteps.findIndex(s => s.id === step);
@@ -473,7 +491,16 @@ export function useWebOnboarding({
         setErrorMessage(t('errors.invalidPostalCode'));
         return;
       }
-      if (!sportId || !selectedRatingId) {
+      setStep('favorites');
+      return;
+    }
+
+    if (step === 'favorites') {
+      if (favoriteFacilityIds.length < MIN_FAVORITE_FACILITIES) {
+        setErrorMessage(t('errors.selectFavorites', { min: MIN_FAVORITE_FACILITIES }));
+        return;
+      }
+      if (!sportId || !selectedRatingId || latitude == null || longitude == null) {
         setErrorMessage(t('errors.submitFailed'));
         return;
       }
@@ -492,6 +519,7 @@ export function useWebOnboarding({
             longitude,
             ...(address ? { address } : {}),
           },
+          favoriteFacilityIds,
         });
         if (nextStep) setStep(nextStep);
       } catch (err) {
@@ -516,12 +544,21 @@ export function useWebOnboarding({
     locationCity,
     locationProvince,
     address,
+    favoriteFacilityIds,
     sportId,
     acceptPolicies,
     onSubmitProfile,
     mapSubmitError,
     t,
   ]);
+
+  const toggleFavoriteFacility = useCallback((facilityId: string) => {
+    setFavoriteFacilityIds(current =>
+      current.includes(facilityId)
+        ? current.filter(id => id !== facilityId)
+        : [...current, facilityId]
+    );
+  }, []);
 
   const goBack = useCallback(() => {
     setErrorMessage(null);
@@ -532,6 +569,7 @@ export function useWebOnboarding({
 
   return {
     supabase,
+    sportId,
     step,
     setStep,
     isReady,
@@ -588,10 +626,16 @@ export function useWebOnboarding({
       locationCity,
       locationProvince,
       latitude,
+      longitude,
       isGeocoding,
       address,
       selectAddress,
       clearAddress,
+    },
+    favorites: {
+      selectedIds: favoriteFacilityIds,
+      toggle: toggleFavoriteFacility,
+      isComplete: favoriteFacilityIds.length >= MIN_FAVORITE_FACILITIES,
     },
 
     goNext,

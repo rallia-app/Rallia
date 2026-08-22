@@ -15,6 +15,7 @@ import type {
 import {
   AuthStep,
   ConsentStep,
+  FavoritesStep,
   LocationStep,
   OnboardingError,
   OnboardingNav,
@@ -59,6 +60,8 @@ function bookErrorMessage(code: string, t: ReturnType<typeof useTranslations<'we
       return t('errors.minimumAge');
     case 'FACILITY_UNAVAILABLE':
       return t('errors.facilityUnavailable');
+    case 'ONBOARDING_INCOMPLETE':
+      return t('errors.onboardingIncomplete');
     default:
       return t('errors.submitFailed');
   }
@@ -118,6 +121,7 @@ export function WebBookWizard({
         sportId: payload.sportId,
         ratingScoreId: payload.ratingScoreId,
         location: payload.location,
+        favoriteFacilityIds: payload.favoriteFacilityIds,
       });
       completedRef.current = true;
       webBookCompleted({ facility_id: facility.id, existing_user: false, has_slot: hasSlot });
@@ -141,6 +145,12 @@ export function WebBookWizard({
   }
   const returnQuery = returnParams.size > 0 ? `?${returnParams.toString()}` : '';
 
+  // The facility being booked is the obvious first favourite; the player can untick it.
+  const pinnedFacilities = useMemo(
+    () => [{ id: facility.id, name: facility.name, city: facility.city }],
+    [facility.id, facility.name, facility.city]
+  );
+
   const controller = useWebOnboarding({
     // The rating step must collect a level for the sport being booked, not
     // whichever sport the facility happens to list first.
@@ -151,6 +161,7 @@ export function WebBookWizard({
     resolveAuthenticatedStep,
     onSubmitProfile,
     mapSubmitError,
+    preselectedFacilityIds: [facility.id],
   });
 
   const { step } = controller;
@@ -213,6 +224,9 @@ export function WebBookWizard({
           <RatingStep controller={controller} t={t} sportName={selectedSport?.name ?? ''} />
         )}
         {step === 'location' && <LocationStep controller={controller} t={t} />}
+        {step === 'favorites' && (
+          <FavoritesStep controller={controller} t={t} pinned={pinnedFacilities} />
+        )}
 
         {step === 'redirect' && (
           // Keyed on the slot so switching resets the court picker rather than

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
-import { meetsMinimumAge } from '@rallia/shared-utils';
+import { MIN_FAVORITE_FACILITIES, meetsMinimumAge } from '@rallia/shared-utils';
 
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import {
@@ -9,6 +9,7 @@ import {
   joinMatchForExistingUser,
   recordWebJoin,
 } from '@/lib/web-join/complete';
+import { OnboardingIncompleteError } from '@/lib/web-onboarding/profile';
 
 /** Accepts seed/test IDs (e.g. b1000000-0000-0000-0000-000000000001) that fail z.uuid(). */
 const uuidLike = z
@@ -46,6 +47,7 @@ const CompleteSchema = z.object({
       matchType: z.enum(['casual', 'competitive', 'both']),
     })
     .optional(),
+  favoriteFacilityIds: z.array(uuidLike).min(MIN_FAVORITE_FACILITIES).optional(),
 });
 
 const StatusSchema = z.object({
@@ -156,7 +158,13 @@ export async function POST(request: NextRequest) {
     if (profile?.onboarding_completed) {
       result = await joinMatchForExistingUser(admin, user.id, matchId);
     } else {
-      if (!body.personal || !body.sportId || !body.ratingScoreId || !body.location) {
+      if (
+        !body.personal ||
+        !body.sportId ||
+        !body.ratingScoreId ||
+        !body.location ||
+        !body.favoriteFacilityIds
+      ) {
         return NextResponse.json({ error: 'Incomplete profile data' }, { status: 400 });
       }
 
@@ -177,6 +185,7 @@ export async function POST(request: NextRequest) {
         playingHand: preferences.playingHand,
         matchType: preferences.matchType,
         locale: body.locale,
+        favoriteFacilityIds: body.favoriteFacilityIds,
       });
     }
 
@@ -192,6 +201,10 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid request', details: error.issues },
         { status: 400 }
       );
+    }
+
+    if (error instanceof OnboardingIncompleteError) {
+      return NextResponse.json({ error: error.code, missing: error.missing }, { status: 422 });
     }
 
     const message = error instanceof Error ? error.message : 'An error occurred';
