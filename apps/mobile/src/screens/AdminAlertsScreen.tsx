@@ -72,11 +72,7 @@ const AdminAlertsScreen: React.FC = () => {
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
-        const { data } = await supabase
-          .from('admin')
-          .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        const { data } = await supabase.from('admin').select('id').eq('id', user.id).maybeSingle();
         setAdminId(data?.id || null);
       }
     };

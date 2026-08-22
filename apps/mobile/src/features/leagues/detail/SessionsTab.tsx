@@ -18,7 +18,8 @@ interface SessionsTabProps {
   isOrganizer: boolean;
   openSeason: Season | undefined;
   seasonSessions: Session[];
-  formatDateTime: (iso: string) => string;
+  /** Renders a session's evening or play window, per formatSessionWhen. */
+  formatSessionWhen: (s: Session) => string;
   sessionPill: (status: SessionStatus) => { bg: string; fg: string };
   handleOpenSession: (sessionId: string, name: string) => void;
   handleOpenCreateSession: () => void;
@@ -32,7 +33,7 @@ export const SessionsTab: React.FC<SessionsTabProps> = ({
   isOrganizer,
   openSeason,
   seasonSessions,
-  formatDateTime,
+  formatSessionWhen,
   sessionPill,
   handleOpenSession,
   handleOpenCreateSession,
@@ -73,7 +74,7 @@ export const SessionsTab: React.FC<SessionsTabProps> = ({
                       {s.name}
                     </Text>
                     <Text size="xs" color={colors.textMuted}>
-                      {formatDateTime(s.scheduled_at)}
+                      {formatSessionWhen(s)}
                     </Text>
                   </View>
                   <View style={styles.seasonRowActions}>

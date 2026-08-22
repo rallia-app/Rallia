@@ -99,7 +99,8 @@ function getIconForType(type: string): keyof typeof Ionicons.glyphMap {
 // Get conversation display info
 function getConversationInfo(
   conversation: ConversationPreview,
-  t: TranslateFn
+  t: TranslateFn,
+  locale: string
 ): {
   name: string;
   avatar: string | null;
@@ -108,7 +109,7 @@ function getConversationInfo(
   isOnline: boolean;
   lastSeen: string | null;
 } {
-  const name = getConversationDisplayName(conversation, t);
+  const name = getConversationDisplayName(conversation, t, locale);
 
   if (conversation.conversation_type === 'direct' && conversation.other_participant) {
     return {
@@ -200,7 +201,8 @@ function ConversationItemComponent({
   // Cast t to TranslateFn for getConversationInfo which uses dynamic keys
   const { name, avatar, iconName, sportIconName, isOnline, lastSeen } = getConversationInfo(
     conversation,
-    t as TranslateFn
+    t as TranslateFn,
+    locale
   );
   const hasUnread = conversation.unread_count > 0;
   const isPinned = conversation.is_pinned ?? false;

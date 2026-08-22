@@ -11,6 +11,12 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-client-info, apikey',
 };
+const json = (body: unknown, status: number) =>
+  new Response(JSON.stringify(body), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status,
+  });
+
 const DEMO_ACCOUNT_EMAIL = 'demo@rallia.ca';
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') {
@@ -82,6 +88,28 @@ Deno.serve(async req => {
     }
     // Service-role client for privileged operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ---- Guard: L&T rows are RESTRICT on purpose; refuse with the breakdown before touching storage ----
+    const { data: blockers, error: blockersError } = await supabase.rpc(
+      'account_deletion_blockers',
+      { p_user_id: user.id }
+    );
+    if (blockersError) {
+      console.error('Failed to check deletion blockers:', blockersError);
+      return json({ error: 'Failed to check account records', code: 'blockers_check_failed' }, 500);
+    }
+    if (blockers && blockers.ok === false) {
+      console.log('Account deletion blocked by L&T records:', JSON.stringify(blockers));
+      return json(
+        {
+          error: 'Account is linked to tournament or league records',
+          code: 'lt_records',
+          blockers,
+        },
+        409
+      );
+    }
+
     // ---- Delete storage files ----
     const USER_STORAGE_BUCKETS = [
       'profile-pictures',
@@ -110,6 +138,7 @@ Deno.serve(async req => {
       return new Response(
         JSON.stringify({
           error: `Failed to delete account: ${deleteError.message}`,
+          code: 'delete_failed',
         }),
         {
           headers: {

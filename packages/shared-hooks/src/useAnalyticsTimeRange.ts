@@ -30,6 +30,8 @@ export interface UseAnalyticsTimeRangeOptions {
   defaultRange?: TimeRangeOption;
   /** Callback when range changes */
   onRangeChange?: (range: TimeRange) => void;
+  /** Locale used by formatDateRange; defaults to en-US */
+  locale?: string;
 }
 
 const STORAGE_KEY = 'analytics_time_range';
@@ -105,7 +107,12 @@ function buildTimeRange(option: TimeRangeOption): TimeRange {
  * Hook for managing analytics time range state
  */
 export function useAnalyticsTimeRange(options: UseAnalyticsTimeRangeOptions = {}) {
-  const { storageKey = STORAGE_KEY, defaultRange = '7d', onRangeChange } = options;
+  const {
+    storageKey = STORAGE_KEY,
+    defaultRange = '7d',
+    onRangeChange,
+    locale = 'en-US',
+  } = options;
 
   const [selectedOption, setSelectedOption] = useState<TimeRangeOption>(defaultRange);
   const [isLoading, setIsLoading] = useState(true);
@@ -170,16 +177,16 @@ export function useAnalyticsTimeRange(options: UseAnalyticsTimeRangeOptions = {}
 
   // Format date for display
   const formatDateRange = useCallback(() => {
-    const start = timeRange.startDate.toLocaleDateString(undefined, {
+    const start = timeRange.startDate.toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
     });
-    const end = timeRange.endDate.toLocaleDateString(undefined, {
+    const end = timeRange.endDate.toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
     });
     return `${start} - ${end}`;
-  }, [timeRange]);
+  }, [timeRange, locale]);
 
   return {
     // Current state

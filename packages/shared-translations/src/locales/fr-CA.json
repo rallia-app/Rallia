@@ -727,6 +727,8 @@
     "deleteAccountFinalTitle": "Êtes-vous absolument certain ?",
     "deleteAccountFinalMessage": "Toutes vos données seront définitivement supprimées. Vous ne pourrez pas récupérer votre compte.",
     "deleteAccountSuccess": "Votre compte a été supprimé.",
+    "deleteAccountBlockedTitle": "Compte encore lié à des événements",
+    "deleteAccountBlockedMessage": "Votre compte est lié à des tournois ou des ligues (inscriptions, résultats ou paiements). Retirez-vous d'abord des événements en cours, puis écrivez-nous à contact@rallia.ca et nous finaliserons la suppression pour vous.",
     "contactSupport": "Contacter le support",
     "appInfo": "Info de l'app",
     "version": "Version",
@@ -4442,7 +4444,8 @@
     "memberErrors": {
       "memberNotFound": "Ce membre ne fait plus partie de la ligue.",
       "notRevocable": "Cette invitation ne peut plus être révoquée.",
-      "organizerImmune": "L'organisateur ne peut pas être retiré de sa propre ligue."
+      "organizerImmune": "L'organisateur ne peut pas être retiré de sa propre ligue.",
+      "staleRow": "Cette demande vient de changer. On a rafraîchi la liste, réessaie."
     },
     "createErrors": {
       "invalidName": "Ce nom ne fonctionne pas. Essaies-en un autre.",
@@ -4498,14 +4501,18 @@
       "joinMode": "Mode d'adhésion",
       "description": "Description",
       "venue": "Lieu",
-      "ratingRange": "Plage de cote"
+      "ratingRange": "Plage de cote",
+      "capacity": "Capacité",
+      "scheduling": "Séances"
     },
     "overview": {
       "infoTitle": "Infos de la ligue",
       "rulesTitle": "Comment ça marche",
       "rulesScoring": "Format de pointage",
       "rulesPoints": "Victoire {win} · Défaite {loss} · Bye {bye}",
-      "rulesPointsHint": "Points au classement"
+      "rulesPointsHint": "Points au classement",
+      "rulesBonusSet": "+{points} par set gagné",
+      "rulesBonusGame": "+{points} par jeu gagné"
     },
     "dashboard": {
       "organizedBy": "Organisée par {name}",
@@ -4531,7 +4538,9 @@
         "title": "En attente ({count})",
         "approveLabel": "Approuver {name}",
         "rejectLabel": "Refuser {name}",
-        "queuedAt": "{rank}e en file pour une place"
+        "queuedAt": "{rank}e en file pour une place",
+        "queuedAtFirst": "1re en file pour une place",
+        "leagueFullHint": "La ligue est pleine ({seated}/{capacity}). Libère une place avant d'approuver."
       },
       "invited": {
         "title": "Invités · en attente de réponse ({count})",
@@ -4542,7 +4551,8 @@
         "suspendedTitle": "Suspendus ({count})",
         "suspendLabel": "Suspendre {name}",
         "removeLabel": "Retirer {name}",
-        "reinstateLabel": "Réactiver {name}"
+        "reinstateLabel": "Réactiver {name}",
+        "suspendedUntil": "Suspendu jusqu'au {date}"
       },
       "memberTabs": {
         "confirmed": "Confirmés",
@@ -4558,7 +4568,8 @@
       },
       "openSeasonCta": {
         "description": "Ouvrir une saison permet aux membres de s'inscrire et aux sessions de commencer"
-      }
+      },
+      "membershipTitle": "Ma place"
     },
     "editModal": {
       "title": "Modifier la ligue",
@@ -4706,11 +4717,22 @@
         "avoid_repeat": {
           "title": "Éviter les répétitions",
           "description": "Priorise les adversaires que chacun n'a pas encore affrontés cette saison."
+        },
+        "manual": {
+          "title": "Manuel",
+          "description": "On place les rondes dans l'ordre des confirmations sans choisir personne. Tu arranges les pairages, puis tu publies la feuille."
         }
       },
       "validation": {
         "nameRequired": "Le nom de la séance est requis",
         "future": "Choisis une date et une heure à venir"
+      },
+      "window": {
+        "label": "Période de jeu",
+        "description": "Combien de temps les membres ont pour jouer leurs parties.",
+        "days": "{count} jours",
+        "hint": "Les membres organisent leurs parties dans la période. Elle ne peut pas dépasser l'écart jusqu'à la prochaine séance.",
+        "range": "Du {from} au {to}"
       }
     },
     "values": {
@@ -4722,7 +4744,9 @@
       "inviteOnly": "Sur invitation",
       "oneSet": "Une manche",
       "twoOfThree": "2 de 3",
-      "threeOfFive": "3 de 5"
+      "threeOfFive": "3 de 5",
+      "capacitySeats": "{count} places",
+      "capacitySeatsWaitlist": "{count} places + file d'attente"
     },
     "actions": {
       "join": "Rejoindre la ligue",
@@ -4869,7 +4893,8 @@
         "sharingUnavailable": "Cette ligue ne peut pas être partagée par les joueurs. Demande une invitation à l'organisateur.",
         "generic": "Impossible de préparer le lien d'invitation. Réessaie."
       }
-    }
+    },
+    "queuedInLineFirst": "1re en file pour une place"
   },
   "sessionDetail": {
     "membersOnlyBounce": "Cette séance est réservée aux membres. Rejoins la ligue pour la voir.",
@@ -4962,7 +4987,11 @@
         "title": "Un joueur va être exempté",
         "message": "{count} joueurs ont confirmé, un nombre impair, donc un d’eux sera exempté pour cette séance. Retire ou ajoute un joueur d’abord si tu préfères qu’ils jouent tous.",
         "cta": "Générer quand même"
-      }
+      },
+      "draftBanner": "Brouillon. Toi seul vois ces pairages. Ajuste-les, puis publie.",
+      "draftHint": "Régénérer rebrasse les pairages non verrouillés. Rien ne se rend à tes membres tant que tu n'as pas publié.",
+      "publish": "Publier la feuille",
+      "published": "Feuille publiée"
     },
     "score": {
       "title": "Entrer le pointage",
@@ -4987,7 +5016,8 @@
       "notCancellable": "Cette séance ne peut plus être annulée.",
       "notWithdrawable": "Ce membre ne peut plus être retiré à ce stade-ci.",
       "notEnoughConfirmed": "Pas assez de joueurs confirmés pour générer la feuille de match.",
-      "sheetLocked": "Des parties sont verrouillées ou déjà comptées, la feuille ne peut pas être régénérée."
+      "sheetLocked": "Des parties sont verrouillées ou déjà comptées, la feuille ne peut pas être régénérée.",
+      "sheetEmpty": "Il n'y a pas encore de feuille à publier."
     },
     "linkPicker": {
       "title": "Lier une partie jouée",
@@ -5180,13 +5210,39 @@
       "memberCapacity": "Limite de membres",
       "memberCapacityPlaceholder": "Illimité",
       "memberCapacityHint": "Nombre de joueurs qui peuvent avoir une place, toi compris. Laisse vide pour aucune limite.",
-      "pointsTitle": "Système de pointage",
+      "schedulingTitle": "Comment se jouent les séances",
+      "scheduling": {
+        "fixed": {
+          "title": "Soirs fixes",
+          "description": "Chaque séance est une date à une heure précise. Tout le monde joue en même temps."
+        },
+        "flex": {
+          "title": "Période flexible",
+          "description": "Chaque séance est une plage de jours. Les membres organisent leurs parties dedans."
+        }
+      },
+      "pointsTitle": "Points par résultat",
       "points": {
         "pointWin": "Victoire",
         "pointLoss": "Défaite",
         "pointBye": "Bye"
       },
-      "pointsHint": "Ce que chaque résultat vaut au classement. Les saisons gardent les valeurs qu'elles avaient à leur création.",
+      "pointsHint": "Ce que chaque résultat vaut au classement.",
+      "bonusTitle": "Bonus",
+      "bonus": {
+        "pointPerSetWon": {
+          "title": "Sets gagnés",
+          "description": "Chaque set remporté ajoute des points, en plus du résultat.",
+          "label": "Points par set"
+        },
+        "pointPerGameWon": {
+          "title": "Jeux gagnés",
+          "description": "Chaque jeu à l'intérieur d'un set ajoute aussi des points, alors perdre de justesse vaut plus que se faire blanchir.",
+          "label": "Points par jeu"
+        }
+      },
+      "formulaExample": "Avec cette formule, une victoire {score} vaut {win} points et la défaite {loss}.",
+      "formulaForwardHint": "Les saisons gardent la formule qu'elles avaient à leur création. Un changement ici s'applique aux prochaines saisons.",
       "waitlistTitle": "Liste d'attente",
       "waitlistDescription": "Quand la ligue est pleine, les nouveaux se placent en file et entrent automatiquement dès qu'une place se libère."
     },
@@ -5195,7 +5251,8 @@
       "nameTooLong": "Le nom doit contenir 100 caractères ou moins",
       "ratingRangeInvalid": "La cote maximale doit être égale ou supérieure à la minimale",
       "capacityInvalid": "Entre un nombre de 1 ou plus",
-      "pointsInvalid": "Les points doivent être des nombres entiers entre -100 et 100"
+      "pointsInvalid": "Les points doivent être des nombres entiers entre -100 et 100",
+      "bonusInvalid": "Les bonus doivent être des nombres entiers entre 0 et 100"
     },
     "errors": {
       "sportMismatch": "Active ce sport sur ton profil avant de créer une ligue",

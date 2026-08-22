@@ -9,7 +9,7 @@ import {
   type InvitationTimeseries,
   type InvitationType,
 } from '@rallia/shared-hooks';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
 import { FunnelStrip } from '@/components/admin/funnel-strip';
@@ -38,6 +38,7 @@ import {
  * is selected.
  */
 export function InvitationsReferralsSection({ days }: { days: number }) {
+  const locale = useLocale();
   const t = useTranslations('admin.analytics');
   const { stats: invitationStats, loading: invitationsLoading } = useInvitationStats(days);
   const { data: timeseries } = useInvitationTimeseries(days);
@@ -105,7 +106,7 @@ export function InvitationsReferralsSection({ days }: { days: number }) {
               data={chartData}
               series={chartSeries}
               height={340}
-              formatDay={day => formatDayLabel(day)}
+              formatDay={day => formatDayLabel(day, locale)}
             />
           ) : (
             <div className="h-[340px] flex items-center justify-center">
@@ -261,10 +262,10 @@ function useInvitationChart(
   }, [stats, timeseries, t]);
 }
 
-function formatDayLabel(day: string): string {
+function formatDayLabel(day: string, locale: string): string {
   try {
     const d = new Date(day);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   } catch {
     return day;
   }

@@ -1,5 +1,7 @@
 'use client';
 
+import { useLocale } from 'next-intl';
+
 import type { MessageWithSender } from '@rallia/shared-services';
 
 import { cn } from '@/lib/utils';
@@ -34,10 +36,14 @@ function MessageAvatar({ message }: { message: MessageWithSender }) {
   );
 }
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, locale: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return date.toLocaleTimeString(locale, {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: locale.startsWith('en'),
+  });
 }
 
 export function MessageBubble({
@@ -53,6 +59,7 @@ export function MessageBubble({
   showTime: boolean;
   groupStart: boolean;
 }) {
+  const locale = useLocale();
   const isOptimistic = message.id.startsWith('optimistic-');
 
   return (
@@ -86,7 +93,7 @@ export function MessageBubble({
         </div>
         {showTime && (
           <span className="px-1 text-[10px] text-muted-foreground">
-            {formatTime(message.created_at)}
+            {formatTime(message.created_at, locale)}
           </span>
         )}
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useUserDemographics, type DemographicCount } from '@rallia/shared-hooks';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { KpiCard } from '@/components/admin/kpi-card';
@@ -17,6 +17,7 @@ const CHART_VARS = [
 ];
 
 export function UsersSection() {
+  const locale = useLocale();
   const t = useTranslations('admin.analytics');
   const { data, loading } = useUserDemographics();
 
@@ -85,7 +86,7 @@ export function UsersSection() {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
                   <XAxis
                     dataKey="week"
-                    tickFormatter={formatWeek}
+                    tickFormatter={(l: unknown) => formatWeek(String(l), locale)}
                     stroke="currentColor"
                     className="text-muted-foreground text-xs"
                     tickLine={false}
@@ -100,7 +101,7 @@ export function UsersSection() {
                     width={28}
                   />
                   <Tooltip
-                    labelFormatter={(l: unknown) => formatWeek(String(l))}
+                    labelFormatter={(l: unknown) => formatWeek(String(l), locale)}
                     contentStyle={{
                       background: 'var(--background)',
                       border: '1px solid var(--border)',
@@ -404,9 +405,9 @@ function formatDuration(v: string): string {
   return /^\d+$/.test(v) ? `${v} min` : cap(v);
 }
 
-function formatWeek(iso: string): string {
+function formatWeek(iso: string, locale: string): string {
   // iso is "YYYY-MM-DD" (Monday of the ISO week)
   const d = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }

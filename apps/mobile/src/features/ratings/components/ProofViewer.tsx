@@ -98,7 +98,10 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
       setLoading(false);
     } else if (status === 'error') {
       if (playerError) {
-        Logger.error('Video playback error', new Error(String(playerError)));
+        Logger.error(
+          'Video playback error',
+          new Error(playerError.message || 'unknown player error')
+        );
       }
       setError(t('profile.ratingProofs.gallery.failedToLoadVideo'));
       setLoading(false);

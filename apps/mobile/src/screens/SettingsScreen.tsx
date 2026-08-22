@@ -75,6 +75,19 @@ function SettingsItem({
   );
 }
 
+type FunctionErrorBody = { code?: string; error?: string; blockers?: Record<string, unknown> };
+
+// supabase.functions.invoke surfaces a non-2xx as FunctionsHttpError carrying the Response on `context`.
+async function readFunctionErrorBody(error: unknown): Promise<FunctionErrorBody | null> {
+  const response = (error as { context?: unknown } | null)?.context;
+  if (!response || typeof (response as Response).json !== 'function') return null;
+  try {
+    return (await (response as Response).json()) as FunctionErrorBody;
+  } catch {
+    return null;
+  }
+}
+
 const SettingsScreen: React.FC = () => {
   const navigation = useAppNavigation();
   const toast = useToast();
@@ -241,7 +254,27 @@ const SettingsScreen: React.FC = () => {
                     try {
                       const { data, error } = await supabase.functions.invoke('delete-account');
                       if (error || !data?.success) {
-                        throw new Error(error?.message || data?.error || 'Deletion failed');
+                        const body = await readFunctionErrorBody(error);
+                        if (body?.code === 'lt_records') {
+                          Logger.info('Account deletion blocked by L&T records', {
+                            blockers: body.blockers,
+                          });
+                          Alert.alert(
+                            t('settings.deleteAccountBlockedTitle'),
+                            t('settings.deleteAccountBlockedMessage'),
+                            [
+                              { text: t('common.cancel'), style: 'cancel' },
+                              {
+                                text: t('settings.contactSupport'),
+                                onPress: () => Linking.openURL('mailto:contact@rallia.ca'),
+                              },
+                            ]
+                          );
+                          return;
+                        }
+                        throw new Error(
+                          body?.error || error?.message || data?.error || 'Deletion failed'
+                        );
                       }
                       await signOut();
                       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });

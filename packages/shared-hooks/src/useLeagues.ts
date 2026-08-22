@@ -58,6 +58,7 @@ import {
   openSeason,
   publishSession,
   recordSessionScore,
+  publishSessionSheet,
   regenerateSessionSheet,
   setSessionMatchLock,
   swapSessionPlayer,
@@ -621,6 +622,7 @@ export function useCreateSession(seasonId: string, options: MutationOptions<Sess
       capacity?: number;
       rounds?: number;
       pairingMode?: Enums<'pairing_mode'>;
+      playWindowEndsAt?: string;
     }) => createLeagueSession({ seasonId, ...input }),
     onSuccess: result => {
       qc.invalidateQueries({ queryKey: leagueKeys.sessions(seasonId) });
@@ -642,6 +644,7 @@ export function useCreateSessionSeries(seasonId: string, options: MutationOption
       capacity?: number;
       rounds?: number;
       pairingMode?: Enums<'pairing_mode'>;
+      windowDays?: number;
     }) => createLeagueSessionSeries({ seasonId, ...input }),
     onSuccess: result => {
       qc.invalidateQueries({ queryKey: leagueKeys.sessions(seasonId) });
@@ -774,6 +777,19 @@ export function useGenerateSessionSheet(sessionId: string, options: MutationOpti
       regenerate
         ? regenerateSessionSheet(sessionId, versionWas)
         : generateSessionSheet(sessionId, versionWas),
+    onSuccess: result => {
+      invalidate(sessionId);
+      options.onSuccess?.(result);
+    },
+    onError: options.onError,
+  });
+}
+
+export function usePublishSessionSheet(sessionId: string, options: MutationOptions<Session> = {}) {
+  const invalidate = useSheetInvalidator();
+  return useMutation({
+    mutationFn: ({ versionWas }: { versionWas: number }) =>
+      publishSessionSheet(sessionId, versionWas),
     onSuccess: result => {
       invalidate(sessionId);
       options.onSuccess?.(result);

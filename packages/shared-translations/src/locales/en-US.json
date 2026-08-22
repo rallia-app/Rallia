@@ -727,6 +727,8 @@
     "deleteAccountFinalTitle": "Are you absolutely sure?",
     "deleteAccountFinalMessage": "All your data will be permanently removed. You will not be able to recover your account.",
     "deleteAccountSuccess": "Your account has been deleted.",
+    "deleteAccountBlockedTitle": "Account still linked to events",
+    "deleteAccountBlockedMessage": "Your account is linked to tournament or league records (registrations, results or payments). Withdraw from any active events first, then write to contact@rallia.ca and we'll finish the deletion for you.",
     "contactSupport": "Contact Support",
     "appInfo": "App Info",
     "version": "Version",
@@ -4442,7 +4444,8 @@
     "memberErrors": {
       "memberNotFound": "This member is no longer in the league.",
       "notRevocable": "This invitation can't be revoked anymore.",
-      "organizerImmune": "The organizer can't be removed from their own league."
+      "organizerImmune": "The organizer can't be removed from their own league.",
+      "staleRow": "This request just changed. We refreshed the list, try again."
     },
     "createErrors": {
       "invalidName": "That name won't work. Try a different one.",
@@ -4498,14 +4501,18 @@
       "joinMode": "Join mode",
       "description": "Description",
       "venue": "Venue",
-      "ratingRange": "Rating range"
+      "ratingRange": "Rating range",
+      "capacity": "Capacity",
+      "scheduling": "Sessions"
     },
     "overview": {
       "infoTitle": "League info",
       "rulesTitle": "How it works",
       "rulesScoring": "Scoring format",
       "rulesPoints": "Win {win} · Loss {loss} · Bye {bye}",
-      "rulesPointsHint": "Standings points"
+      "rulesPointsHint": "Standings points",
+      "rulesBonusSet": "+{points} per set won",
+      "rulesBonusGame": "+{points} per game won"
     },
     "dashboard": {
       "organizedBy": "Organized by {name}",
@@ -4531,7 +4538,9 @@
         "title": "Pending approval ({count})",
         "approveLabel": "Approve {name}",
         "rejectLabel": "Turn down {name}",
-        "queuedAt": "#{rank} in line for a spot"
+        "queuedAt": "#{rank} in line for a spot",
+        "queuedAtFirst": "1st in line for a spot",
+        "leagueFullHint": "The league is full ({seated}/{capacity}). Free a seat before approving."
       },
       "invited": {
         "title": "Invited · awaiting response ({count})",
@@ -4542,7 +4551,8 @@
         "suspendedTitle": "Suspended ({count})",
         "suspendLabel": "Suspend {name}",
         "removeLabel": "Remove {name}",
-        "reinstateLabel": "Reinstate {name}"
+        "reinstateLabel": "Reinstate {name}",
+        "suspendedUntil": "Suspended until {date}"
       },
       "memberTabs": {
         "confirmed": "Confirmed",
@@ -4558,7 +4568,8 @@
       },
       "openSeasonCta": {
         "description": "Opening a season lets members register and sessions begin"
-      }
+      },
+      "membershipTitle": "My spot"
     },
     "editModal": {
       "title": "Edit league",
@@ -4706,11 +4717,22 @@
         "avoid_repeat": {
           "title": "Avoid repeats",
           "description": "Favours opponents each player has not faced yet this season."
+        },
+        "manual": {
+          "title": "Manual",
+          "description": "We lay out the rounds in confirmation order and choose nobody. You arrange the pairings, then publish the sheet."
         }
       },
       "validation": {
         "nameRequired": "Session name is required",
         "future": "Pick a date and time in the future"
+      },
+      "window": {
+        "label": "Play window",
+        "description": "How long members have to play their games.",
+        "days": "{count} days",
+        "hint": "Members arrange their own games inside the window. It cannot outlast the gap to the next session.",
+        "range": "{from} to {to}"
       }
     },
     "values": {
@@ -4722,7 +4744,9 @@
       "inviteOnly": "Invite only",
       "oneSet": "Single set",
       "twoOfThree": "Best of 3",
-      "threeOfFive": "Best of 5"
+      "threeOfFive": "Best of 5",
+      "capacitySeats": "{count} spots",
+      "capacitySeatsWaitlist": "{count} spots + waitlist"
     },
     "actions": {
       "join": "Join league",
@@ -4869,7 +4893,8 @@
         "sharingUnavailable": "This league can't be shared by players. Ask the organizer for an invite.",
         "generic": "Couldn't prepare the invite link. Please try again."
       }
-    }
+    },
+    "queuedInLineFirst": "1st in line for a spot"
   },
   "sessionDetail": {
     "membersOnlyBounce": "That session is for members. Join the league to see it.",
@@ -4962,7 +4987,11 @@
         "title": "Someone will sit out",
         "message": "{count} players confirmed, which is an odd number, so one of them gets a bye this session. Remove or add a player first if you would rather they all play.",
         "cta": "Generate anyway"
-      }
+      },
+      "draftBanner": "Draft. Only you can see these pairings. Adjust them, then publish.",
+      "draftHint": "Regenerating reshuffles the unlocked pairings. Nothing reaches your members until you publish.",
+      "publish": "Publish the sheet",
+      "published": "Sheet published"
     },
     "score": {
       "title": "Enter score",
@@ -4987,7 +5016,8 @@
       "notCancellable": "This session can't be cancelled anymore.",
       "notWithdrawable": "This member can't be withdrawn at this point.",
       "notEnoughConfirmed": "Not enough confirmed players to build the match sheet.",
-      "sheetLocked": "Some games are locked or already scored, so the sheet can't be regenerated."
+      "sheetLocked": "Some games are locked or already scored, so the sheet can't be regenerated.",
+      "sheetEmpty": "There is no sheet to publish yet."
     },
     "linkPicker": {
       "title": "Link a played match",
@@ -5182,20 +5212,47 @@
       "memberCapacityHint": "How many players can hold a spot, including you. Leave empty for no limit.",
       "waitlistTitle": "Waitlist",
       "waitlistDescription": "When the league is full, new joiners line up and move in automatically when a spot opens.",
-      "pointsTitle": "Points system",
+      "schedulingTitle": "How sessions run",
+      "scheduling": {
+        "fixed": {
+          "title": "Fixed evenings",
+          "description": "Every session is one date at one time. Everyone plays together."
+        },
+        "flex": {
+          "title": "Flexible window",
+          "description": "Every session is a stretch of days. Members arrange their own games inside it."
+        }
+      },
+      "pointsTitle": "Points per result",
       "points": {
         "pointWin": "Win",
         "pointLoss": "Loss",
         "pointBye": "Bye"
       },
-      "pointsHint": "What each result is worth in the standings. Seasons keep the values they were created with."
+      "pointsHint": "What each result is worth in the standings.",
+      "bonusTitle": "Bonuses",
+      "bonus": {
+        "pointPerSetWon": {
+          "title": "Sets won",
+          "description": "Every set a player takes adds points, on top of the result.",
+          "label": "Points per set"
+        },
+        "pointPerGameWon": {
+          "title": "Games won",
+          "description": "Every game inside a set adds points too, so a tight loss is worth more than a blowout.",
+          "label": "Points per game"
+        }
+      },
+      "formulaExample": "With this formula, a {score} win is worth {win} points and the loss {loss}.",
+      "formulaForwardHint": "Seasons keep the formula they were created with. A change here applies to the seasons you create next."
     },
     "validation": {
       "nameRequired": "League name is required",
       "nameTooLong": "Name must be 100 characters or fewer",
       "ratingRangeInvalid": "Maximum rating must be at or above the minimum",
       "capacityInvalid": "Enter a number of 1 or more",
-      "pointsInvalid": "Points must be whole numbers between -100 and 100"
+      "pointsInvalid": "Points must be whole numbers between -100 and 100",
+      "bonusInvalid": "Bonuses must be whole numbers between 0 and 100"
     },
     "errors": {
       "sportMismatch": "Switch to a sport on your profile before creating a league",

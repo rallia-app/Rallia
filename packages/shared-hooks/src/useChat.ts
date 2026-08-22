@@ -4,7 +4,15 @@
  */
 
 import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+  type InfiniteData,
+  type QueryClient,
+  type QueryKey,
+} from '@tanstack/react-query';
 import {
   getPlayerConversations,
   getPlayerConversationsFiltered,
@@ -412,6 +420,54 @@ export function useSendMessage() {
   });
 }
 
+type ConversationListCache = ConversationPreview[] | InfiniteData<FilteredConversationsPage>;
+
+function isInfiniteConversationList(
+  data: ConversationListCache
+): data is InfiniteData<FilteredConversationsPage> {
+  return !Array.isArray(data) && Array.isArray(data.pages);
+}
+
+// Patches every cache under the playerConversations prefix: flat lists and the paginated inbox query.
+function patchConversationCaches(
+  queryClient: QueryClient,
+  playerId: string,
+  patch: (conversation: ConversationPreview) => ConversationPreview
+) {
+  queryClient.setQueriesData<ConversationListCache>(
+    { queryKey: chatKeys.playerConversations(playerId) },
+    old => {
+      if (!old) return old;
+      if (!isInfiniteConversationList(old)) return old.map(patch);
+      return {
+        ...old,
+        pages: old.pages.map(page =>
+          Array.isArray(page?.conversations)
+            ? { ...page, conversations: page.conversations.map(patch) }
+            : page
+        ),
+      };
+    }
+  );
+}
+
+function findCachedConversation(
+  lists: Array<[QueryKey, ConversationListCache | undefined]>,
+  conversationId: string
+): ConversationPreview | undefined {
+  for (const [, data] of lists) {
+    if (!data) continue;
+    const rows = isInfiniteConversationList(data)
+      ? data.pages.flatMap(page => page?.conversations ?? [])
+      : data;
+    const hit = rows.find(conv => conv.id === conversationId);
+    if (hit) return hit;
+  }
+  return undefined;
+}
+
+const MARK_MESSAGES_AS_READ_KEY = [...chatKeys.all, 'markMessagesAsRead'] as const;
+
 /**
  * Mark messages as read
  */
@@ -419,41 +475,55 @@ export function useMarkMessagesAsRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: MARK_MESSAGES_AS_READ_KEY,
     mutationFn: ({ conversationId, playerId }: { conversationId: string; playerId: string }) =>
       markMessagesAsRead(conversationId, playerId),
     onMutate: async variables => {
+      const listKey = chatKeys.playerConversations(variables.playerId);
+      const totalKey = chatKeys.unreadCount(variables.playerId);
+      const convsKey = chatKeys.unreadConversationsCount(variables.playerId);
       // Cancel outgoing refetches so they don't overwrite optimistic update
-      await queryClient.cancelQueries({
-        queryKey: chatKeys.playerConversations(variables.playerId),
-      });
-
-      // Snapshot previous value
-      const previousConversations = queryClient.getQueryData<ConversationPreview[]>(
-        chatKeys.playerConversations(variables.playerId)
+      await Promise.all(
+        [listKey, totalKey, convsKey].map(queryKey => queryClient.cancelQueries({ queryKey }))
       );
 
-      // Optimistically set unread_count to 0 for this conversation
-      if (previousConversations) {
-        queryClient.setQueryData<ConversationPreview[]>(
-          chatKeys.playerConversations(variables.playerId),
-          previousConversations.map(conv =>
-            conv.id === variables.conversationId ? { ...conv, unread_count: 0 } : conv
-          )
+      // Read, patch and decrement in one synchronous block so overlapping calls never double-count.
+      const previousLists = queryClient.getQueriesData<ConversationListCache>({
+        queryKey: listKey,
+      });
+      const previousCounts = [totalKey, convsKey].flatMap(queryKey =>
+        queryClient.getQueriesData<number>({ queryKey, exact: true })
+      );
+      const cached = findCachedConversation(previousLists, variables.conversationId);
+
+      patchConversationCaches(queryClient, variables.playerId, conv =>
+        conv.id === variables.conversationId && conv.unread_count !== 0
+          ? { ...conv, unread_count: 0 }
+          : conv
+      );
+
+      // Both badge counts exclude archived conversations.
+      const unread = cached && !cached.is_archived ? cached.unread_count : 0;
+      if (unread > 0) {
+        queryClient.setQueriesData<number>({ queryKey: totalKey, exact: true }, old =>
+          old === undefined ? old : Math.max(0, old - unread)
+        );
+        queryClient.setQueriesData<number>({ queryKey: convsKey, exact: true }, old =>
+          old === undefined ? old : Math.max(0, old - 1)
         );
       }
 
-      return { previousConversations };
+      const previous: Array<[QueryKey, unknown]> = [...previousLists, ...previousCounts];
+      return { previous };
     },
-    onError: (_err, variables, context) => {
-      // Roll back on error
-      if (context?.previousConversations) {
-        queryClient.setQueryData(
-          chatKeys.playerConversations(variables.playerId),
-          context.previousConversations
-        );
-      }
+    onError: (_err, _variables, context) => {
+      context?.previous.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
     },
     onSettled: (_, __, variables) => {
+      // Calls overlap (enter + each incoming message): only the last one refetches.
+      if (queryClient.isMutating({ mutationKey: MARK_MESSAGES_AS_READ_KEY }) > 1) return;
       // Refetch conversations list so inbox reflects read state when navigating back
       queryClient.invalidateQueries({
         queryKey: chatKeys.conversations(),

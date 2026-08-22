@@ -25,7 +25,7 @@ import { Link, useRouter } from '@/i18n/navigation';
 import { BackButton } from '@/components/back-button';
 import { createClient } from '@/lib/supabase/client';
 import { AlertTriangle, Calendar, CalendarX, Loader2, Plus, Trash2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -75,6 +75,7 @@ interface OverlappingBlock {
 const BLOCK_TYPES: BlockType[] = ['manual', 'maintenance', 'holiday', 'weather', 'private_event'];
 
 export default function BlockManagementPage() {
+  const locale = useLocale();
   const t = useTranslations('blocks');
   const params = useParams();
   const router = useRouter();
@@ -530,7 +531,7 @@ export default function BlockManagementPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-medium mb-0">
-                          {new Date(block.block_date + 'T00:00:00').toLocaleDateString(undefined, {
+                          {new Date(block.block_date + 'T00:00:00').toLocaleDateString(locale, {
                             weekday: 'short',
                             month: 'short',
                             day: 'numeric',

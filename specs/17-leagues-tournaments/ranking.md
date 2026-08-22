@@ -24,7 +24,11 @@ Every league carries `default_rules` (jsonb) and every season freezes a copy at 
   "pointWalkoverWinner": 10,
   "pointWalkoverLoser": 0, // distinct from no-show: 0 ≠ -5
 
-  // Bonuses (v1.1; toggle with `enableBonuses`)
+  // Proportional bonuses (shipped). 0 = off, which is the default.
+  "pointPerSetWon": 0, // added per SET won, on top of the result
+  "pointPerGameWon": 0, // added per GAME won, on top of the result
+
+  // Discrete bonuses (v1.1, unbuilt; toggle with `enableBonuses`)
   "enableBonuses": false,
   "bonusStraightSets": 2, // win in min sets without dropping any
   "bonusShutout": 1, // 6-0,6-0 (or 11-0)
@@ -99,7 +103,26 @@ Drill matches (`session_matches.is_drill = true`) award **0 points** regardless 
 
 Three-player matches (`session_matches.is_three_player = true`, used for pickleball when capacity is odd): the lone-side player gets `pointWin` if they win and `pointLoss` if they lose; each player on the duo side gets `pointWin / 2` if they win (rounded up) and `pointLoss` if they lose. Configurable via `rules.threePlayerScoring` (`'lone_full'` default, or `'duo_full'`).
 
-### Bonuses (v1.1)
+### Proportional bonuses
+
+The organizer's scoring formula is a base plus two optional proportional
+bonuses, set in the league settings and snapshotted into every season at
+`season_create` (so an edit is forward-looking: it reaches the seasons created
+after it, never a running one).
+
+- **`pointPerSetWon`**: added once per set the player's side won.
+- **`pointPerGameWon`**: added once per game the player's side won.
+
+Both default to **0**, which is result-only scoring. Both are refused if
+negative (`lt_assert_league_rules`): they multiply a count of things _won_.
+They apply to any scored outcome, but a walkover or bye carries no score, so
+`lt_parse_score` returns zeroes and neither bonus pays anything there.
+
+Worked example, `pointWin` 10 / `pointLoss` 1 / `pointPerSetWon` 3 /
+`pointPerGameWon` 1, on a 6-4 6-2: the winner takes 10 + (2 x 3) + (12 x 1) =
+**28**, the loser 1 + (0 x 3) + (6 x 1) = **7**.
+
+### Discrete bonuses (v1.1, unbuilt)
 
 When `enableBonuses = true`:
 

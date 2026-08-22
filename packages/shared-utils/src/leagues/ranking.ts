@@ -4,9 +4,9 @@
  * Spec: specs/17-leagues-tournaments/ranking.md.
  *
  * As with byRankPairings.ts, this is the testable reference; the authoritative
- * runtime path is the SQL in `recalc_season_ranking` (migration
- * 20260618140000_lt_session_score_bridge.sql), which mirrors `parseScore`,
- * `outcomePoints`, and `rankingCompare`.
+ * runtime path is the SQL in `recalc_season_ranking` (latest definition in
+ * migration 20260819160000_lt_ranking_set_bonus.sql), which mirrors
+ * `parseScore`, `outcomePoints`, and `matchPoints`.
  */
 
 export interface RankingRules {
@@ -19,6 +19,8 @@ export interface RankingRules {
   pointRetirementLoser: number;
   pointWalkoverWinner: number;
   pointWalkoverLoser: number;
+  /** Points per SET won, added on top of the result. 0 = result-only. */
+  pointPerSetWon?: number;
   /** Points per GAME won, added on top of the result. 0 = result-only. */
   pointPerGameWon?: number;
 }
@@ -50,17 +52,22 @@ export function outcomePoints(
 }
 
 /**
- * Total points one player takes from one match: the result, plus
- * pointPerGameWon for every game they won. Mirrors the `contrib` CTE in
- * recalc_season_ranking, which adds the same term to its per-side points.
+ * Total points one player takes from one match: the result, plus the
+ * proportional bonuses for every set and game they won. Mirrors the `contrib`
+ * CTE in recalc_season_ranking, which adds the same two terms to its per-side
+ * points.
  */
 export function matchPoints(
   rules: RankingRules,
   status: ScoredStatus,
   isWinner: boolean,
-  gamesWon = 0
+  won: { sets?: number; games?: number } = {}
 ): number {
-  return outcomePoints(rules, status, isWinner) + (rules.pointPerGameWon ?? 0) * gamesWon;
+  return (
+    outcomePoints(rules, status, isWinner) +
+    (rules.pointPerSetWon ?? 0) * (won.sets ?? 0) +
+    (rules.pointPerGameWon ?? 0) * (won.games ?? 0)
+  );
 }
 
 export interface ParsedScore {

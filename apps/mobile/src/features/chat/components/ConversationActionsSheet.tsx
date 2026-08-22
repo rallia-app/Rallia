@@ -28,7 +28,7 @@ function ConversationActionsSheetComponent({ payload }: SheetProps<'conversation
   const onLeave = payload?.onLeave;
 
   const { colors, isDark } = useThemeStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   const handleClose = useCallback(() => {
     SheetManager.hide('conversation-actions');
@@ -41,7 +41,11 @@ function ConversationActionsSheetComponent({ payload }: SheetProps<'conversation
   const isArchived = conversation.is_archived ?? false;
   const isGroup = isGroupConversationType(conversation.conversation_type);
 
-  const conversationName = getConversationDisplayName(conversation, t as (key: string) => string);
+  const conversationName = getConversationDisplayName(
+    conversation,
+    t as (key: string) => string,
+    locale
+  );
 
   type ActionItem = {
     id: string;

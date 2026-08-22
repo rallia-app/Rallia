@@ -139,6 +139,7 @@ import {
   readRules,
   seasonRefundPolicyLine,
   seasonRefundZeroReason,
+  formatSessionWhen,
 } from '../features/leagues/detail/components';
 import type {
   ManageMemberRow,
@@ -150,7 +151,7 @@ import type {
 import type { LeagueEditData } from '../features/leagues';
 import { LeagueBanner } from '../features/leagues/components/LeagueBanner';
 import { useTranslation, useRequireOnboarding, type TranslationKey } from '../hooks';
-import { rpcErrorMessage } from '../utils/rpcErrorMessage';
+import { rpcErrorMessage, type RpcErrorOverrides } from '../utils/rpcErrorMessage';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
 
@@ -267,6 +268,27 @@ export const LeagueDetail: React.FC = () => {
     void refetchSeasons();
   }, [refetchLeague, refetchMembers, refetchMembership, refetchSeasons]);
 
+  /**
+   * Every organizer action on a member row carries that row's version, so a
+   * list that has drifted fails the optimistic lock. The shared copy tells the
+   * organizer to refresh and try again; refetching here is what makes that
+   * advice true, instead of leaving the retry to reuse the same stale version.
+   */
+  const memberActionError = useCallback(
+    (e: Error, overrides: RpcErrorOverrides = {}) => {
+      warningHaptic();
+      invalidateAll();
+      toast.error(
+        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
+          ...overrides,
+          OPTIMISTIC_LOCK_CONFLICT: 'leagueDetail.memberErrors.staleRow',
+          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
+        })
+      );
+    },
+    [toast, t, invalidateAll]
+  );
+
   const { mutate: joinLeague, isPending: isJoining } = useJoinLeague(leagueId, {
     onSuccess: m => {
       successHaptic();
@@ -316,15 +338,7 @@ export const LeagueDetail: React.FC = () => {
       toast.success(t('leagueDetail.memberApproved'));
       invalidateAll();
     },
-    onError: e => {
-      warningHaptic();
-      toast.error(
-        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
-          LEAGUE_FULL: 'leagueDetail.joinErrors.leagueFull',
-          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
-        })
-      );
-    },
+    onError: e => memberActionError(e, { LEAGUE_FULL: 'leagueDetail.joinErrors.leagueFull' }),
   });
 
   const { mutate: acceptInvite, isPending: isAccepting } = useAcceptLeagueInvite(leagueId, {
@@ -333,15 +347,7 @@ export const LeagueDetail: React.FC = () => {
       toast.success(t('leagueDetail.inviteAccepted'));
       invalidateAll();
     },
-    onError: e => {
-      warningHaptic();
-      toast.error(
-        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
-          NOT_INVITED: 'leagueDetail.joinErrors.notInvited',
-          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
-        })
-      );
-    },
+    onError: e => memberActionError(e, { NOT_INVITED: 'leagueDetail.joinErrors.notInvited' }),
   });
 
   const { mutate: revokeInvite, isPending: isRevoking } = useRevokeLeagueInvite(leagueId, {
@@ -350,30 +356,17 @@ export const LeagueDetail: React.FC = () => {
       toast.success(t('leagueDetail.inviteRevoked'));
       invalidateAll();
     },
-    onError: e => {
-      warningHaptic();
-      toast.error(
-        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
-          NOT_REVOCABLE: 'leagueDetail.memberErrors.notRevocable',
-          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
-        })
-      );
-    },
+    onError: e => memberActionError(e, { NOT_REVOCABLE: 'leagueDetail.memberErrors.notRevocable' }),
   });
 
   const onMemberLifecycleError = useCallback(
-    (e: Error) => {
-      warningHaptic();
-      toast.error(
-        rpcErrorMessage(e, t, 'leagueDetail.errors.generic', {
-          ORGANIZER_CANNOT_LEAVE: 'leagueDetail.memberErrors.organizerImmune',
-          CANNOT_REMOVE_ORGANIZER: 'leagueDetail.memberErrors.organizerImmune',
-          CANNOT_SUSPEND_ORGANIZER: 'leagueDetail.memberErrors.organizerImmune',
-          MEMBER_NOT_FOUND: 'leagueDetail.memberErrors.memberNotFound',
-        })
-      );
-    },
-    [toast, t]
+    (e: Error) =>
+      memberActionError(e, {
+        ORGANIZER_CANNOT_LEAVE: 'leagueDetail.memberErrors.organizerImmune',
+        CANNOT_REMOVE_ORGANIZER: 'leagueDetail.memberErrors.organizerImmune',
+        CANNOT_SUSPEND_ORGANIZER: 'leagueDetail.memberErrors.organizerImmune',
+      }),
+    [memberActionError]
   );
 
   const { mutate: leaveLeagueMut, isPending: isLeaving } = useLeaveLeague(leagueId, {
@@ -556,6 +549,27 @@ export const LeagueDetail: React.FC = () => {
   const activeMembers = useMemo(() => members.filter(m => m.status === 'active'), [members]);
   const suspendedMembers = useMemo(() => members.filter(m => m.status === 'suspended'), [members]);
 
+  // Approving past capacity fails server-side (LEAGUE_FULL); when every seat
+  // is taken the Demandes list says so up front instead of letting the tap
+  // discover it. Suspended members keep their seat, so they count.
+  const leagueFullHint = useMemo(() => {
+    const capacity = league?.member_capacity;
+    if (capacity == null || pendingRequests.length === 0) return undefined;
+    const seated = activeMembers.length + suspendedMembers.length;
+    return seated >= capacity
+      ? t('leagueDetail.dashboard.pendingRequests.leagueFullHint', {
+          seated: String(seated),
+          capacity: String(capacity),
+        })
+      : undefined;
+  }, [
+    league?.member_capacity,
+    pendingRequests.length,
+    activeMembers.length,
+    suspendedMembers.length,
+    t,
+  ]);
+
   const openSeason = useMemo(() => seasons.find(s => s.status === 'open'), [seasons]);
   const openSeasonId = openSeason?.id;
   const { data: seasonRoster = [] } = useSeasonMembers(openSeasonId);
@@ -622,8 +636,16 @@ export const LeagueDetail: React.FC = () => {
         memberId: m.id,
         version: m.version,
         userId: m.user_id,
+        suspensionLine: m.suspended_until
+          ? t('leagueDetail.dashboard.members.suspendedUntil', {
+              date: new Date(m.suspended_until).toLocaleDateString(locale, {
+                month: 'short',
+                day: 'numeric',
+              }),
+            })
+          : undefined,
       })),
-    [suspendedMembers, memberBadges]
+    [suspendedMembers, memberBadges, t, locale]
   );
 
   // Members-tab status segments. Requests / Invited / Suspended only exist
@@ -1190,10 +1212,25 @@ export const LeagueDetail: React.FC = () => {
 
   const formatDate = useCallback(
     (isoOrDate: string | Date): string => {
-      const d = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate;
+      // A bare date column ("2026-06-01") parsed by new Date() lands at UTC
+      // midnight, which is the previous evening in Montréal: every season
+      // rendered one day early. Date-only strings are parsed as local dates.
+      const dateOnly =
+        typeof isoOrDate === 'string' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoOrDate) : null;
+      const d = dateOnly
+        ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+        : typeof isoOrDate === 'string'
+          ? new Date(isoOrDate)
+          : isoOrDate;
       return d.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
     },
     [locale]
+  );
+
+  const sessionWhen = useCallback(
+    (s: { scheduled_at: string; play_window_ends_at?: string | null }) =>
+      formatSessionWhen(s, locale, t),
+    [locale, t]
   );
 
   const formatDateTime = useCallback(
@@ -1567,6 +1604,7 @@ export const LeagueDetail: React.FC = () => {
         seasonId: openSeason.id,
         leagueId,
         defaultRounds: seasonRules.gamesPerPlayer,
+        scheduling: seasonRules.sessionScheduling === 'flex' ? 'flex' : 'fixed',
       },
     });
   }, [openSeason, leagueId]);
@@ -1731,13 +1769,23 @@ export const LeagueDetail: React.FC = () => {
   // league defaults afterwards.
   const rules = readRules(openSeason?.rules ?? league.default_rules);
   const scoringLabel = rules.matchFormat ? MATCH_FORMAT_KEY[rules.matchFormat] : undefined;
+  // The formula, in one line: the result points, then whichever proportional
+  // bonuses the organizer turned on. A bonus of 0 is off and stays unsaid.
   const pointsLabel =
     rules.pointWin != null && rules.pointLoss != null
-      ? t('leagueDetail.overview.rulesPoints', {
-          win: String(rules.pointWin),
-          loss: String(rules.pointLoss),
-          bye: String(rules.pointBye ?? 0),
-        })
+      ? [
+          t('leagueDetail.overview.rulesPoints', {
+            win: String(rules.pointWin),
+            loss: String(rules.pointLoss),
+            bye: String(rules.pointBye ?? 0),
+          }),
+          ...((rules.pointPerSetWon ?? 0) > 0
+            ? [t('leagueDetail.overview.rulesBonusSet', { points: String(rules.pointPerSetWon) })]
+            : []),
+          ...((rules.pointPerGameWon ?? 0) > 0
+            ? [t('leagueDetail.overview.rulesBonusGame', { points: String(rules.pointPerGameWon) })]
+            : []),
+        ].join(' · ')
       : undefined;
 
   /** Organizer utilities, rendered as one quiet grouped list in the Overview. */
@@ -1817,6 +1865,20 @@ export const LeagueDetail: React.FC = () => {
         testID: 'cta-close-league',
       });
     }
+  }
+  // A plain member's one lifecycle action lives at the END of the page, in the
+  // same quiet grouped list the organizer gets. It used to sit beside the hero
+  // chip, first thing under the header, where a destructive tap is one slip
+  // away and the page led with "how to leave".
+  if (!isOrganizer && myMembership?.status === 'active') {
+    organizerRows.push({
+      icon: 'exit-outline',
+      label: t('leagueDetail.leaveLeague'),
+      onPress: handleLeavePress,
+      destructive: true,
+      disabled: isLeaving,
+      testID: 'action-leave-league',
+    });
   }
 
   /**
@@ -2028,10 +2090,12 @@ export const LeagueDetail: React.FC = () => {
                     myMembership.invited_by
                       ? t('leagueDetail.acceptInvite')
                       : myQueueStatus
-                        ? t('leagueDetail.queuedInLine', {
-                            rank: String(myQueueStatus.queueRank),
-                            size: String(myQueueStatus.queueSize),
-                          })
+                        ? myQueueStatus.queueRank === 1
+                          ? t('leagueDetail.queuedInLineFirst')
+                          : t('leagueDetail.queuedInLine', {
+                              rank: String(myQueueStatus.queueRank),
+                              size: String(myQueueStatus.queueSize),
+                            })
                         : t('leagueDetail.membershipPending')
                   }
                 />
@@ -2045,18 +2109,9 @@ export const LeagueDetail: React.FC = () => {
                   label={t('leagueDetail.viewReceipt')}
                 />
               ) : null}
-              {myMembership.status === 'active' ? (
-                <TouchableOpacity
-                  onPress={handleLeavePress}
-                  disabled={isLeaving}
-                  style={styles.heroTextAction}
-                  testID="cta-leave-league"
-                >
-                  <Text size="xs" weight="semibold" color={colors.danger}>
-                    {t('leagueDetail.leaveLeague')}
-                  </Text>
-                </TouchableOpacity>
-              ) : !myMembership.invited_by ? (
+              {/* Leaving moved to the Overview's quiet bottom list; only the
+                  low-stakes cancel-request stays beside the pending chip. */}
+              {myMembership.status === 'active' ? null : !myMembership.invited_by ? (
                 <TouchableOpacity
                   onPress={handleCancelRequestPress}
                   disabled={isLeaving}
@@ -2099,6 +2154,7 @@ export const LeagueDetail: React.FC = () => {
             organizerName={organizerName}
             organizerRows={organizerRows}
             pendingMemberRows={pendingMemberRows}
+            currentUserId={userId ?? null}
             rankingSeason={rankingSeason}
             rankings={rankings}
             standingsSeasons={standingsSeasons}
@@ -2123,6 +2179,7 @@ export const LeagueDetail: React.FC = () => {
             pendingMemberRows={pendingMemberRows}
             invitedMemberRows={invitedMemberRows}
             suspendedMemberRows={suspendedMemberRows}
+            leagueFullHint={leagueFullHint}
             handlePlayerPress={handlePlayerPress}
             handleInvitePress={handleInvitePress}
             handleApprovePress={handleApprovePress}
@@ -2182,7 +2239,7 @@ export const LeagueDetail: React.FC = () => {
             isOrganizer={isOrganizer}
             openSeason={openSeason}
             seasonSessions={seasonSessions}
-            formatDateTime={formatDateTime}
+            formatSessionWhen={sessionWhen}
             sessionPill={sessionPill}
             handleOpenSession={handleOpenSession}
             handleOpenCreateSession={handleOpenCreateSession}

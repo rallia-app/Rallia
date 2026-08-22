@@ -556,7 +556,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         );
 
         if (error) {
-          Logger.error('Email OTP send error', error);
+          // Supabase's resend cooldown (429) just means a second tap inside the window.
+          if (error.status === 429 || error.code === 'over_email_send_rate_limit') {
+            Logger.warn('Email OTP send rate-limited', { message: error.message });
+          } else {
+            Logger.error('Email OTP send error', error);
+          }
           return { success: false, error };
         }
 

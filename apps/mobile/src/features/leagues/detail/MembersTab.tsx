@@ -34,6 +34,8 @@ interface MembersTabProps {
   pendingMemberRows: PendingMemberRow[];
   invitedMemberRows: PendingMemberRow[];
   suspendedMemberRows: ManageMemberRow[];
+  /** Set when the league is at capacity: shown above the pending requests. */
+  leagueFullHint?: string;
   handlePlayerPress: (player: PlayerSearchResult) => void;
   handleInvitePress: () => void;
   handleApprovePress: (memberId: string, version: number) => void;
@@ -56,6 +58,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   pendingMemberRows,
   invitedMemberRows,
   suspendedMemberRows,
+  leagueFullHint,
   handlePlayerPress,
   handleInvitePress,
   handleApprovePress,
@@ -95,6 +98,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
         onReject={handleRejectPress}
         colors={colors}
         t={t}
+        leagueFullHint={leagueFullHint}
       />
     ) : activeMembersSegment === 'invited' ? (
       <InvitedMembersSection

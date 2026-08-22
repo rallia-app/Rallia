@@ -15,6 +15,17 @@ Sentry.init({
   // Only enable Sentry in production (not development or Vercel preview)
   enabled: process.env.NODE_ENV === 'production',
 
+  // Third-party noise: in-app browsers (Instagram/Facebook) inject their own
+  // scripts, Outlook SafeLinks probes the page, and Supabase auth steals its
+  // own navigator.lock across tabs. None of it is ours to fix.
+  ignoreErrors: [
+    'Java object is gone',
+    /window\.webkit\.messageHandlers/,
+    /Object Not Found Matching Id:\d+, MethodName:/,
+    /Lock broken by another request with the 'steal' option/,
+  ],
+  denyUrls: [/navigation_performance_logger_android/],
+
   // Session replay is attached lazily by AnalyticsRuntime after consent.
   integrations: [],
 

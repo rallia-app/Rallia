@@ -307,10 +307,15 @@ BEGIN
     -- 7. the named row has to hold the player being taken out
     -- ------------------------------------------------------------------
     BEGIN
+        -- Has to be a round-2 row that does NOT hold v_out: an unordered
+        -- LIMIT 1 could land on the one that does, where the swap is legal and
+        -- the assertion below fires for the wrong reason.
         PERFORM public.session_swap_player(
             v_sess.id,
             (SELECT id FROM session_matches
-              WHERE session_id = v_sess.id AND is_drill = false AND round_number = 2 LIMIT 1),
+              WHERE session_id = v_sess.id AND is_drill = false AND round_number = 2
+                AND NOT (v_out = ANY (team_a_user_ids || team_b_user_ids))
+              ORDER BY id LIMIT 1),
             v_out, v_in, v_sess.version);
         RAISE EXCEPTION 'a swap named a row the leaving player is not in';
     EXCEPTION WHEN SQLSTATE 'P0001' THEN

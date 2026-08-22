@@ -2,7 +2,7 @@
 
 import { useAutoInviteFunnel, type AutoInviteFunnelPoint } from '@rallia/shared-hooks';
 import { status } from '@rallia/design-system';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 
 import {
@@ -125,6 +125,7 @@ const KNOWN_DECLINE_REASONS = [
 ] as const;
 
 export function AutoInviteFunnel() {
+  const locale = useLocale();
   const t = useTranslations('admin.analytics');
   const tReasons = useTranslations('matchActions.declineReasons');
   const [days, setDays] = useState<DaysWindow>(14);
@@ -263,7 +264,9 @@ export function AutoInviteFunnel() {
             {view !== 'cumulative' ? (
               <TrendInviteFunnels
                 buckets={trend}
-                labelOf={view === 'daily' ? shortDayLabel : shortWeekLabel}
+                labelOf={s =>
+                  view === 'daily' ? shortDayLabel(s, locale) : shortWeekLabel(s, locale)
+                }
                 progressNote={t(
                   view === 'daily' ? 'autoInvite.dailyInProgress' : 'matchesTab.weeklyInProgress'
                 )}

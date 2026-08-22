@@ -8769,11 +8769,13 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
           season_id: string
+          sheet_published_at: string | null
           status: Database["public"]["Enums"]["session_status"]
           timezone: string
           updated_at: string
@@ -8797,11 +8799,13 @@ export type Database = {
           name: string
           odd_cardinality_mode?: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode?: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at?: string | null
           points_per_game?: number | null
           published_at?: string | null
           rounds?: number
           scheduled_at: string
           season_id: string
+          sheet_published_at?: string | null
           status?: Database["public"]["Enums"]["session_status"]
           timezone: string
           updated_at?: string
@@ -8825,11 +8829,13 @@ export type Database = {
           name?: string
           odd_cardinality_mode?: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode?: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at?: string | null
           points_per_game?: number | null
           published_at?: string | null
           rounds?: number
           scheduled_at?: string
           season_id?: string
+          sheet_published_at?: string | null
           status?: Database["public"]["Enums"]["session_status"]
           timezone?: string
           updated_at?: string
@@ -10151,6 +10157,7 @@ export type Database = {
         Args: { p_match_result_id: string; p_player_id: string }
         Returns: boolean
       }
+      account_deletion_blockers: { Args: { p_user_id: string }; Returns: Json }
       admin_certify_network: {
         Args: {
           p_is_certified: boolean
@@ -10332,13 +10339,6 @@ export type Database = {
           p_tz: string
         }
         Returns: string
-      }
-      debug_check_conversation_participant: {
-        Args: { p_conversation_id: string; p_player_id: string }
-        Returns: {
-          is_participant: boolean
-          participant_count: number
-        }[]
       }
       derive_zone_from_location: {
         Args: { p_location: unknown }
@@ -11898,6 +11898,7 @@ export type Database = {
           network_name: string
         }[]
       }
+      get_total_unread_count: { Args: { p_player_id: string }; Returns: number }
       get_tournament_co_organizers: {
         Args: { p_tournament_id: string }
         Returns: {
@@ -12952,11 +12953,13 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
           season_id: string
+          sheet_published_at: string | null
           status: Database["public"]["Enums"]["session_status"]
           timezone: string
           updated_at: string
@@ -13901,11 +13904,13 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
           season_id: string
+          sheet_published_at: string | null
           status: Database["public"]["Enums"]["session_status"]
           timezone: string
           updated_at: string
@@ -13953,6 +13958,7 @@ export type Database = {
           p_facility_id?: string
           p_name: string
           p_pairing_mode?: Database["public"]["Enums"]["pairing_mode"]
+          p_play_window_ends_at?: string
           p_rounds?: number
           p_scheduled_at: string
           p_season_id: string
@@ -13976,11 +13982,13 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
           season_id: string
+          sheet_published_at: string | null
           status: Database["public"]["Enums"]["session_status"]
           timezone: string
           updated_at: string
@@ -14008,6 +14016,7 @@ export type Database = {
           p_season_id: string
           p_timezone?: string
           p_venue_name?: string
+          p_window_days?: number
         }
         Returns: {
           allow_guests: boolean
@@ -14026,11 +14035,13 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
           season_id: string
+          sheet_published_at: string | null
           status: Database["public"]["Enums"]["session_status"]
           timezone: string
           updated_at: string
@@ -14063,11 +14074,13 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
           season_id: string
+          sheet_published_at: string | null
           status: Database["public"]["Enums"]["session_status"]
           timezone: string
           updated_at: string
@@ -14104,11 +14117,52 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
           season_id: string
+          sheet_published_at: string | null
+          status: Database["public"]["Enums"]["session_status"]
+          timezone: string
+          updated_at: string
+          venue_name: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      session_publish_sheet: {
+        Args: { p_session_id: string; p_version_was: number }
+        Returns: {
+          allow_guests: boolean
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          capacity: number | null
+          completed_at: string | null
+          confirm_reminder_sent_at: string | null
+          confirmation_deadline_at: string | null
+          created_at: string
+          duration_minutes: number
+          facility_id: string | null
+          formats_allowed: Database["public"]["Enums"]["entry_format"][]
+          id: string
+          match_format: Database["public"]["Enums"]["match_format"] | null
+          name: string
+          odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
+          pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
+          points_per_game: number | null
+          published_at: string | null
+          rounds: number
+          scheduled_at: string
+          season_id: string
+          sheet_published_at: string | null
           status: Database["public"]["Enums"]["session_status"]
           timezone: string
           updated_at: string
@@ -14178,11 +14232,13 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
           season_id: string
+          sheet_published_at: string | null
           status: Database["public"]["Enums"]["session_status"]
           timezone: string
           updated_at: string
@@ -14260,11 +14316,13 @@ export type Database = {
           name: string
           odd_cardinality_mode: Database["public"]["Enums"]["odd_cardinality_mode"]
           pairing_mode: Database["public"]["Enums"]["pairing_mode"]
+          play_window_ends_at: string | null
           points_per_game: number | null
           published_at: string | null
           rounds: number
           scheduled_at: string
           season_id: string
+          sheet_published_at: string | null
           status: Database["public"]["Enums"]["session_status"]
           timezone: string
           updated_at: string
@@ -16188,6 +16246,7 @@ export type Database = {
         | "avoid_repeat"
         | "swiss"
         | "balanced_doubles"
+        | "manual"
       pairing_team: "a" | "b"
       payment_method:
         | "credit_card"
@@ -16886,6 +16945,7 @@ export const Constants = {
         "avoid_repeat",
         "swiss",
         "balanced_doubles",
+        "manual",
       ],
       pairing_team: ["a", "b"],
       payment_method: [

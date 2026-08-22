@@ -72,7 +72,7 @@ const Chat = () => {
   const rootNavigation = useAppNavigation();
   const chatNavigation = useChatNavigation();
   const { session, isAuthenticated, loading: isLoadingAuth } = useAuth();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { openSheet } = useActionsSheet();
   const { selectedSport } = useSport();
   const { guardAction, isReady: isOnboarded } = useRequireOnboarding();
@@ -250,10 +250,10 @@ const Chat = () => {
       lightHaptic();
       rootNavigation.navigate('ChatConversation', {
         conversationId: conversation.id,
-        title: getConversationDisplayName(conversation, t as (key: string) => string),
+        title: getConversationDisplayName(conversation, t as (key: string) => string, locale),
       });
     },
-    [rootNavigation, t]
+    [rootNavigation, t, locale]
   );
 
   const handleConversationLongPress = useCallback(

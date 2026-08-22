@@ -50,6 +50,7 @@ function isExpectedLocationError(message: string): boolean {
     message.includes('location services') ||
     message.includes('getCurrentPositionAsync') ||
     message.includes('Cannot obtain current location') ||
+    message.includes('unsatisfied device settings') ||
     message.includes('kCLError') ||
     message.includes('denied')
   );

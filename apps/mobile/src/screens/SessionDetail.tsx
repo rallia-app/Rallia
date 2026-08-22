@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, Button, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -34,7 +34,13 @@ import {
   neutral,
   secondary,
 } from '@rallia/design-system';
-import { lightHaptic, successHaptic, warningHaptic, getHumanName } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  successHaptic,
+  warningHaptic,
+  getHumanName,
+  getInitialName,
+} from '@rallia/shared-utils';
 import {
   useTheme,
   useAuth,
@@ -48,6 +54,7 @@ import {
   useCancelSession,
   useSessionMatches,
   useGenerateSessionSheet,
+  usePublishSessionSheet,
   useSetSessionMatchLock,
   useSports,
   useOpenSessionPairingChat,
@@ -66,6 +73,7 @@ import { SheetDateField } from '#/components/SheetDateField';
 import { ConfirmationModal } from '#/components/ConfirmationModal';
 
 import { useTranslation, useScrollBottomInset, type TranslationKey } from '../hooks';
+import { formatSessionWhen } from '../features/leagues/detail/components';
 import { rpcErrorMessage } from '../utils/rpcErrorMessage';
 import * as Analytics from '../services/analytics';
 import type { RootStackParamList } from '../navigation';
@@ -214,8 +222,24 @@ export const SessionDetail: React.FC = () => {
     [presence, t]
   );
 
+  // Sheet rows put two names and a score on one line; full names ellipsize
+  // into "Mathis Lef… 6-3 6-4 Marc Trem…". First name + last initial keeps
+  // both players readable, which was the testers' doubles ask verbatim.
+  const shortNameOf = useCallback(
+    (id: string): string => {
+      const profile = presence.find(p => p.user_id === id)?.profile;
+      return profile
+        ? getInitialName(profile, t('sessionDetail.unknownMember'))
+        : t('sessionDetail.unknownMember');
+    },
+    [presence, t]
+  );
+
   // Doubles rows carry two ids a side; joining with & covers both formats.
-  const teamLabel = useCallback((ids: string[]): string => ids.map(nameOf).join(' & '), [nameOf]);
+  const teamLabel = useCallback(
+    (ids: string[]): string => ids.map(shortNameOf).join(' & '),
+    [shortNameOf]
+  );
 
   const isDoubles = (sess?.formats_allowed?.[0] ?? 'singles') !== 'singles';
 
@@ -357,6 +381,27 @@ export const SessionDetail: React.FC = () => {
   // roster is now a decision rather than a surprise: the organizer is told who
   // sits out and can withdraw or add someone first.
   const oddRoster = confirmedCount % 2 === 1 && (sess?.rounds ?? 1) <= 1;
+
+  // A generated sheet belongs to the organizer until they release it. Members
+  // never reach this branch: RLS hides the rows, so for them hasSheet is false.
+  const isDraftSheet = hasSheet && !sess?.sheet_published_at;
+
+  const { mutate: publishSheet, isPending: isPublishingSheet } = usePublishSessionSheet(sessionId, {
+    onSuccess: () => {
+      successHaptic();
+      toast.success(t('sessionDetail.sheet.published'));
+      invalidate();
+    },
+    onError: e => {
+      warningHaptic();
+      toast.error(
+        rpcErrorMessage(e, t, 'sessionDetail.errors.generic', {
+          SHEET_EMPTY: 'sessionDetail.rpcErrors.sheetEmpty',
+        })
+      );
+      invalidate();
+    },
+  });
 
   const { mutate: genSheet, isPending: isGenerating } = useGenerateSessionSheet(sessionId, {
     onSuccess: () => {
@@ -724,7 +769,7 @@ export const SessionDetail: React.FC = () => {
           <View style={styles.metaRow}>
             <Ionicons name="time-outline" size={16} color={colors.textMuted} />
             <Text size="sm" color={colors.textMuted}>
-              {formatDateTime(sess.scheduled_at)} · {sess.duration_minutes} min
+              {formatSessionWhen(sess, locale, t)}
             </Text>
           </View>
           {sess.venue_name ? (
@@ -940,6 +985,14 @@ export const SessionDetail: React.FC = () => {
             <View
               style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
+              {isDraftSheet && isOrganizer && (
+                <View style={[styles.draftBanner, { borderColor: colors.border }]}>
+                  <Ionicons name="eye-off-outline" size={16} color={colors.textMuted} />
+                  <Text size="xs" color={colors.textMuted} style={styles.draftBannerText}>
+                    {t('sessionDetail.sheet.draftBanner')}
+                  </Text>
+                </View>
+              )}
               {!hasSheet ? (
                 <Text size="sm" color={colors.textMuted}>
                   {t('sessionDetail.sheet.empty')}
@@ -965,9 +1018,21 @@ export const SessionDetail: React.FC = () => {
                       <View style={styles.vsRow}>
                         <Text
                           size="base"
-                          weight={m.winner_team === 'a' ? 'bold' : 'regular'}
+                          weight={
+                            m.winner_team === 'a'
+                              ? 'bold'
+                              : !isScored(m) && userId && m.team_a_user_ids.includes(userId)
+                                ? 'semibold'
+                                : 'regular'
+                          }
                           color={
-                            isScored(m) && m.winner_team !== 'a' ? colors.textMuted : colors.text
+                            isScored(m)
+                              ? m.winner_team !== 'a'
+                                ? colors.textMuted
+                                : colors.text
+                              : userId && m.team_a_user_ids.includes(userId)
+                                ? colors.primary
+                                : colors.text
                           }
                           numberOfLines={1}
                           style={styles.vsName}
@@ -981,9 +1046,21 @@ export const SessionDetail: React.FC = () => {
                         </Text>
                         <Text
                           size="base"
-                          weight={m.winner_team === 'b' ? 'bold' : 'regular'}
+                          weight={
+                            m.winner_team === 'b'
+                              ? 'bold'
+                              : !isScored(m) && userId && m.team_b_user_ids.includes(userId)
+                                ? 'semibold'
+                                : 'regular'
+                          }
                           color={
-                            isScored(m) && m.winner_team !== 'b' ? colors.textMuted : colors.text
+                            isScored(m)
+                              ? m.winner_team !== 'b'
+                                ? colors.textMuted
+                                : colors.text
+                              : userId && m.team_b_user_ids.includes(userId)
+                                ? colors.primary
+                                : colors.text
                           }
                           numberOfLines={1}
                           style={styles.vsName}
@@ -1078,6 +1155,22 @@ export const SessionDetail: React.FC = () => {
                 </View>
               )}
             </View>
+            {isOrganizer && isDraftSheet && (
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                loading={isPublishingSheet}
+                onPress={() => {
+                  lightHaptic();
+                  publishSheet({ versionWas: sess.version });
+                }}
+                style={styles.sheetButton}
+                testID="cta-publish-sheet"
+              >
+                {t('sessionDetail.sheet.publish')}
+              </Button>
+            )}
             {isOrganizer && sess.status === 'published' && (
               <TouchableOpacity
                 onPress={() => {
@@ -1105,13 +1198,23 @@ export const SessionDetail: React.FC = () => {
                 style={[
                   styles.fullButton,
                   styles.sheetButton,
-                  { backgroundColor: colors.primary },
+                  isDraftSheet
+                    ? { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border }
+                    : { backgroundColor: colors.primary },
                   (isGenerating || confirmedCount < 2) && styles.disabled,
                 ]}
                 testID="cta-generate-sheet"
               >
-                <Ionicons name="shuffle-outline" size={18} color="#fff" />
-                <Text size="base" weight="semibold" color="#fff">
+                <Ionicons
+                  name="shuffle-outline"
+                  size={18}
+                  color={isDraftSheet ? colors.textMuted : '#fff'}
+                />
+                <Text
+                  size="base"
+                  weight="semibold"
+                  color={isDraftSheet ? colors.textMuted : '#fff'}
+                >
                   {isGenerating
                     ? t('sessionDetail.sheet.generating')
                     : hasSheet
@@ -1124,7 +1227,9 @@ export const SessionDetail: React.FC = () => {
                 It re-pairs the unlocked rows only, and refuses once a score is in. */}
             {isOrganizer && sess.status === 'published' && hasSheet && (
               <Text size="xs" color={colors.textMuted} style={styles.sheetHint}>
-                {t('sessionDetail.sheet.regenerateHint')}
+                {isDraftSheet
+                  ? t('sessionDetail.sheet.draftHint')
+                  : t('sessionDetail.sheet.regenerateHint')}
               </Text>
             )}
           </View>
@@ -1398,6 +1503,15 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[2],
   },
   sheetButton: { marginTop: spacingPixels[3] },
+  draftBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+    paddingBottom: spacingPixels[3],
+    marginBottom: spacingPixels[3],
+    borderBottomWidth: 1,
+  },
+  draftBannerText: { flex: 1 },
   sheetHint: { marginTop: spacingPixels[2], textAlign: 'center' },
   fullButton: {
     flexDirection: 'row',

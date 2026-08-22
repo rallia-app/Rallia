@@ -5,24 +5,27 @@
 
 import { supabase } from '../supabase';
 import type { PlayerOnlineStatus, SearchMessageResult, ConversationPreview } from './chatTypes';
-import { getPlayerConversations } from './conversationService';
 
 // ============================================================================
 // DISPLAY NAME UTILITY
 // ============================================================================
 
-function formatMatchTime(pgTime: string): string {
+function formatMatchTime(pgTime: string, locale: string): string {
   const [hours, minutes] = pgTime.split(':').map(Number);
   const d = new Date();
   d.setHours(hours, minutes, 0, 0);
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return d.toLocaleTimeString(locale, {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: locale.startsWith('en'),
+  });
 }
 
 // Formats a Postgres DATE ("YYYY-MM-DD") as "MMM d" in local time; building the
 // Date from parts avoids the UTC-midnight parse that shifts the day in -UTC zones.
-function formatMatchDate(pgDate: string): string {
+function formatMatchDate(pgDate: string, locale: string): string {
   const [year, month, day] = pgDate.split('T')[0].split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+  return new Date(year, month - 1, day).toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
   });
@@ -43,7 +46,8 @@ function formatMatchDate(pgDate: string): string {
  */
 export function getConversationDisplayName(
   conversation: ConversationPreview,
-  t: (key: string) => string
+  t: (key: string) => string,
+  locale: string
 ): string {
   if (conversation.conversation_type === 'direct') {
     const p = conversation.other_participant;
@@ -56,8 +60,8 @@ export function getConversationDisplayName(
     if (mi) {
       const formatLabel =
         mi.format === 'doubles' ? t('match.format.doubles') : t('match.format.singles');
-      const dateStr = mi.match_date ? formatMatchDate(mi.match_date) : '';
-      const timeStr = mi.start_time ? formatMatchTime(mi.start_time) : '';
+      const dateStr = mi.match_date ? formatMatchDate(mi.match_date, locale) : '';
+      const timeStr = mi.start_time ? formatMatchTime(mi.start_time, locale) : '';
       const datePart = [dateStr, timeStr].filter(Boolean).join(', ');
       return datePart ? `${formatLabel} - ${datePart}` : formatLabel;
     }
@@ -255,13 +259,19 @@ async function getSenderNames(senderIds: string[]): Promise<Map<string, string>>
 // ============================================================================
 
 /**
- * Get unread message count for a player across all conversations
+ * Total unread messages across non-archived conversations (chat tab badge).
  */
 export async function getTotalUnreadCount(playerId: string): Promise<number> {
-  const conversations = await getPlayerConversations(playerId);
-  return conversations
-    .filter(conv => !conv.is_archived)
-    .reduce((total, conv) => total + conv.unread_count, 0);
+  const { data, error } = await supabase.rpc('get_total_unread_count', {
+    p_player_id: playerId,
+  });
+
+  if (error) {
+    console.error('Error fetching total unread count:', error);
+    return 0;
+  }
+
+  return data ?? 0;
 }
 
 /**
