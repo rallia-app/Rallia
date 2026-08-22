@@ -465,7 +465,11 @@ const Home = () => {
       switch (payload.type) {
         case 'match': {
           const match = await getMatchWithDetails(payload.matchId);
-          if (match) openMatchDetail(match as MatchDetailData, { source: 'deep_link' });
+          if (match)
+            openMatchDetail(match as MatchDetailData, {
+              source: 'deep_link',
+              autoAction: payload.action,
+            });
           break;
         }
         case 'group': {
