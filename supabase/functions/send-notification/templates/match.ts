@@ -24,21 +24,11 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SPORT_ICONS = new Set(['tennis', 'pickleball']);
 
 /**
- * Convert a rallia:// deep link to a universal link using siteUrl.
- * Includes the locale segment so it matches the Next.js `/[locale]/...` route
- * and the mobile universal-link intent filters.
- */
-function toUniversalLink(deepLink: string, siteUrl?: string, locale: string = 'en-US'): string {
-  if (!siteUrl || !deepLink.startsWith('rallia://')) return deepLink;
-  const path = deepLink.slice('rallia://'.length);
-  const urlLocale = locale === 'fr' || locale === 'fr-CA' ? 'fr-CA' : 'en-US';
-  return path ? `${siteUrl}/${urlLocale}/${path}` : `${siteUrl}/${urlLocale}/`;
-}
-
-/**
- * CTA link for a destination that exists only in the app. Tournaments have no
- * web page, so a universal link would 404 — the /api/go bouncer opens the
+ * CTA link for a destination that exists only in the app. None of these screens
+ * has a web page, so a universal link would 404 — the /api/go bouncer opens the
  * rallia:// deep link on mobile (store fallback) and the website on desktop.
+ * `target` is an /api/go `?to=` key, not a screen path: the bouncer owns the
+ * target -> path map so the two sides can move independently.
  */
 function toGoLink(
   target: string,
@@ -252,6 +242,157 @@ function generateMatchDetailsCard(
 }
 
 /**
+ * Where each notification type lands in the app.
+ *
+ * `to` is an /api/go target (see apps/web/app/api/go/route.ts, which owns the
+ * target -> screen-path map). `idFrom` names the payload key holding the entity
+ * id; a type that needs an id but has none falls back to the app home rather
+ * than emitting a link to nowhere.
+ *
+ * Every destination here routes through the bouncer: none of these paths exist
+ * as web pages, so a universal link would 404 for anyone whose mail client
+ * doesn't hand the URL to the app.
+ */
+interface CtaSpec {
+  buttonKey: string;
+  to: string;
+  idFrom?: string;
+}
+
+const CTA_BY_TYPE: Record<string, CtaSpec> = {
+  // Tournaments and leagues: every type opens the event itself.
+  tournament_invitation: {
+    buttonKey: 'match.button.viewTournamentInvitation',
+    to: 'tournament',
+    idFrom: 'tournamentId',
+  },
+  tournament_registration_open: {
+    buttonKey: 'match.button.registerNow',
+    to: 'tournament',
+    idFrom: 'tournamentId',
+  },
+  tournament_registration_closing_soon: {
+    buttonKey: 'match.button.registerNow',
+    to: 'tournament',
+    idFrom: 'tournamentId',
+  },
+  tournament_registration_removed: {
+    buttonKey: 'match.button.viewTournament',
+    to: 'tournament',
+    idFrom: 'tournamentId',
+  },
+  tournament_bracket_published: {
+    buttonKey: 'match.button.viewDraw',
+    to: 'tournament',
+    idFrom: 'tournamentId',
+  },
+  tournament_match_ready: {
+    buttonKey: 'match.button.viewDraw',
+    to: 'tournament',
+    idFrom: 'tournamentId',
+  },
+  tournament_match_completed: {
+    buttonKey: 'match.button.viewDraw',
+    to: 'tournament',
+    idFrom: 'tournamentId',
+  },
+  tournament_completed: {
+    buttonKey: 'match.button.viewResults',
+    to: 'tournament',
+    idFrom: 'tournamentId',
+  },
+  tournament_updated: {
+    buttonKey: 'match.button.viewTournament',
+    to: 'tournament',
+    idFrom: 'tournamentId',
+  },
+  tournament_cancelled: {
+    buttonKey: 'match.button.viewTournament',
+    to: 'tournament',
+    idFrom: 'tournamentId',
+  },
+  tournament_action_required: {
+    buttonKey: 'match.button.completeRegistration',
+    to: 'tournament',
+    idFrom: 'tournamentId',
+  },
+  tournament_partner_registered: {
+    buttonKey: 'match.button.viewTournament',
+    to: 'tournament',
+    idFrom: 'tournamentId',
+  },
+
+  // Games.
+  match_invitation: { buttonKey: 'match.button.viewInvitation', to: 'match', idFrom: 'matchId' },
+  match_join_request: {
+    buttonKey: 'match.button.reviewRequest',
+    to: 'matchRequests',
+    idFrom: 'matchId',
+  },
+  match_join_accepted: { buttonKey: 'match.button.viewGame', to: 'match', idFrom: 'matchId' },
+  match_player_joined: { buttonKey: 'match.button.viewGame', to: 'match', idFrom: 'matchId' },
+  match_updated: { buttonKey: 'match.button.viewGame', to: 'match', idFrom: 'matchId' },
+  match_starting_soon: { buttonKey: 'match.button.viewGame', to: 'match', idFrom: 'matchId' },
+  // Check-in is a location-gated action, so land on the game and let the
+  // player press the button themselves; the label says what to do.
+  match_check_in_available: { buttonKey: 'match.button.checkIn', to: 'match', idFrom: 'matchId' },
+  match_new_available: { buttonKey: 'match.button.viewGame', to: 'match', idFrom: 'matchId' },
+  match_spot_opened: { buttonKey: 'match.button.viewGame', to: 'match', idFrom: 'matchId' },
+  nearby_match_available: { buttonKey: 'match.button.viewGame', to: 'match', idFrom: 'matchId' },
+  player_left: { buttonKey: 'match.button.viewGame', to: 'match', idFrom: 'matchId' },
+  reminder: { buttonKey: 'match.button.viewGameDetails', to: 'match', idFrom: 'matchId' },
+  court_booking_nudge: { buttonKey: 'match.button.bookCourt', to: 'match', idFrom: 'matchId' },
+  match_time_suggested: { buttonKey: 'match.button.reviewTime', to: 'match', idFrom: 'matchId' },
+  match_time_suggestion_accepted: {
+    buttonKey: 'match.button.viewGame',
+    to: 'match',
+    idFrom: 'matchId',
+  },
+  match_time_suggestion_declined: {
+    buttonKey: 'match.button.viewGame',
+    to: 'match',
+    idFrom: 'matchId',
+  },
+
+  // Scores: straight into the score/feedback wizard, not the game screen.
+  feedback_request: { buttonKey: 'match.button.rateGame', to: 'matchFeedback', idFrom: 'matchId' },
+  feedback_reminder: { buttonKey: 'match.button.rateGame', to: 'matchFeedback', idFrom: 'matchId' },
+  score_confirmation: { buttonKey: 'match.button.reviewScore', to: 'match', idFrom: 'matchId' },
+
+  // Dead ends for this game: send the player to the games feed instead.
+  match_join_rejected: { buttonKey: 'match.button.browseGames', to: 'games' },
+  match_cancelled: { buttonKey: 'match.button.browseGames', to: 'games' },
+  player_kicked: { buttonKey: 'match.button.browseGames', to: 'games' },
+  match_unfilled_recovery: { buttonKey: 'match.button.browseGames', to: 'games' },
+
+  // Chat.
+  new_message: { buttonKey: 'match.button.viewMessage', to: 'chat', idFrom: 'conversationId' },
+  chat: { buttonKey: 'match.button.viewMessage', to: 'chat', idFrom: 'conversationId' },
+
+  // Communities.
+  community_join_request: {
+    buttonKey: 'match.button.reviewRequest',
+    to: 'community',
+    idFrom: 'communityId',
+  },
+  community_join_accepted: {
+    buttonKey: 'match.button.viewCommunity',
+    to: 'community',
+    idFrom: 'communityId',
+  },
+
+  // Profile and ratings.
+  rating_verified: { buttonKey: 'match.button.viewRating', to: 'profile' },
+  reference_request_received: { buttonKey: 'match.button.viewRequest', to: 'referenceRequests' },
+  reference_request_accepted: { buttonKey: 'match.button.viewRating', to: 'profile' },
+  reference_request_declined: { buttonKey: 'match.button.viewRating', to: 'profile' },
+  availability_refresh_reminder: {
+    buttonKey: 'match.button.updateAvailability',
+    to: 'availability',
+  },
+};
+
+/**
  * Generate action button based on notification type
  */
 function generateActionButton(
@@ -260,73 +401,27 @@ function generateActionButton(
   locale: string,
   siteUrl?: string
 ): string {
-  let buttonKey = 'match.button.openRallia';
-  let deepLink = 'rallia://';
-  // Set when the destination is app-only and must bypass toUniversalLink.
-  let href: string | null = null;
+  const spec = CTA_BY_TYPE[type];
 
-  switch (type) {
-    case 'tournament_invitation':
-      buttonKey = 'match.button.viewTournamentInvitation';
-      href = toGoLink(
-        'tournament',
-        typeof payload.tournamentId === 'string' ? payload.tournamentId : undefined,
-        siteUrl,
-        locale,
-        'tournament_invitation_email'
-      );
-      break;
-    case 'match_invitation':
-      buttonKey = 'match.button.viewInvitation';
-      if (payload.matchId) deepLink = `rallia://match/${payload.matchId}`;
-      break;
-    case 'match_join_request':
-      buttonKey = 'match.button.reviewRequest';
-      if (payload.matchId) deepLink = `rallia://match/${payload.matchId}/requests`;
-      break;
-    case 'match_join_rejected':
-    case 'match_cancelled':
-    case 'player_kicked':
-      buttonKey = 'match.button.browseGames';
-      deepLink = 'rallia://discover';
-      break;
-    case 'match_join_accepted':
-    case 'match_player_joined':
-    case 'match_updated':
-    case 'match_starting_soon':
-    case 'match_check_in_available':
-    case 'match_new_available':
-    case 'match_spot_opened':
-    case 'nearby_match_available':
-    case 'score_confirmation':
-    case 'player_left':
-      buttonKey = 'match.button.viewGame';
-      if (payload.matchId) deepLink = `rallia://match/${payload.matchId}`;
-      break;
-    case 'feedback_request':
-    case 'feedback_reminder':
-      buttonKey = 'match.button.rateGame';
-      if (payload.matchId) deepLink = `rallia://match/${payload.matchId}/feedback`;
-      break;
-    case 'reminder':
-      buttonKey = 'match.button.viewGameDetails';
-      if (payload.matchId) deepLink = `rallia://match/${payload.matchId}`;
-      break;
-    case 'new_message':
-    case 'chat':
-      buttonKey = 'match.button.viewMessage';
-      if (payload.conversationId) deepLink = `rallia://chat/${payload.conversationId}`;
-      break;
-    case 'rating_verified':
-      buttonKey = 'match.button.viewRating';
-      deepLink = 'rallia://profile/ratings';
-      break;
-    default:
-      buttonKey = 'match.button.openRallia';
-      deepLink = 'rallia://';
+  if (!spec) {
+    return renderCtaButton(
+      t(locale, 'match.button.openRallia'),
+      toGoLink('home', undefined, siteUrl, locale, `${type}_email`)
+    );
   }
 
-  return renderCtaButton(t(locale, buttonKey), href ?? toUniversalLink(deepLink, siteUrl, locale));
+  const rawId = spec.idFrom ? payload[spec.idFrom] : undefined;
+  const id = typeof rawId === 'string' && rawId ? rawId : undefined;
+
+  // An id-bearing destination with no id would open a broken screen; the app
+  // home is a worse landing but an honest one.
+  const target = spec.idFrom && !id ? 'home' : spec.to;
+  const buttonKey = spec.idFrom && !id ? 'match.button.openRallia' : spec.buttonKey;
+
+  return renderCtaButton(
+    t(locale, buttonKey),
+    toGoLink(target, id, siteUrl, locale, `${type}_email`)
+  );
 }
 
 /**
@@ -382,7 +477,13 @@ export function generateEmailHtml(
 
                 ${renderDividerAndDisclaimer(t(locale, 'match.disclaimer'))}`;
 
-  const manageHref = toUniversalLink('rallia://settings/notifications', siteUrl, locale);
+  const manageHref = toGoLink(
+    'notificationPreferences',
+    undefined,
+    siteUrl,
+    locale,
+    'manage_prefs'
+  );
   const manageLink = `<a href="${manageHref}" style="color: ${T.primary600}; text-decoration: none;">${t(locale, 'match.managePreferences')}</a>`;
   const footerNote = `${t(locale, 'match.footerNote')}<br>${manageLink}`;
 

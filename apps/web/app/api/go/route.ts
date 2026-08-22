@@ -4,16 +4,34 @@ import { detectPlatform } from '@/lib/referral-tracking';
 import { APP_STORE_URL, buildPlayStoreUrl } from '@/lib/store-urls';
 
 // Maps an email CTA `?to=` value to an in-app screen path (React Navigation
-// linking config in apps/mobile) used to build the `rallia://` deep link.
-const SCREEN_BY_TARGET: Record<string, string> = {
-  profile: 'profile',
-  courts: 'courts',
-  games: 'home/public-matches',
-  tournament: 'tournament',
-};
+// linking config in apps/mobile/src/navigation/linking.ts) used to build the
+// `rallia://` deep link. This table is the single owner of that mapping: the
+// notification email sends target names, never paths, so a screen can move
+// without reissuing links that are already sitting in people's inboxes.
+//
+// `id` marks a path that takes a trailing entity id (`?id=<uuid>`); `suffix`
+// is appended after it (`match/<uuid>/feedback`).
+interface TargetSpec {
+  path: string;
+  id?: boolean;
+  suffix?: string;
+}
 
-/** Targets whose screen path takes a trailing entity id (`?id=<uuid>`). */
-const TARGETS_TAKING_ID = new Set(['tournament']);
+const TARGETS: Record<string, TargetSpec> = {
+  home: { path: 'home' },
+  profile: { path: 'profile' },
+  courts: { path: 'courts' },
+  games: { path: 'home/public-matches' },
+  availability: { path: 'profile?openSheet=availability' },
+  notificationPreferences: { path: 'notifications/preferences' },
+  referenceRequests: { path: 'reference-requests' },
+  tournament: { path: 'tournament', id: true },
+  match: { path: 'match', id: true },
+  matchFeedback: { path: 'match', id: true, suffix: 'feedback' },
+  matchRequests: { path: 'match', id: true, suffix: 'requests' },
+  chat: { path: 'chat', id: true },
+  community: { path: 'community', id: true },
+};
 
 const LOCALES = ['en-US', 'fr-CA'];
 const DEFAULT_LOCALE = 'en-US';
@@ -40,7 +58,10 @@ function toScriptLiteral(value: string): string {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Attribution tag; kept as the default for the welcome email that predates it. */
 const DEFAULT_SRC = 'welcome_email';
-const SRC_RE = /^[a-z0-9_]{1,40}$/;
+// Long enough for the longest notification type plus the `_email` suffix
+// (tournament_registration_closing_soon_email is 42); an over-long value would
+// silently fall back to DEFAULT_SRC and mis-attribute the click.
+const SRC_RE = /^[a-z0-9_]{1,64}$/;
 
 /**
  * Deep-link bouncer for transactional emails (e.g. the welcome email CTAs).
@@ -55,24 +76,25 @@ export function GET(request: NextRequest): NextResponse {
   const locale = LOCALES.includes(localeParam) ? localeParam : DEFAULT_LOCALE;
 
   const target = searchParams.get('to') ?? '';
-  const screen = SCREEN_BY_TARGET[target];
+  const spec = TARGETS[target];
   const platform = detectPlatform(request.headers.get('user-agent') ?? '');
 
   // Entity id is required for targets that route to a specific record, and is
   // uuid-checked so nothing arbitrary can be spliced into the deep link.
   const id = searchParams.get('id') ?? '';
-  const needsId = TARGETS_TAKING_ID.has(target);
+  const needsId = spec?.id === true;
   const hasValidId = UUID_RE.test(id);
 
   // Unknown target, missing/invalid id, or desktop visitor: website home page.
-  if (!screen || (needsId && !hasValidId) || platform === null) {
+  if (!spec || (needsId && !hasValidId) || platform === null) {
     return NextResponse.redirect(new URL(`/${locale}`, request.url));
   }
 
   const srcParam = searchParams.get('src') ?? '';
   const src = SRC_RE.test(srcParam) ? srcParam : DEFAULT_SRC;
-  const path = needsId ? `${screen}/${id}` : screen;
-  const appUrl = `rallia://${path}?src=${src}`;
+  const path = [needsId ? `${spec.path}/${id}` : spec.path, spec.suffix].filter(Boolean).join('/');
+  // A couple of paths carry their own query string, so pick the separator.
+  const appUrl = `rallia://${path}${path.includes('?') ? '&' : '?'}src=${src}`;
   // Store fallback fires when the recipient no longer has the app. The
   // Android leg carries the email context in the install referrer so the
   // reinstall still attributes; iOS has no store-URL equivalent.
