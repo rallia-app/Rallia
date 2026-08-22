@@ -1,13 +1,14 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Badge } from '@rallia/shared-components';
 import {
   spacingPixels,
   radiusPixels,
   fontSizePixels,
   fontWeightNumeric,
 } from '@rallia/design-system';
+import { isOnboardingGapItem } from '@rallia/shared-hooks';
 import type { CompletenessTier, CompletenessItem } from '@rallia/shared-hooks';
 
 import { getTierColors } from '#/features/profile/completionTierColors';
@@ -130,8 +131,13 @@ const ProfileCompletionChecklist: React.FC<ProfileCompletionChecklistProps> = ({
                     },
                   ]}
                 >
-                  {t(item.labelKey)}
+                  {t(item.labelKey, item.labelParams)}
                 </Text>
+                {!item.completed && isOnboardingGapItem(item) && (
+                  <Badge variant="warning" size="sm">
+                    {t('profileCompletion.required')}
+                  </Badge>
+                )}
                 {!item.completed && (
                   <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                 )}

@@ -1856,7 +1856,10 @@
       "verificationCodeSent": "Verification code sent!",
       "cityRequired": "Please enter your city",
       "postalCodeRequired": "Postal code is required. Please go back and complete the location setup.",
-      "failedToSaveLocation": "Failed to save your location. Please try again."
+      "failedToSaveLocation": "Failed to save your location. Please try again.",
+      "verifyPostalCode": "Enter a postal code we can locate to continue.",
+      "missingDetailsTitle": "Almost there",
+      "missingDetails": "A few details are still missing before we can finish setting you up. Let's fill them in."
     },
     "successMessages": {
       "personalInfoUpdated": "Successfully updated Personal Information",
@@ -1931,6 +1934,8 @@
     "locationStep": {
       "title": "Confirm your location",
       "subtitle": "Add your address for more precise match finding, or continue with your postal code",
+      "postalCodeTitle": "Where do you play?",
+      "postalCodeSubtitle": "Enter your postal code so we can find games and players near you.",
       "savedPostalCode": "Your saved location",
       "editPostalCode": "Edit",
       "postalCodeUpdated": "Postal code updated",
@@ -11748,7 +11753,8 @@
       "profile": "Profile",
       "level": "Level",
       "location": "Location",
-      "preferences": "Preferences"
+      "preferences": "Preferences",
+      "favorites": "Favorites"
     },
     "auth": {
       "title": "Sign in to join",
@@ -11859,7 +11865,9 @@
       "alreadyHost": "You're the host of this game, so you're already in it.",
       "eligibilityUnverified": "We couldn't verify your eligibility for this game. Please try again.",
       "matchStarted": "This game has already started, so you can't leave it from here.",
-      "consentRequired": "Please accept the Privacy Policy and the Terms of Use to continue."
+      "consentRequired": "Please accept the Privacy Policy and the Terms of Use to continue.",
+      "selectFavorites": "Pick at least {min} favorite courts to continue.",
+      "onboardingIncomplete": "Your profile is missing something. Go back a step and check your answers."
     },
     "chat": {
       "title": "Game chat",
@@ -11878,6 +11886,17 @@
         "body": "Be respectful, keep messages relevant to the game, and hold off on sharing personal contact details until you're comfortable. Messages may be moderated.",
         "accept": "Got it, let's chat"
       }
+    },
+    "favorites": {
+      "title": "Your favorite courts",
+      "description": "Pick at least {min} places you like to play. We use them to suggest games near you.",
+      "counter": "{count} / {min} selected",
+      "searchLabel": "Search for a court",
+      "searchPlaceholder": "Search by name or city...",
+      "noLocation": "Add your postal code first so we can show courts near you.",
+      "noResults": "No courts match your search.",
+      "noFacilitiesNearby": "No courts found near you. Try searching by name.",
+      "hint": "You can change your favorite courts anytime in your profile."
     }
   },
   "webBook": {
@@ -11908,7 +11927,8 @@
       "consent": "Consent",
       "profile": "Profile",
       "level": "Level",
-      "location": "Location"
+      "location": "Location",
+      "favorites": "Favorites"
     },
     "auth": {
       "title": "Sign in to book",
@@ -11976,7 +11996,20 @@
       "invalidPostalCode": "Enter a valid postal code.",
       "ratingsLoadFailed": "Could not load skill levels. Please refresh and try again.",
       "submitFailed": "Something went wrong. Please try again.",
-      "facilityUnavailable": "This court is no longer available."
+      "facilityUnavailable": "This court is no longer available.",
+      "selectFavorites": "Pick at least {min} favorite courts to continue.",
+      "onboardingIncomplete": "Your profile is missing something. Go back a step and check your answers."
+    },
+    "favorites": {
+      "title": "Your favorite courts",
+      "description": "Pick at least {min} places you like to play. We use them to suggest games near you.",
+      "counter": "{count} / {min} selected",
+      "searchLabel": "Search for a court",
+      "searchPlaceholder": "Search by name or city...",
+      "noLocation": "Add your postal code first so we can show courts near you.",
+      "noResults": "No courts match your search.",
+      "noFacilitiesNearby": "No courts found near you. Try searching by name.",
+      "hint": "You can change your favorite courts anytime in your profile."
     }
   },
   "playPage": {
@@ -12561,6 +12594,15 @@
       "phone": "Add your phone number",
       "displayName": "Choose a display name",
       "playStyle": "Set your play style"
+    },
+    "required": "Required",
+    "gapBannerDescription": "A few essentials are missing, so players nearby can't find you for games yet. It takes a minute to fix.",
+    "gapBannerCta": "Fix it",
+    "gaps": {
+      "sport": "Choose your sport",
+      "rating": "Choose your level in {sport}",
+      "favorites": "Pick at least {count} favorite courts for {sport}",
+      "postalCode": "Add your postal code"
     }
   },
   "donate": {

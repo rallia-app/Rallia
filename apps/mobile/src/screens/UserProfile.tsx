@@ -536,6 +536,12 @@ const UserProfile = () => {
         openPicker();
         return;
       }
+      if (item.actionType === 'sport_setup') {
+        // No sport at all: activate the first one not yet set up (rating + favourites follow)
+        const target = sports.find(s => !s.isActive) ?? sports[0];
+        if (target) startSetup(target.id, target.name as 'tennis' | 'pickleball');
+        return;
+      }
       if (item.actionType === 'navigate' && item.actionNavigate) {
         (navigation.navigate as (...args: unknown[]) => void)(
           item.actionNavigate,
@@ -592,6 +598,7 @@ const UserProfile = () => {
               },
               onSave: () => {
                 refetchPlayer();
+                void profileCompleteness.refetchOnboardingGaps();
               },
             },
           });
@@ -618,6 +625,9 @@ const UserProfile = () => {
       refetchPlayer,
       availabilities,
       handleSaveAvailabilities,
+      sports,
+      startSetup,
+      profileCompleteness.refetchOnboardingGaps,
     ]
   );
 

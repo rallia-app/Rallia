@@ -19,12 +19,15 @@ import React, {
 import { supabase } from '@rallia/shared-services';
 import type { Profile, Player } from '@rallia/shared-types';
 import type { PrimaryRating, SportPreferences } from './PlayerContext';
+import { useOnboardingGaps } from './useOnboardingGaps';
+import { usePlayerSports } from './usePlayerSports';
+import { buildOnboardingGapItems, type GapSportInfo } from './onboardingGapItems';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-export type CompletenessItemKey =
+export type BaseCompletenessItemKey =
   | 'profile_picture'
   | 'home_address'
   | 'skill_rating'
@@ -36,6 +39,15 @@ export type CompletenessItemKey =
   | 'display_name'
   | 'play_style';
 
+/** Onboarding-minimum gap rows (see onboardingGapItems.ts). */
+export type OnboardingGapItemKey =
+  | 'onboarding_sport'
+  | `onboarding_rating:${string}`
+  | `onboarding_favorites:${string}`
+  | 'onboarding_postal_code';
+
+export type CompletenessItemKey = BaseCompletenessItemKey | OnboardingGapItemKey;
+
 export type CompletenessTier =
   | 'getting_started'
   | 'growing'
@@ -43,11 +55,13 @@ export type CompletenessTier =
   | 'almost_there'
   | 'complete';
 
-export type CompletenessActionType = 'image_picker' | 'sheet' | 'navigate';
+export type CompletenessActionType = 'image_picker' | 'sheet' | 'navigate' | 'sport_setup';
 
 export interface CompletenessItem {
   key: CompletenessItemKey;
   labelKey: string;
+  /** Interpolation values for labelKey (e.g. sport name). */
+  labelParams?: Record<string, string | number>;
   weight: number;
   completed: boolean;
   applicable: boolean;
@@ -65,15 +79,19 @@ export interface ProfileCompletenessResult {
   nextAction: CompletenessItem | null;
   isComplete: boolean;
   loading: boolean;
-  /** Refetch async data (availability, proofs, favorites) */
+  /** True while get_onboarding_gaps() reports a missing invariant piece. */
+  hasOnboardingGaps: boolean;
+  /** Refetch async data (availability, proofs, favorites) and the onboarding gaps */
   refetch: () => Promise<void>;
+  /** Cheap: only re-asks get_onboarding_gaps() */
+  refetchOnboardingGaps: () => Promise<unknown>;
 }
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
 
-const BASE_WEIGHTS: Record<CompletenessItemKey, number> = {
+const BASE_WEIGHTS: Record<BaseCompletenessItemKey, number> = {
   profile_picture: 15,
   home_address: 15,
   skill_rating: 10,
@@ -141,6 +159,21 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
   const [favoritesCount, setFavoritesCount] = useState<number | null>(null);
 
   const playerId = player?.id ?? null;
+
+  // Repair path for players already marked onboarded with invariant pieces missing
+  const onboardingGaps = useOnboardingGaps({
+    playerId: profile?.id ?? null,
+    onboardingCompleted: profile?.onboarding_completed ?? false,
+  });
+  const { playerSports } = usePlayerSports(playerId ?? undefined);
+  const gapSportsById = useMemo(() => {
+    const map: Record<string, GapSportInfo> = {};
+    for (const ps of playerSports ?? []) {
+      const sport = Array.isArray(ps.sport) ? ps.sport[0] : ps.sport;
+      if (sport) map[ps.sport_id] = sport;
+    }
+    return map;
+  }, [playerSports]);
 
   // Selected sport's rating (for navigation payloads)
   const selectedRating = selectedSportId ? sportRatings[selectedSportId] : null;
@@ -232,6 +265,15 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
     fetchAsyncData();
   }, [fetchAsyncData]);
 
+  const refetchGaps = onboardingGaps.refetch;
+  const refetchAll = useCallback(async () => {
+    await Promise.all([fetchAsyncData(), refetchGaps()]);
+  }, [fetchAsyncData, refetchGaps]);
+
+  const gaps = onboardingGaps.gaps;
+  const gapsLoading = onboardingGaps.isLoading;
+  const hasGaps = onboardingGaps.hasGaps;
+
   const value = useMemo((): ProfileCompletenessResult => {
     if (!profile || !player) {
       return {
@@ -242,12 +284,19 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
         nextAction: null,
         isComplete: false,
         loading: true,
-        refetch: fetchAsyncData,
+        hasOnboardingGaps: false,
+        refetch: refetchAll,
+        refetchOnboardingGaps: refetchGaps,
       };
     }
 
     // Async data not yet loaded — return loading state
-    if (availabilityCount === null || proofCount === null || favoritesCount === null) {
+    if (
+      availabilityCount === null ||
+      proofCount === null ||
+      favoritesCount === null ||
+      gapsLoading
+    ) {
       return {
         percentage: 0,
         tier: 'getting_started',
@@ -256,9 +305,18 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
         nextAction: null,
         isComplete: false,
         loading: true,
-        refetch: fetchAsyncData,
+        hasOnboardingGaps: false,
+        refetch: refetchAll,
+        refetchOnboardingGaps: refetchGaps,
       };
     }
+
+    // Gap rows replace the base row that covers the same fix for the selected sport
+    const gapItems = buildOnboardingGapItems(gaps, gapSportsById);
+    const selectedSportUnrated =
+      !!selectedSportId && gaps.unratedSportIds.includes(selectedSportId);
+    const selectedSportUnderFavorited =
+      !!selectedSportId && gaps.underFavoritedSportIds.includes(selectedSportId);
 
     // Sport-specific checks for the selected sport
     const hasSport = !!selectedSportId;
@@ -290,7 +348,7 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
           !!player.province &&
           !!player.postal_code &&
           player.latitude != null,
-        applicable: true,
+        applicable: !gaps.postalCode,
         actionType: 'sheet',
         actionSheet: 'player-location',
       },
@@ -299,7 +357,7 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
         labelKey: 'profileCompletion.items.skillRating',
         weight: BASE_WEIGHTS.skill_rating,
         completed: hasRating,
-        applicable: hasSport,
+        applicable: hasSport && !selectedSportUnrated,
         actionType: 'navigate',
         actionNavigate: 'SportProfile',
         actionPayload: selectedSportId
@@ -329,7 +387,7 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
         labelKey: 'profileCompletion.items.favoriteCourts',
         weight: BASE_WEIGHTS.favorite_courts,
         completed: favoritesCount >= MIN_FAVORITE_FACILITIES_PER_SPORT,
-        applicable: hasSport,
+        applicable: hasSport && !selectedSportUnderFavorited,
         actionType: 'navigate',
         actionNavigate: 'SportProfile',
         actionPayload: selectedSportId
@@ -394,7 +452,8 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
       },
     ];
 
-    const applicableItems = allItems.filter(item => item.applicable);
+    const items = [...gapItems, ...allItems];
+    const applicableItems = items.filter(item => item.applicable);
     const totalApplicableWeight = applicableItems.reduce((sum, item) => sum + item.weight, 0);
     const weightMultiplier = totalApplicableWeight > 0 ? 100 / totalApplicableWeight : 1;
 
@@ -403,19 +462,23 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
       .reduce((sum, item) => sum + item.weight, 0);
     const percentage = Math.round(earnedWeight * weightMultiplier);
 
+    // Gaps come first in spec order; the rest falls back to heaviest-first
     const nextAction =
+      gapItems[0] ??
       applicableItems.filter(item => !item.completed).sort((a, b) => b.weight - a.weight)[0] ??
       null;
 
     return {
       percentage,
       tier: getTier(percentage),
-      items: allItems,
+      items,
       applicableItems,
       nextAction,
-      isComplete: percentage >= 100,
+      isComplete: percentage >= 100 && gapItems.length === 0,
       loading: false,
-      refetch: fetchAsyncData,
+      hasOnboardingGaps: hasGaps,
+      refetch: refetchAll,
+      refetchOnboardingGaps: refetchGaps,
     };
   }, [
     profile,
@@ -427,7 +490,12 @@ export const ProfileCompletenessProvider: React.FC<ProfileCompletenessProviderPr
     availabilityCount,
     proofCount,
     favoritesCount,
-    fetchAsyncData,
+    gaps,
+    gapsLoading,
+    hasGaps,
+    gapSportsById,
+    refetchAll,
+    refetchGaps,
   ]);
 
   return React.createElement(ProfileCompletenessContext.Provider, { value }, children);

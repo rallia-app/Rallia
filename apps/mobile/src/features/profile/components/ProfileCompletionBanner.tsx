@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { lightHaptic } from '@rallia/shared-utils';
+import { isOnboardingGapItem } from '@rallia/shared-hooks';
 import type { CompletenessItem } from '@rallia/shared-hooks';
 
 import HomeBanner from '#/components/HomeBanner';
@@ -20,8 +21,15 @@ const COOLDOWN_MS = [
  * Lives outside the component so Home can decide whether to render the banner
  * at all — that keeps `bannerCards.length` accurate so the carousel/full-width
  * switch matches what the user actually sees.
+ *
+ * `hasOnboardingGaps` (missing sport / rating / favourites / postal code) skips
+ * the permanent lockout: those players are invisible to matchmaking until the
+ * banner gets them to the fix, so it keeps coming back after each cooldown.
  */
-export function useProfileCompletionBannerVisibility(isComplete: boolean) {
+export function useProfileCompletionBannerVisibility(
+  isComplete: boolean,
+  hasOnboardingGaps: boolean = false
+) {
   const [visible, setVisible] = useState(false);
   const [ready, setReady] = useState(false);
 
@@ -35,7 +43,7 @@ export function useProfileCompletionBannerVisibility(isComplete: boolean) {
 
         const dismissCount = countStr ? parseInt(countStr, 10) : 0;
 
-        if (dismissCount >= MAX_DISMISSALS) {
+        if (dismissCount >= MAX_DISMISSALS && !hasOnboardingGaps) {
           setVisible(false);
           setReady(true);
           return;
@@ -57,7 +65,7 @@ export function useProfileCompletionBannerVisibility(isComplete: boolean) {
         setReady(true);
       }
     })();
-  }, []);
+  }, [hasOnboardingGaps]);
 
   useEffect(() => {
     if (isComplete) {
@@ -75,14 +83,14 @@ export function useProfileCompletionBannerVisibility(isComplete: boolean) {
 
       await AsyncStorage.setItem(STORAGE_KEY_DISMISS_COUNT, newCount.toString());
 
-      if (newCount < MAX_DISMISSALS) {
+      if (newCount < MAX_DISMISSALS || hasOnboardingGaps) {
         const cooldownMs = COOLDOWN_MS[Math.min(newCount - 1, COOLDOWN_MS.length - 1)];
         await AsyncStorage.setItem(STORAGE_KEY_COOLDOWN, (Date.now() + cooldownMs).toString());
       }
     } catch {
       // Ignore storage errors
     }
-  }, []);
+  }, [hasOnboardingGaps]);
 
   return { visible, ready, handleDismiss };
 }
@@ -101,21 +109,28 @@ const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = ({
   onAction,
   onDismiss,
   t,
-}) => (
-  <HomeBanner
-    variant="action"
-    icon="person-circle-outline"
-    title={t('profileCompletion.bannerTitle', { percentage })}
-    description={t('profileCompletion.bannerDescription')}
-    primaryAction={{
-      label: t('profileCompletion.bannerCta'),
-      onPress: () => {
-        void lightHaptic();
-        onAction(nextAction);
-      },
-    }}
-    onDismiss={onDismiss}
-  />
-);
+}) => {
+  const isGap = isOnboardingGapItem(nextAction);
+  return (
+    <HomeBanner
+      variant="action"
+      icon={isGap ? 'alert-circle-outline' : 'person-circle-outline'}
+      title={t('profileCompletion.bannerTitle', { percentage })}
+      description={
+        isGap
+          ? t('profileCompletion.gapBannerDescription')
+          : t('profileCompletion.bannerDescription')
+      }
+      primaryAction={{
+        label: isGap ? t('profileCompletion.gapBannerCta') : t('profileCompletion.bannerCta'),
+        onPress: () => {
+          void lightHaptic();
+          onAction(nextAction);
+        },
+      }}
+      onDismiss={onDismiss}
+    />
+  );
+};
 
 export default ProfileCompletionBanner;

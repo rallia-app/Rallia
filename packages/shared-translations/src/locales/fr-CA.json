@@ -1856,7 +1856,10 @@
       "verificationCodeSent": "Code de vérification envoyé!",
       "cityRequired": "Veuillez entrer votre ville",
       "postalCodeRequired": "Le code postal est requis. Veuillez retourner et compléter la configuration de l'emplacement.",
-      "failedToSaveLocation": "Échec de l'enregistrement de votre localisation. Veuillez réessayer."
+      "failedToSaveLocation": "Échec de l'enregistrement de votre localisation. Veuillez réessayer.",
+      "verifyPostalCode": "Entrez un code postal que nous pouvons localiser pour continuer.",
+      "missingDetailsTitle": "Presque terminé",
+      "missingDetails": "Il manque encore quelques infos avant de terminer votre profil. On les complète ensemble."
     },
     "successMessages": {
       "personalInfoUpdated": "Informations personnelles mises à jour avec succès",
@@ -1931,6 +1934,8 @@
     "locationStep": {
       "title": "Confirmez votre emplacement",
       "subtitle": "Ajoutez votre adresse pour des matchs plus précis, ou continuez avec votre code postal",
+      "postalCodeTitle": "Où jouez-vous?",
+      "postalCodeSubtitle": "Entrez votre code postal pour qu'on trouve des parties et des joueurs près de chez vous.",
       "savedPostalCode": "Votre emplacement enregistré",
       "editPostalCode": "Modifier",
       "postalCodeUpdated": "Code postal mis à jour",
@@ -11748,7 +11753,8 @@
       "profile": "Profil",
       "level": "Niveau",
       "location": "Secteur",
-      "preferences": "Préférences"
+      "preferences": "Préférences",
+      "favorites": "Favoris"
     },
     "auth": {
       "title": "Connectez-vous pour rejoindre",
@@ -11859,7 +11865,9 @@
       "alreadyHost": "Vous êtes le créateur de cette partie, vous y êtes déjà.",
       "eligibilityUnverified": "Nous n'avons pas pu vérifier votre admissibilité à cette partie. Veuillez réessayer.",
       "matchStarted": "Cette partie a déjà commencé, vous ne pouvez donc pas la quitter ici.",
-      "consentRequired": "Veuillez accepter la Politique de confidentialité et les Conditions générales d’utilisation pour continuer."
+      "consentRequired": "Veuillez accepter la Politique de confidentialité et les Conditions générales d’utilisation pour continuer.",
+      "selectFavorites": "Choisissez au moins {min} terrains favoris pour continuer.",
+      "onboardingIncomplete": "Il manque quelque chose à votre profil. Revenez en arrière et vérifiez vos réponses."
     },
     "chat": {
       "title": "Clavardage de la partie",
@@ -11878,6 +11886,17 @@
         "body": "Restez respectueux, gardez les messages en lien avec la partie et évitez de partager vos coordonnées personnelles tant que vous n'êtes pas à l'aise. Les messages peuvent être modérés.",
         "accept": "Compris, on clavarde"
       }
+    },
+    "favorites": {
+      "title": "Vos terrains favoris",
+      "description": "Choisissez au moins {min} endroits où vous aimez jouer. On s'en sert pour vous proposer des parties près de chez vous.",
+      "counter": "{count} / {min} sélectionnés",
+      "searchLabel": "Rechercher un terrain",
+      "searchPlaceholder": "Recherchez par nom ou par ville...",
+      "noLocation": "Entrez d'abord votre code postal pour voir les terrains près de chez vous.",
+      "noResults": "Aucun terrain ne correspond à votre recherche.",
+      "noFacilitiesNearby": "Aucun terrain trouvé près de chez vous. Essayez une recherche par nom.",
+      "hint": "Vous pouvez modifier vos terrains favoris en tout temps dans votre profil."
     }
   },
   "webBook": {
@@ -11908,7 +11927,8 @@
       "consent": "Consentement",
       "profile": "Profil",
       "level": "Niveau",
-      "location": "Endroit"
+      "location": "Endroit",
+      "favorites": "Favoris"
     },
     "auth": {
       "title": "Connecte-toi pour réserver",
@@ -11976,7 +11996,20 @@
       "invalidPostalCode": "Entre un code postal valide.",
       "ratingsLoadFailed": "Impossible de charger les niveaux. Rafraîchis la page pis réessaie.",
       "submitFailed": "Une erreur est survenue. Réessaie.",
-      "facilityUnavailable": "Ce terrain n’est plus disponible."
+      "facilityUnavailable": "Ce terrain n’est plus disponible.",
+      "selectFavorites": "Choisissez au moins {min} terrains favoris pour continuer.",
+      "onboardingIncomplete": "Il manque quelque chose à votre profil. Revenez en arrière et vérifiez vos réponses."
+    },
+    "favorites": {
+      "title": "Vos terrains favoris",
+      "description": "Choisissez au moins {min} endroits où vous aimez jouer. On s'en sert pour vous proposer des parties près de chez vous.",
+      "counter": "{count} / {min} sélectionnés",
+      "searchLabel": "Rechercher un terrain",
+      "searchPlaceholder": "Recherchez par nom ou par ville...",
+      "noLocation": "Entrez d'abord votre code postal pour voir les terrains près de chez vous.",
+      "noResults": "Aucun terrain ne correspond à votre recherche.",
+      "noFacilitiesNearby": "Aucun terrain trouvé près de chez vous. Essayez une recherche par nom.",
+      "hint": "Vous pouvez modifier vos terrains favoris en tout temps dans votre profil."
     }
   },
   "playPage": {
@@ -12561,6 +12594,15 @@
       "phone": "Ajouter votre numéro de téléphone",
       "displayName": "Choisir un nom d'affichage",
       "playStyle": "Définir votre style de jeu"
+    },
+    "required": "Requis",
+    "gapBannerDescription": "Il manque quelques infos essentielles, alors les joueurs près de chez vous ne vous trouvent pas encore pour des parties. Ça se règle en une minute.",
+    "gapBannerCta": "Corriger",
+    "gaps": {
+      "sport": "Choisir votre sport",
+      "rating": "Choisir votre niveau au {sport}",
+      "favorites": "Choisir au moins {count} terrains favoris pour le {sport}",
+      "postalCode": "Ajouter votre code postal"
     }
   },
   "donate": {

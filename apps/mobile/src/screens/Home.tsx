@@ -698,7 +698,21 @@ const Home = () => {
   // Profile completeness for banner
   const profileCompleteness = useProfileCompleteness();
   const profileCompletionBanner = useProfileCompletionBannerVisibility(
-    profileCompleteness.isComplete
+    profileCompleteness.isComplete,
+    profileCompleteness.hasOnboardingGaps
+  );
+
+  // Gaps get fixed on other screens (SportProfile, UserProfile); re-ask on return.
+  const gapsFocusedOnceRef = useRef(false);
+  const { hasOnboardingGaps, refetchOnboardingGaps } = profileCompleteness;
+  useFocusEffect(
+    useCallback(() => {
+      if (!gapsFocusedOnceRef.current) {
+        gapsFocusedOnceRef.current = true;
+        return;
+      }
+      if (hasOnboardingGaps) void refetchOnboardingGaps();
+    }, [hasOnboardingGaps, refetchOnboardingGaps])
   );
 
   // Billing-issue banner dismissal — lifted out of the banner so Home knows
@@ -731,6 +745,9 @@ const Home = () => {
         );
       } else if (item.actionType === 'sheet' && item.actionSheet) {
         // For sheet actions, navigate to UserProfile where the sheets are available
+        (appNavigation.navigate as (...args: unknown[]) => void)('UserProfile');
+      } else if (item.actionType === 'sport_setup') {
+        // Sport activation (rating + favourites wizard) lives on UserProfile
         (appNavigation.navigate as (...args: unknown[]) => void)('UserProfile');
       } else if (item.actionType === 'image_picker') {
         appNavigation.navigate('UserProfile' as never);
