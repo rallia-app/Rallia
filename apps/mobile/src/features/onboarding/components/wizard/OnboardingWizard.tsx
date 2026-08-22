@@ -5,13 +5,16 @@
  * with horizontal slide animations, progress indicator, and theme/i18n support.
  *
  * Steps:
- * 1. Personal Info (also silently persists pre-onboarding home location)
- * 2. Tennis Rating (if tennis selected)
- * 3. Pickleball Rating (if pickleball selected)
- * 4. Preferences
- * 5. Favorite Sites
- * 6. Availabilities
- * 7. Success (final)
+ * 1. Consent
+ * 2. Personal Info (also silently persists pre-onboarding home location)
+ * 3. Sports (only when no sport could be resolved from pre-onboarding)
+ * 4. Tennis Rating (if tennis selected)
+ * 5. Pickleball Rating (if pickleball selected)
+ * 6. Location (only when no postal code is known for the player)
+ * 7. Preferences
+ * 8. Favorite Sites
+ * 9. Availabilities (calls complete_onboarding(); a refusal jumps back to the gap)
+ * 10. Success (final)
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -33,7 +36,14 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  mediumHaptic,
+  successHaptic,
+  warningHaptic,
+  MIN_FAVORITE_FACILITIES,
+  parseOnboardingGaps,
+} from '@rallia/shared-utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   OnboardingService,
@@ -73,12 +83,15 @@ import { useSport, useUserHomeLocation } from '#/context';
 import {
   useOnboardingWizard,
   computeFavoriteSportCounts,
+  resolveOnboardingGapStep,
   type OnboardingStepId,
 } from '#/features/onboarding/hooks/useOnboardingWizard';
 
 import {
   ConsentStep,
   PersonalInfoStep,
+  SportsStep,
+  LocationStep,
   RatingStep,
   PreferencesStep,
   FavoriteSitesStep,
@@ -253,6 +266,8 @@ const getStepName = (stepId: OnboardingStepId, t: (key: TranslationKey) => strin
   const keys: Record<OnboardingStepId, TranslationKey> = {
     consent: 'onboarding.stepNames.consent',
     personal: 'onboarding.stepNames.personal',
+    sports: 'onboarding.stepNames.sports',
+    location: 'onboarding.stepNames.location',
     'tennis-rating': 'onboarding.stepNames.tennisRating',
     'pickleball-rating': 'onboarding.stepNames.pickleballRating',
     preferences: 'onboarding.stepNames.preferences',
@@ -309,6 +324,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     updateFormData,
     goToNextStep,
     goToPrevStep,
+    jumpToStep,
     isLastStep,
     resetWizard,
     hasTennis,
@@ -331,8 +347,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const { refetch: refetchPlayer } = usePlayer();
 
   // Home location captured during pre-onboarding; synced to the player row
-  // after personal info is saved, so we no longer need a Location step.
-  const { homeLocation } = useUserHomeLocation();
+  // after personal info is saved. The Location step only appears when it is
+  // missing on both the device and the player row.
+  const { homeLocation, setHomeLocation } = useUserHomeLocation();
 
   // Sport context to refetch player sports when onboarding completes
   const { refetch: refetchSports, setSelectedSport, selectedSport } = useSport();
@@ -510,6 +527,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         if (formData.dateOfBirth > minimumDateOfBirth) return true;
         return false;
       }
+      case 'sports':
+        return formData.selectedSportIds.length === 0;
+      case 'location':
+        return !(
+          formData.postalCode.trim() &&
+          formData.latitude !== null &&
+          formData.longitude !== null
+        );
       case 'tennis-rating':
         return !formData.tennisRatingId;
       case 'pickleball-rating':
@@ -518,9 +543,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         const bothSports = hasTennis && hasPickleball;
         if (bothSports) {
           const counts = computeFavoriteSportCounts(formData);
-          return counts.tennisCount < 2 || counts.pickleballCount < 2;
+          return (
+            counts.tennisCount < MIN_FAVORITE_FACILITIES ||
+            counts.pickleballCount < MIN_FAVORITE_FACILITIES
+          );
         }
-        return formData.favoriteFacilities.length < 2;
+        return formData.favoriteFacilities.length < MIN_FAVORITE_FACILITIES;
       }
       case 'availabilities':
         // 6 hour cells minimum — matches MIN_AVAILABILITIES used on
@@ -584,7 +612,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             .select('policy_type, current_version');
 
           if (versionsError || !versions) {
-            Logger.error('Failed to load policy versions', versionsError as Error);
+            Logger.error('Failed to load policy versions', versionsError);
             Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
             setIsSaving(false);
             return false;
@@ -701,6 +729,131 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving personal info', error as Error);
+          Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
+          setIsSaving(false);
+          return false;
+        }
+      }
+
+      case 'sports': {
+        if (formData.selectedSportIds.length === 0) {
+          Alert.alert(t('alerts.error'), t('onboarding.validation.selectAtLeastOneSport'));
+          warningHaptic();
+          return false;
+        }
+
+        setIsSaving(true);
+        try {
+          const userId = await DatabaseService.Auth.getCurrentUserId();
+          if (!userId) {
+            Alert.alert(t('alerts.error'), t('onboarding.validation.userNotAuthenticated'));
+            setIsSaving(false);
+            return false;
+          }
+
+          // Same rows pre-onboarding's hand-off would have written: one
+          // player_sport per pick, the first pick primary. Diff against what
+          // exists so going back and forth never duplicates a row.
+          const { data: existingRows, error: existingError } =
+            await DatabaseService.PlayerSport.getPlayerSports(userId);
+          if (existingError) {
+            Logger.error('Failed to load player sports', existingError as Error);
+            Alert.alert(t('alerts.error'), t('onboarding.validation.failedToUpdateSportSelection'));
+            setIsSaving(false);
+            return false;
+          }
+
+          const existingIds = new Set((existingRows ?? []).map(ps => ps.sport_id));
+          const selectedIds = formData.selectedSportIds;
+          const hasPrimary = (existingRows ?? []).some(
+            ps => ps.is_primary && selectedIds.includes(ps.sport_id)
+          );
+
+          for (const sportId of selectedIds) {
+            if (existingIds.has(sportId)) continue;
+            const { error: addError } = await DatabaseService.PlayerSport.addPlayerSport({
+              player_id: userId,
+              sport_id: sportId,
+              is_primary: !hasPrimary && sportId === selectedIds[0],
+            });
+            if (addError) {
+              Logger.error('Failed to save sport selection', addError as Error, { sportId });
+              Alert.alert(
+                t('alerts.error'),
+                t('onboarding.validation.failedToUpdateSportSelection')
+              );
+              setIsSaving(false);
+              return false;
+            }
+          }
+
+          for (const sportId of existingIds) {
+            if (selectedIds.includes(sportId)) continue;
+            const { error: removeError } = await DatabaseService.PlayerSport.removePlayerSport(
+              userId,
+              sportId
+            );
+            if (removeError) {
+              Logger.warn('Failed to remove deselected sport', { sportId, error: removeError });
+            }
+          }
+
+          refetchSports();
+          setIsSaving(false);
+          return true;
+        } catch (error) {
+          Logger.error('Unexpected error saving sport selection', error as Error);
+          Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
+          setIsSaving(false);
+          return false;
+        }
+      }
+
+      case 'location': {
+        if (
+          !formData.postalCode.trim() ||
+          formData.latitude === null ||
+          formData.longitude === null
+        ) {
+          Alert.alert(t('alerts.error'), t('onboarding.validation.verifyPostalCode'));
+          warningHaptic();
+          return false;
+        }
+
+        setIsSaving(true);
+        try {
+          const userId = await DatabaseService.Auth.getCurrentUserId();
+          if (!userId) {
+            Alert.alert(t('alerts.error'), t('onboarding.validation.userNotAuthenticated'));
+            setIsSaving(false);
+            return false;
+          }
+
+          const location = {
+            postalCode: formData.postalCode,
+            country: 'CA' as const,
+            latitude: formData.latitude,
+            longitude: formData.longitude,
+          };
+          const syncResult = await syncHomeLocationToPlayer(userId, location);
+          if (!syncResult.success) {
+            Logger.error('Failed to save postal code to player', new Error(syncResult.error));
+            Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveLocation'));
+            setIsSaving(false);
+            return false;
+          }
+
+          // Keep device storage coherent so later sign-ins skip the re-ask.
+          try {
+            await setHomeLocation({ ...location, formattedAddress: formData.postalCode });
+          } catch (storageError) {
+            Logger.warn('Failed to cache home location on device', { error: storageError });
+          }
+
+          setIsSaving(false);
+          return true;
+        } catch (error) {
+          Logger.error('Unexpected error saving location', error as Error);
           Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
           setIsSaving(false);
           return false;
@@ -841,16 +994,19 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         }
 
       case 'favorite-sites': {
-        // Validate per-sport minimums
+        // Validate per-sport minimums (MIN_FAVORITE_FACILITIES, mirrored server-side)
         const bothSportsSelected = hasTennis && hasPickleball;
         if (bothSportsSelected) {
           const counts = computeFavoriteSportCounts(formData);
-          if (counts.tennisCount < 2 || counts.pickleballCount < 2) {
+          if (
+            counts.tennisCount < MIN_FAVORITE_FACILITIES ||
+            counts.pickleballCount < MIN_FAVORITE_FACILITIES
+          ) {
             Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.selectMinimumPerSport'));
             warningHaptic();
             return false;
           }
-        } else if (formData.favoriteFacilities.length < 2) {
+        } else if (formData.favoriteFacilities.length < MIN_FAVORITE_FACILITIES) {
           Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.selectMinimum'));
           warningHaptic();
           return false;
@@ -943,17 +1099,39 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             return false;
           }
 
-          // Mark onboarding as completed - this is CRITICAL and must succeed
-          const { error: completeError } = await OnboardingService.completeOnboarding();
+          // Mark onboarding as completed through complete_onboarding(): the
+          // server checks the invariant (postal code, sport, rating per sport,
+          // favourites per sport) and refuses with the list of gaps.
+          const { data: completion, error: completeError } =
+            await OnboardingService.completeOnboarding();
 
-          if (completeError) {
-            Logger.error('Failed to mark onboarding as completed', completeError as Error);
+          if (completeError || !completion) {
+            Logger.error(
+              'Failed to mark onboarding as completed',
+              (completeError as Error) ?? new Error('complete_onboarding returned no data')
+            );
+            Alert.alert(t('alerts.error'), t('onboarding.validation.failedToCompleteOnboarding'));
+            setIsSaving(false);
+            return false;
+          }
+
+          if (!completion.ok) {
+            const gaps = parseOnboardingGaps(completion.missing);
+            const targetStep = resolveOnboardingGapStep(gaps, steps, sportId => {
+              const index = formData.selectedSportIds.indexOf(sportId);
+              return index >= 0 ? formData.selectedSportNames[index] : undefined;
+            });
+            Logger.warn('onboarding_completion_refused', {
+              missing: completion.missing,
+              targetStep,
+            });
+            warningHaptic();
             Alert.alert(
-              t('alerts.error'),
-              t('onboarding.validation.failedToCompleteOnboarding') ||
-                'Failed to complete onboarding. Please try again.'
+              t('onboarding.validation.missingDetailsTitle'),
+              t('onboarding.validation.missingDetails')
             );
             setIsSaving(false);
+            if (targetStep) jumpToStep(targetStep);
             return false;
           }
 
@@ -1161,6 +1339,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     refetchSports,
     lastUploadedProfileUrl,
     queryClient,
+    steps,
+    jumpToStep,
+    setHomeLocation,
   ]);
 
   // Handle next button press
@@ -1220,6 +1401,26 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             formData={formData}
             onUpdateFormData={updateFormData}
             onPickImage={pickImage}
+            colors={colors}
+            t={t}
+            isDark={isDark}
+          />
+        );
+      case 'sports':
+        return (
+          <SportsStep
+            formData={formData}
+            onUpdateFormData={updateFormData}
+            colors={colors}
+            t={t}
+            isDark={isDark}
+          />
+        );
+      case 'location':
+        return (
+          <LocationStep
+            formData={formData}
+            onUpdateFormData={updateFormData}
             colors={colors}
             t={t}
             isDark={isDark}

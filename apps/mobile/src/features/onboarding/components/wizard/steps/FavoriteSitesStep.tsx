@@ -15,7 +15,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, EmptyState } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { lightHaptic, selectionHaptic, successHaptic } from '@rallia/shared-utils';
+import {
+  lightHaptic,
+  selectionHaptic,
+  successHaptic,
+  MIN_FAVORITE_FACILITIES,
+} from '@rallia/shared-utils';
 import { isRealSportId, fallbackSportSlug } from '@rallia/shared-services';
 import { useFacilitySearch, useSports } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
@@ -72,8 +77,9 @@ interface FavoriteSitesStepProps {
 // CONSTANTS
 // =============================================================================
 
-const MIN_SINGLE_SPORT = 2;
-const MIN_BOTH_SPORTS = 2;
+// Per-sport minimum, shared with the wizard gate and the SQL invariant.
+const MIN_SINGLE_SPORT = MIN_FAVORITE_FACILITIES;
+const MIN_BOTH_SPORTS = MIN_FAVORITE_FACILITIES;
 
 // Fallback location (Parc Jeanne-Mance, Montréal) used when the user has no
 // saved coordinates and device location is unavailable, so the facility list

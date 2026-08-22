@@ -24,6 +24,7 @@ import {
   selectionHaptic,
   successHaptic,
   mediumHaptic,
+  MIN_FAVORITE_FACILITIES,
 } from '@rallia/shared-utils';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
@@ -36,7 +37,8 @@ import TennisCourtIcon from '../../../../assets/icons/tennis-court.svg';
 // CONSTANTS
 // =============================================================================
 
-const MIN_FAVORITES = 3;
+// Shared with onboarding and the SQL invariant; payload.minFavorites can lower it.
+const MIN_FAVORITES = MIN_FAVORITE_FACILITIES;
 
 // =============================================================================
 // HELPER FUNCTIONS

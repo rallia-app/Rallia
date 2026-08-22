@@ -5,8 +5,6 @@
  * Provides type-safe CRUD methods and onboarding-specific operations
  */
 
-import { supabase } from './supabase';
-import { isRealSportId, fallbackSportSlug } from './sports';
 import type {
   Profile,
   ProfileInsert,
@@ -35,6 +33,9 @@ import type {
   DatabaseError,
 } from '@rallia/shared-types';
 
+import { supabase } from './supabase';
+import { isRealSportId, fallbackSportSlug } from './sports';
+
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
@@ -54,10 +55,25 @@ async function resolveSportId(sportId: string): Promise<string> {
   const slug = fallbackSportSlug(sportId);
   if (slug) {
     const { data } = await SportService.getSportByName(slug);
-    if (isRealSportId(data?.id)) return data!.id;
+    if (isRealSportId(data?.id)) return data.id;
   }
 
   throw new Error(`Cannot resolve sport id "${sportId}" to a real sport`);
+}
+
+/** Result of complete_onboarding(): the server either flips the flag or lists what is missing. */
+export interface OnboardingCompletionResult {
+  ok: boolean;
+  /** Gap codes: 'postal_code' | 'sport' | 'rating:<sport_id>' | 'favorites:<sport_id>' */
+  missing: string[];
+}
+
+function parseOnboardingCompletionResult(raw: unknown): OnboardingCompletionResult {
+  const obj = raw && typeof raw === 'object' ? (raw as { ok?: unknown; missing?: unknown }) : {};
+  const missing = Array.isArray(obj.missing)
+    ? obj.missing.filter((code): code is string => typeof code === 'string')
+    : [];
+  return { ok: obj.ok === true, missing };
 }
 
 /**
@@ -379,10 +395,20 @@ export const ProfileService = {
   },
 
   /**
-   * Mark onboarding as completed
+   * Mark onboarding as completed through the server-side invariant check.
+   * Returns { ok: false, missing } instead of flipping the flag when the player
+   * still lacks a postal code, a sport, a rating or enough favourites.
    */
-  async completeOnboarding(userId: string): Promise<DatabaseResponse<Profile>> {
-    return ProfileService.updateProfile(userId, { onboarding_completed: true });
+  async completeOnboarding(userId: string): Promise<DatabaseResponse<OnboardingCompletionResult>> {
+    try {
+      const { data, error } = await supabase.rpc('complete_onboarding', { p_player_id: userId });
+
+      if (error) throw error;
+
+      return { data: parseOnboardingCompletionResult(data), error: null };
+    } catch (error) {
+      return { data: null, error: handleError(error) };
+    }
   },
 };
 
@@ -1323,16 +1349,16 @@ export const OnboardingService = {
   },
 
   /**
-   * Complete the entire onboarding process
+   * Complete the entire onboarding process for the signed-in player.
+   * The RPC resolves auth.uid() itself; data.ok === false carries the gap codes.
    */
-  async completeOnboarding(): Promise<DatabaseResponse<Profile>> {
+  async completeOnboarding(): Promise<DatabaseResponse<OnboardingCompletionResult>> {
     try {
-      const userId = await getCurrentUserId();
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
+      const { data, error } = await supabase.rpc('complete_onboarding');
 
-      return ProfileService.completeOnboarding(userId);
+      if (error) throw error;
+
+      return { data: parseOnboardingCompletionResult(data), error: null };
     } catch (error) {
       return { data: null, error: handleError(error) };
     }

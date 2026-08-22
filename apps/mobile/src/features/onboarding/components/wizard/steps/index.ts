@@ -1,5 +1,7 @@
 export { ConsentStep } from './ConsentStep';
 export { PersonalInfoStep } from './PersonalInfoStep';
+export { SportsStep } from './SportsStep';
+export { LocationStep } from './LocationStep';
 export { RatingStep } from './RatingStep';
 export { PreferencesStep } from './PreferencesStep';
 export { FavoriteSitesStep } from './FavoriteSitesStep';

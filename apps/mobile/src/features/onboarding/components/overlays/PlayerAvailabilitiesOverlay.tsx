@@ -206,15 +206,8 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
         Logger.debug('player_availabilities_saved', { count: availabilityData.length });
         Analytics.availabilityScheduleUpdated({ was_refresh_only: false });
 
-        const { error: completeError } = await OnboardingService.completeOnboarding();
-        if (completeError) {
-          Logger.warn('Failed to mark onboarding as completed', { error: completeError });
-        } else {
-          Logger.info('onboarding_completed', {
-            message: 'Onboarding marked as completed in profile',
-          });
-        }
-
+        // Availability is not part of the onboarding invariant; only the
+        // wizard's final step may call complete_onboarding().
         onContinue(selection);
       } catch (error) {
         Logger.error('Unexpected error saving availability', error as Error);
