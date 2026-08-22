@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
 // next-intl's redirect, not next/navigation's: a locale-less path would be re-prefixed
@@ -21,6 +22,7 @@ import { PlayerShell } from '@/components/app/layout/player-shell';
 import { getPlayerShellData } from '@/lib/supabase/check-player';
 import { createClient } from '@/lib/supabase/server';
 import { readSportCookie } from '@/lib/app/sport-cookie';
+import { isPlayerAppEnabled } from '@/lib/app/player-app-enabled';
 
 /**
  * The player app is private. robots.txt disallows the app path prefix, but that only
@@ -37,6 +39,8 @@ export default async function PlayerLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
+  if (!isPlayerAppEnabled()) notFound();
+
   const { locale } = await params;
   const supabase = await createClient();
   const headersList = await headers();

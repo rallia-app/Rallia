@@ -1,4 +1,5 @@
 import { CalendarCheck2, MapPin, UsersRound } from 'lucide-react';
+import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 
 import { CourtLines } from '@/components/court-lines';
@@ -9,6 +10,7 @@ import { ModeToggle } from '@/components/mode-toggle';
 import ThemeLogo from '@/components/theme-logo';
 import { OrganizationSignInForm } from '@/components/organization-sign-in-form';
 import { createClient } from '@/lib/supabase/server';
+import { isPlayerAppEnabled } from '@/lib/app/player-app-enabled';
 
 /**
  * Only accepts same-origin app paths. `next` comes off the query string, so without
@@ -36,6 +38,8 @@ export default async function PlayerSignInPage({
 }: {
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
+  if (!isPlayerAppEnabled()) notFound();
+
   const params = await searchParams;
   const destination = safeNext(params.next);
   const locale = await getLocale();

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { MIN_AVAILABILITY_CELLS, meetsMinimumAge } from '@rallia/shared-utils';
 
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { isPlayerAppEnabled } from '@/lib/app/player-app-enabled';
 import { writeWebOnboardingProfile } from '@/lib/web-onboarding/profile';
 import {
   isValidAvailabilityCell,
@@ -71,6 +72,8 @@ const CompleteSchema = z.object({
  * onboarding produces rather than a subset of it.
  */
 export async function POST(request: NextRequest) {
+  if (!isPlayerAppEnabled()) return new NextResponse(null, { status: 404 });
+
   try {
     const supabase = await createClient();
     const {
