@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { QRCodeSVG } from 'qrcode.react';
 
-import { IOSCodeHandoff } from '../../invite/[code]/_components/ios-code-handoff';
+import { IOSCodeHandoff } from '@/components/ios-code-handoff';
 
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { logReferralClick, buildPlayStoreUrl, APP_STORE_URL } from '@/lib/referral-tracking';

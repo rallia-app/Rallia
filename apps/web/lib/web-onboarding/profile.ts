@@ -40,6 +40,16 @@ export type WebOnboardingAttribution = {
   acquisitionChannel: string;
   referralInvitationType?: string;
   referralTargetId?: string;
+  /** Profile id of the referrer, resolved server-side from a referral code. */
+  referredBy?: string;
+  /** Inbound campaign context, persisted on the account rather than only in the clipboard token. */
+  utm?: {
+    source?: string;
+    medium?: string;
+    campaign?: string;
+    term?: string;
+    content?: string;
+  };
 };
 
 /** complete_onboarding() refused: the stable gap codes the client can localize. */
@@ -99,6 +109,12 @@ export async function writeWebOnboardingProfile(
             referral_target_id: attribution.referralTargetId,
           }
         : {}),
+      ...(attribution.referredBy ? { referred_by: attribution.referredBy } : {}),
+      ...(attribution.utm?.source ? { utm_source: attribution.utm.source } : {}),
+      ...(attribution.utm?.medium ? { utm_medium: attribution.utm.medium } : {}),
+      ...(attribution.utm?.campaign ? { utm_campaign: attribution.utm.campaign } : {}),
+      ...(attribution.utm?.term ? { utm_term: attribution.utm.term } : {}),
+      ...(attribution.utm?.content ? { utm_content: attribution.utm.content } : {}),
     },
     { onConflict: 'id' }
   );

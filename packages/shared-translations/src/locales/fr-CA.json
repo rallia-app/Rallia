@@ -6413,7 +6413,8 @@
         "headline": "Ta prochaine partie commence ici.",
         "subheadline": "Télécharge l'application, connecte-toi avec des joueurs de ton niveau, et commence à jouer aujourd'hui.",
         "downloadButton": "Télécharger l'application",
-        "learnMore": "En savoir plus"
+        "learnMore": "En savoir plus",
+        "createAccount": "Crée ton compte"
       },
       "leadAnswer": {
         "headline": "Qu'est-ce que Rallia ?",
@@ -6948,7 +6949,31 @@
     "roleHint": "Sélectionnez le rôle qui décrit le mieux votre position dans cette organisation.",
     "createButton": "Créer l'organisation",
     "creating": "Création...",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "funnel": {
+      "pageTitle": "Créez votre compte Rallia",
+      "pageDescription": "Créez votre compte joueur en quelques étapes, puis installez l'application et jouez.",
+      "heading": "Créez votre compte",
+      "subheading": "Quelques étapes rapides, puis installez l'application et jouez.",
+      "auth": {
+        "title": "Connectez-vous pour commencer",
+        "description": "Utilisez Google ou votre courriel. Vous vous connecterez de la même façon dans l'application."
+      },
+      "finish": "Créer mon compte",
+      "handoff": {
+        "title": "Votre compte est prêt",
+        "body": "Les parties se passent dans l'application Rallia. Installez-la et connectez-vous pour trouver des joueurs et des parties près de chez vous.",
+        "signIn": {
+          "google": "Connectez-vous avec Google dans l'application, comme ici.",
+          "apple": "Connectez-vous avec Apple dans l'application, comme ici.",
+          "facebook": "Connectez-vous avec Facebook dans l'application, comme ici.",
+          "email": "Connectez-vous avec votre courriel ({email}) dans l'application, comme ici.",
+          "generic": "Connectez-vous avec le même compte dans l'application."
+        },
+        "qrHint": "Scannez avec votre téléphone pour installer Rallia.",
+        "installHint": "Installez l'application, puis connectez-vous. Votre profil est déjà prêt."
+      }
+    }
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -11754,7 +11779,9 @@
       "level": "Niveau",
       "location": "Secteur",
       "preferences": "Préférences",
-      "favorites": "Favoris"
+      "favorites": "Favoris",
+      "sport": "Sport",
+      "availability": "Disponibilités"
     },
     "auth": {
       "title": "Connectez-vous pour rejoindre",
@@ -11867,7 +11894,9 @@
       "matchStarted": "Cette partie a déjà commencé, vous ne pouvez donc pas la quitter ici.",
       "consentRequired": "Veuillez accepter la Politique de confidentialité et les Conditions générales d’utilisation pour continuer.",
       "selectFavorites": "Choisissez au moins {min} terrains favoris pour continuer.",
-      "onboardingIncomplete": "Il manque quelque chose à votre profil. Revenez en arrière et vérifiez vos réponses."
+      "onboardingIncomplete": "Il manque quelque chose à votre profil. Revenez en arrière et vérifiez vos réponses.",
+      "selectSport": "Choisissez un sport pour continuer.",
+      "selectAvailability": "Choisissez au moins {min} plages horaires pour continuer."
     },
     "chat": {
       "title": "Clavardage de la partie",

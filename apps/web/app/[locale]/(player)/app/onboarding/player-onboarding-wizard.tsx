@@ -14,8 +14,8 @@ import {
   type HourGrid,
 } from '@rallia/shared-utils';
 
-import { AvailabilityStep } from './availability-step';
-import { SportStep } from './sport-step';
+import { AvailabilityStep } from '@/components/web-onboarding/availability-step';
+import { SportStep } from '@/components/web-onboarding/sport-step';
 
 import { AvatarPicker } from '@/components/app/inputs/avatar-picker';
 import {
@@ -193,7 +193,7 @@ export function PlayerOnboardingWizard({
       // profile write cannot lose it.
       await acceptPolicies();
 
-      const response = await fetch('/api/player-onboarding/complete', {
+      const response = await fetch('/api/web-onboarding/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

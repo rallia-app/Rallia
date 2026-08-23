@@ -40,7 +40,8 @@ export type AppStorePlacement =
   | 'player_page'
   | 'invite_page'
   | 'join_dialog'
-  | 'web_book';
+  | 'web_book'
+  | 'get_started';
 
 export function appStoreClicked(props: {
   store: 'app_store' | 'play_store';
@@ -145,6 +146,21 @@ export function webJoinCompleted(props: {
   existing_user?: boolean;
 }): void {
   capture('web_join_completed', props);
+}
+
+// ---- /get-started web onboarding funnel ----
+
+export function webOnboardingStarted(props: { referred: boolean; has_utm: boolean }): void {
+  capture('web_onboarding_started', props);
+}
+
+export function webOnboardingCompleted(props: {
+  existing_user: boolean;
+  provider: string;
+  referred: boolean;
+  has_utm: boolean;
+}): void {
+  capture('web_onboarding_completed', props);
 }
 
 // ---- Web booking onboarding funnel ----

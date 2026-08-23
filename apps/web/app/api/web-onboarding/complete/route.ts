@@ -7,7 +7,6 @@ import {
 } from '@rallia/shared-utils';
 
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
-import { isPlayerAppEnabled } from '@/lib/app/player-app-enabled';
 import {
   OnboardingIncompleteError,
   completeOnboarding,
@@ -40,6 +39,8 @@ const PRIMARY_SIGNUP_DEFAULTS = {
   maxTravelDistance: 10,
 };
 
+const utmValue = z.string().trim().min(1).max(200);
+
 const CompleteSchema = z.object({
   locale: z.string().default('en-US'),
   personal: z.object({
@@ -71,19 +72,37 @@ const CompleteSchema = z.object({
   favoriteFacilityIds: z
     .array(uuidLike)
     .min(MIN_FAVORITE_FACILITIES, { message: 'FAVORITES_REQUIRED' }),
+  attribution: z
+    .object({
+      utm: z
+        .object({
+          source: utmValue.optional(),
+          medium: utmValue.optional(),
+          campaign: utmValue.optional(),
+          term: utmValue.optional(),
+          content: utmValue.optional(),
+        })
+        .optional(),
+      /** A friend's referral code; resolved to a profile id here, never trusted as an id. */
+      referralCode: z
+        .string()
+        .trim()
+        .regex(/^[A-Za-z0-9]{4,12}$/)
+        .optional(),
+    })
+    .optional(),
 });
 
 /**
- * Completes onboarding for a player who signed up on the web.
+ * Completes onboarding for a player who created their account on the web (/get-started,
+ * and the parked /app wizard while it lasts).
  *
- * Writes the profile through the same writeWebOnboardingProfile the /games join gate and
- * /courts booking gate use, then adds the two things those gates never collect —
- * availability and favourite facilities — so the resulting account matches what mobile
- * onboarding produces rather than a subset of it.
+ * Writes the profile through the same writeWebOnboardingProfile the join and booking
+ * gates use, then the two things those gates never collect, availability and favourite
+ * facilities, then flips the flag through complete_onboarding(). Attribution lands on
+ * the account here, before any install, so the clipboard token is only a fallback.
  */
 export async function POST(request: NextRequest) {
-  if (!isPlayerAppEnabled()) return new NextResponse(null, { status: 404 });
-
   try {
     const supabase = await createClient();
     const {
@@ -91,14 +110,16 @@ export async function POST(request: NextRequest) {
       error: authError,
     } = await supabase.auth.getUser();
 
-    // The (player) layout already guards the page, but the route is reachable
-    // directly, so it re-authenticates rather than trusting the caller.
     if (authError || !user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = CompleteSchema.parse(await request.json());
     const admin = createServiceRoleClient();
+
+    const referredBy = body.attribution?.referralCode
+      ? await resolveReferrer(admin, body.attribution.referralCode, user.id)
+      : undefined;
 
     await writeWebOnboardingProfile(
       admin,
@@ -118,7 +139,11 @@ export async function POST(request: NextRequest) {
         matchType: PRIMARY_SIGNUP_DEFAULTS.matchType,
         locale: body.locale,
       },
-      { acquisitionChannel: 'web_app' }
+      {
+        acquisitionChannel: 'web',
+        ...(referredBy ? { referredBy } : {}),
+        ...(body.attribution?.utm ? { utm: body.attribution.utm } : {}),
+      }
     );
 
     // writeWebOnboardingProfile has no photo parameter (the join and booking gates never
@@ -177,7 +202,25 @@ export async function POST(request: NextRequest) {
     }
 
     const message = error instanceof Error ? error.message : 'An error occurred';
-    console.error('[player-onboarding/complete]', message);
+    console.error('[web-onboarding/complete]', message);
     return NextResponse.json({ error: 'SUBMIT_FAILED' }, { status: 500 });
   }
+}
+
+/**
+ * Referral code to referrer profile id. Unknown codes and self-referrals resolve to
+ * nothing rather than failing the signup: attribution must never cost an account.
+ */
+async function resolveReferrer(
+  admin: ReturnType<typeof createServiceRoleClient>,
+  code: string,
+  userId: string
+): Promise<string | undefined> {
+  const { data } = await admin
+    .from('profile')
+    .select('id')
+    .eq('referral_code', code.toUpperCase())
+    .maybeSingle();
+  if (!data?.id || data.id === userId) return undefined;
+  return data.id;
 }

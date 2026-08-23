@@ -1,11 +1,16 @@
 'use client';
 
 import { usePostalCodeGeocode, useAuth, type PlaceDetails } from '@rallia/shared-hooks';
-import { GENDER_VALUES } from '@rallia/shared-types';
+import { GENDER_VALUES, type DayEnum } from '@rallia/shared-types';
 import {
+  MIN_AVAILABILITY_CELLS,
   MIN_FAVORITE_FACILITIES,
+  countSelected,
+  emptyGrid,
   formatPostalCodeInput,
   meetsMinimumAge,
+  parseCellKey,
+  type HourGrid,
   type RatingSystemCode,
 } from '@rallia/shared-utils';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -14,10 +19,20 @@ import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js
 import { createClient } from '@/lib/supabase/client';
 
 /** Steps this hook owns. Callers add their own terminal steps (success, review, …). */
-export type OnboardingStep = 'auth' | 'consent' | 'personal' | 'rating' | 'location' | 'favorites';
+export type OnboardingStep =
+  | 'auth'
+  | 'consent'
+  | 'personal'
+  | 'sport'
+  | 'rating'
+  | 'location'
+  | 'favorites'
+  | 'availability';
 
-/** The profile-building steps, in order. `auth` sits outside the stepper. */
-export const PROFILE_STEPS: Array<{ id: OnboardingStep; labelKey: string }> = [
+type ProfileStepSpec = { id: OnboardingStep; labelKey: string };
+
+/** The default profile-building steps, in order. `auth` sits outside the stepper. */
+export const PROFILE_STEPS: ProfileStepSpec[] = [
   { id: 'consent', labelKey: 'consent' },
   { id: 'personal', labelKey: 'profile' },
   { id: 'rating', labelKey: 'level' },
@@ -25,13 +40,32 @@ export const PROFILE_STEPS: Array<{ id: OnboardingStep; labelKey: string }> = [
   { id: 'favorites', labelKey: 'favorites' },
 ];
 
-/** The step that submits the profile; everything the server needs is collected by then. */
+/** Opt-in steps: the sport picker (when no entry point hands us one) and the weekly grid. */
+const SPORT_STEP: ProfileStepSpec = { id: 'sport', labelKey: 'sport' };
+const AVAILABILITY_STEP: ProfileStepSpec = { id: 'availability', labelKey: 'availability' };
+
+/** The step that submits the profile on the default walk; `controller.finalProfileStep` is the live value. */
 export const FINAL_PROFILE_STEP: OnboardingStep = 'favorites';
 
-/** Same steps with consent lifted out, for callers that ask for it at the very end. */
-const PROFILE_STEPS_WITHOUT_CONSENT = PROFILE_STEPS.filter(s => s.id !== 'consent');
+function buildProfileSteps(options: {
+  deferConsent: boolean;
+  includeSportStep: boolean;
+  includeAvailabilityStep: boolean;
+}): ProfileStepSpec[] {
+  const steps: ProfileStepSpec[] = [];
+  for (const spec of PROFILE_STEPS) {
+    if (spec.id === 'consent' && options.deferConsent) continue;
+    // The sport is chosen right before the level it scopes.
+    if (spec.id === 'rating' && options.includeSportStep) steps.push(SPORT_STEP);
+    steps.push(spec);
+  }
+  if (options.includeAvailabilityStep) steps.push(AVAILABILITY_STEP);
+  return steps;
+}
 
 export type RatingOption = { id: string; label: string; value: number | null };
+
+export type AvailabilityCell = { day: DayEnum; hour: number };
 
 /** What a brand-new account submits once the last step is done. */
 export type OnboardingProfilePayload = {
@@ -54,6 +88,8 @@ export type OnboardingProfilePayload = {
   };
   /** At least MIN_FAVORITE_FACILITIES, for `sportId`. */
   favoriteFacilityIds: string[];
+  /** Only when the caller opted into the availability step; at least MIN_AVAILABILITY_CELLS. */
+  availability?: AvailabilityCell[];
 };
 
 /** Minimal translator shape — both `webJoin` and `webBook` satisfy it. */
@@ -71,8 +107,15 @@ async function resolveInitialUser(supabase: SupabaseClient): Promise<SupabaseUse
 }
 
 export interface UseWebOnboardingOptions {
-  /** Sport the rating step loads levels for. Null defers the fetch. */
+  /**
+   * Sport the rating step loads levels for. Null defers the fetch; with
+   * `includeSportStep` the player's pick takes over when this is null.
+   */
   sportId: string | null;
+  /** Adds a sport picker before the level step, for surfaces no entry point hands a sport to. */
+  includeSportStep?: boolean;
+  /** Adds the weekly availability grid after favourites; the payload then carries `availability`. */
+  includeAvailabilityStep?: boolean;
   /** Locale-prefixed path Supabase returns to after an OAuth/magic-link round trip. */
   returnPath: string;
   locale: string;
@@ -90,6 +133,8 @@ export interface UseWebOnboardingOptions {
     step: OnboardingStep | string;
     firstName?: string | null;
     lastName?: string | null;
+    /** Pre-selects the sport step, e.g. from an existing player_sport row. */
+    sportId?: string | null;
   }>;
   /**
    * Called once the favourites step validates, with the full profile payload.
@@ -116,7 +161,9 @@ export interface UseWebOnboardingOptions {
 }
 
 export function useWebOnboarding({
-  sportId,
+  sportId: sportIdOption,
+  includeSportStep = false,
+  includeAvailabilityStep = false,
   returnPath,
   locale,
   t,
@@ -173,21 +220,47 @@ export function useWebOnboarding({
     () => preselectedFacilityIds ?? []
   );
 
-  const profileSteps = deferConsent ? PROFILE_STEPS_WITHOUT_CONSENT : PROFILE_STEPS;
+  // Sport (only when the caller opted into the sport step)
+  const [selectedSportId, setSelectedSportId] = useState<string | null>(null);
+  const sportId = sportIdOption ?? selectedSportId;
+
+  // Availability (only when the caller opted into the availability step)
+  const [availability, setAvailability] = useState<HourGrid>(emptyGrid);
+
+  const profileSteps = useMemo(
+    () => buildProfileSteps({ deferConsent, includeSportStep, includeAvailabilityStep }),
+    [deferConsent, includeSportStep, includeAvailabilityStep]
+  );
   const profileStepIndex = profileSteps.findIndex(s => s.id === step);
   const isProfileStep = profileStepIndex !== -1;
+  const finalProfileStep = profileSteps[profileSteps.length - 1].id;
+  const isFinalProfileStep = step === finalProfileStep;
 
   const applyResolvedStep = useCallback(
     (state: {
       step: OnboardingStep | string;
       firstName?: string | null;
       lastName?: string | null;
+      sportId?: string | null;
     }) => {
       if (state.firstName) setFirstName(state.firstName);
       if (state.lastName) setLastName(state.lastName);
+      if (state.sportId) setSelectedSportId(state.sportId);
       setStep(state.step);
     },
     []
+  );
+
+  /** Picking a sport invalidates the level and the courts, which are both sport-scoped. */
+  const selectSport = useCallback(
+    (nextSportId: string) => {
+      if (nextSportId === selectedSportId) return;
+      setSelectedSportId(nextSportId);
+      setSelectedRatingId(null);
+      setRatings([]);
+      setFavoriteFacilityIds(preselectedFacilityIds ?? []);
+    },
+    [selectedSportId, preselectedFacilityIds]
   );
 
   // Initial guest-vs-signed-in resolution.
@@ -446,6 +519,10 @@ export function useWebOnboarding({
   const goNext = useCallback(async () => {
     setErrorMessage(null);
 
+    // Each step validates itself; the walk then advances along profileSteps, and the
+    // last one submits. Adding a step is one entry in buildProfileSteps plus its check.
+    const nextStep = profileSteps[profileStepIndex + 1]?.id;
+
     if (step === 'consent') {
       if (!hasAcceptedPrivacy || !hasAcceptedTerms) {
         setErrorMessage(t('errors.consentRequired'));
@@ -455,7 +532,7 @@ export function useWebOnboarding({
       setIsSubmitting(true);
       try {
         await acceptPolicies();
-        setStep('personal');
+        if (nextStep) setStep(nextStep);
       } catch {
         setErrorMessage(t('errors.submitFailed'));
       } finally {
@@ -473,66 +550,79 @@ export function useWebOnboarding({
         setErrorMessage(t('errors.minimumAge'));
         return;
       }
-      setStep('rating');
+    }
+
+    if (step === 'sport' && !sportId) {
+      setErrorMessage(t('errors.selectSport'));
       return;
     }
 
-    if (step === 'rating') {
-      if (!selectedRatingId) {
-        setErrorMessage(t('errors.selectRating'));
-        return;
-      }
-      setStep('location');
+    if (step === 'rating' && !selectedRatingId) {
+      setErrorMessage(t('errors.selectRating'));
       return;
     }
 
-    if (step === 'location') {
-      if (!postalCode.trim() || latitude == null || longitude == null) {
-        setErrorMessage(t('errors.invalidPostalCode'));
-        return;
-      }
-      setStep('favorites');
+    if (step === 'location' && (!postalCode.trim() || latitude == null || longitude == null)) {
+      setErrorMessage(t('errors.invalidPostalCode'));
       return;
     }
 
-    if (step === 'favorites') {
-      if (favoriteFacilityIds.length < MIN_FAVORITE_FACILITIES) {
-        setErrorMessage(t('errors.selectFavorites', { min: MIN_FAVORITE_FACILITIES }));
-        return;
-      }
-      if (!sportId || !selectedRatingId || latitude == null || longitude == null) {
-        setErrorMessage(t('errors.submitFailed'));
-        return;
-      }
+    if (step === 'favorites' && favoriteFacilityIds.length < MIN_FAVORITE_FACILITIES) {
+      setErrorMessage(t('errors.selectFavorites', { min: MIN_FAVORITE_FACILITIES }));
+      return;
+    }
 
-      setIsSubmitting(true);
-      try {
-        const nextStep = await onSubmitProfile({
-          personal: { firstName, lastName, gender, birthDate },
-          sportId,
-          ratingScoreId: selectedRatingId,
-          location: {
-            postalCode,
-            city: locationCity || postalCode,
-            province: locationProvince || 'QC',
-            latitude,
-            longitude,
-            ...(address ? { address } : {}),
-          },
-          favoriteFacilityIds,
-        });
-        if (nextStep) setStep(nextStep);
-      } catch (err) {
-        setErrorMessage(mapSubmitError?.(err) ?? t('errors.submitFailed'));
-      } finally {
-        setIsSubmitting(false);
-      }
+    if (step === 'availability' && countSelected(availability) < MIN_AVAILABILITY_CELLS) {
+      setErrorMessage(t('errors.selectAvailability', { min: MIN_AVAILABILITY_CELLS }));
+      return;
+    }
+
+    if (!isFinalProfileStep) {
+      if (nextStep) setStep(nextStep);
+      return;
+    }
+
+    if (!sportId || !selectedRatingId || latitude == null || longitude == null) {
+      setErrorMessage(t('errors.submitFailed'));
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const landing = await onSubmitProfile({
+        personal: { firstName, lastName, gender, birthDate },
+        sportId,
+        ratingScoreId: selectedRatingId,
+        location: {
+          postalCode,
+          city: locationCity || postalCode,
+          province: locationProvince || 'QC',
+          latitude,
+          longitude,
+          ...(address ? { address } : {}),
+        },
+        favoriteFacilityIds,
+        ...(includeAvailabilityStep
+          ? {
+              availability: Array.from(availability)
+                .map(parseCellKey)
+                .filter((cell): cell is AvailabilityCell => cell !== null),
+            }
+          : {}),
+      });
+      if (landing) setStep(landing);
+    } catch (err) {
+      setErrorMessage(mapSubmitError?.(err) ?? t('errors.submitFailed'));
+    } finally {
+      setIsSubmitting(false);
     }
   }, [
     step,
+    profileSteps,
+    profileStepIndex,
+    isFinalProfileStep,
     hasAcceptedPrivacy,
     hasAcceptedTerms,
-    supabase,
     firstName,
     lastName,
     birthDate,
@@ -545,6 +635,8 @@ export function useWebOnboarding({
     locationProvince,
     address,
     favoriteFacilityIds,
+    availability,
+    includeAvailabilityStep,
     sportId,
     acceptPolicies,
     onSubmitProfile,
@@ -580,6 +672,8 @@ export function useWebOnboarding({
     profileSteps,
     profileStepIndex,
     isProfileStep,
+    finalProfileStep,
+    isFinalProfileStep,
     acceptPolicies,
 
     auth: {
@@ -636,6 +730,16 @@ export function useWebOnboarding({
       selectedIds: favoriteFacilityIds,
       toggle: toggleFavoriteFacility,
       isComplete: favoriteFacilityIds.length >= MIN_FAVORITE_FACILITIES,
+    },
+    sport: {
+      selectedId: selectedSportId,
+      select: selectSport,
+      isComplete: !!sportId,
+    },
+    availability: {
+      grid: availability,
+      setGrid: setAvailability,
+      isComplete: countSelected(availability) >= MIN_AVAILABILITY_CELLS,
     },
 
     goNext,

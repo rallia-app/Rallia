@@ -6413,7 +6413,8 @@
         "headline": "Your next game starts here.",
         "subheadline": "Download the app, connect with players at your level, and start playing today.",
         "downloadButton": "Download the App",
-        "learnMore": "Learn more"
+        "learnMore": "Learn more",
+        "createAccount": "Create your account"
       },
       "leadAnswer": {
         "headline": "What is Rallia?",
@@ -6948,7 +6949,31 @@
     "roleHint": "Select the role that best describes your position in this organization.",
     "createButton": "Create Organization",
     "creating": "Creating...",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "funnel": {
+      "pageTitle": "Create your Rallia account",
+      "pageDescription": "Create your player account in a few steps, then install the app and play.",
+      "heading": "Create your account",
+      "subheading": "A few quick steps, then install the app and play.",
+      "auth": {
+        "title": "Sign in to get started",
+        "description": "Use Google or your email. You will sign in the same way in the app."
+      },
+      "finish": "Create my account",
+      "handoff": {
+        "title": "Your account is ready",
+        "body": "Games happen in the Rallia app. Install it and sign in to find players and games near you.",
+        "signIn": {
+          "google": "Sign in with Google in the app, same as here.",
+          "apple": "Sign in with Apple in the app, same as here.",
+          "facebook": "Sign in with Facebook in the app, same as here.",
+          "email": "Sign in with your email ({email}) in the app, same as here.",
+          "generic": "Sign in with the same account in the app."
+        },
+        "qrHint": "Scan with your phone to install Rallia.",
+        "installHint": "Install the app, then sign in. Your profile is already set up."
+      }
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -11754,7 +11779,9 @@
       "level": "Level",
       "location": "Location",
       "preferences": "Preferences",
-      "favorites": "Favorites"
+      "favorites": "Favorites",
+      "sport": "Sport",
+      "availability": "Availability"
     },
     "auth": {
       "title": "Sign in to join",
@@ -11867,7 +11894,9 @@
       "matchStarted": "This game has already started, so you can't leave it from here.",
       "consentRequired": "Please accept the Privacy Policy and the Terms of Use to continue.",
       "selectFavorites": "Pick at least {min} favorite courts to continue.",
-      "onboardingIncomplete": "Your profile is missing something. Go back a step and check your answers."
+      "onboardingIncomplete": "Your profile is missing something. Go back a step and check your answers.",
+      "selectSport": "Pick a sport to continue.",
+      "selectAvailability": "Pick at least {min} time slots to continue."
     },
     "chat": {
       "title": "Game chat",

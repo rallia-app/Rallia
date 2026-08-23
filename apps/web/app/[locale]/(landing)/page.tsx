@@ -30,6 +30,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export async function generateMetadata({
@@ -83,11 +84,24 @@ export default async function Home({ params }: { params: Promise<{ locale: Local
           <h2 className="text-xl md:text-2xl text-white/60 max-w-2xl">
             {t('landing.hero.subheadline')}
           </h2>
-          <div className="mt-6 md:hidden">
-            <AppStoreButtons badgeHeight={48} />
-          </div>
-          <div className="hidden md:block mt-6">
-            <HeroDownloadCta label={t('landing.hero.downloadButton')} />
+          {/* Account creation is the primary ask; the store badges stay as the direct route. */}
+          <div className="mt-6 flex flex-col items-center gap-5">
+            <Button
+              asChild
+              size="lg"
+              className="button-scale text-lg px-8 py-6 bg-[var(--secondary-500)] hover:bg-[var(--secondary-600)] text-white"
+            >
+              <Link href="/get-started">
+                {t('landing.hero.createAccount')}
+                <ArrowRight className="size-5" />
+              </Link>
+            </Button>
+            <div className="md:hidden">
+              <AppStoreButtons badgeHeight={40} />
+            </div>
+            <div className="hidden md:block">
+              <HeroDownloadCta label={t('landing.hero.downloadButton')} variant="secondary" />
+            </div>
           </div>
           <a
             href="#how-it-works"

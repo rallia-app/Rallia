@@ -27,7 +27,9 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { AvailabilityStep } from './availability-step';
 import { FavoriteFacilitiesStep, type PinnedFacility } from './favorite-facilities-step';
+import { SportStep } from './sport-step';
 import {
   ConsentCheckboxRow,
   GoogleIcon,
@@ -35,7 +37,7 @@ import {
   StepHeader,
   Stepper,
 } from './wizard-primitives';
-import { FINAL_PROFILE_STEP, type WebOnboardingController } from './use-web-onboarding';
+import type { WebOnboardingController } from './use-web-onboarding';
 
 import { AddressAutocomplete } from '@/components/app/inputs/address-autocomplete';
 import { QueryProvider } from '@/components/query-provider';
@@ -581,6 +583,30 @@ export function FavoritesStep({
 }
 
 /**
+ * Sport picker for surfaces that opted into the controller's sport step. Carries its
+ * own SharedSupabaseSync for the same reason FavoritesStep does: useSports reads
+ * through the shared singleton, which the marketing layout never wires up.
+ */
+export function SportSelectStep({ controller }: { controller: WebOnboardingController }) {
+  return (
+    <>
+      <SharedSupabaseSync />
+      <SportStep selectedSportId={controller.sport.selectedId} onSelect={controller.sport.select} />
+    </>
+  );
+}
+
+/** Weekly grid for surfaces that opted into the controller's availability step. */
+export function AvailabilitySelectStep({ controller }: { controller: WebOnboardingController }) {
+  return (
+    <AvailabilityStep
+      value={controller.availability.grid}
+      onChange={controller.availability.setGrid}
+    />
+  );
+}
+
+/**
  * Back/continue footer for the profile steps. `finishLabel` is what the last
  * step's button reads, so each surface can name its own outcome.
  */
@@ -595,7 +621,7 @@ export function OnboardingNav({
 }) {
   if (!controller.isProfileStep) return null;
 
-  const isLastStep = controller.step === FINAL_PROFILE_STEP;
+  const isLastStep = controller.isFinalProfileStep;
 
   return (
     <div className="flex gap-3">
@@ -619,7 +645,9 @@ export function OnboardingNav({
         disabled={
           controller.isSubmitting ||
           (controller.step === 'consent' && !controller.consent.isComplete) ||
-          (controller.step === 'favorites' && !controller.favorites.isComplete)
+          (controller.step === 'sport' && !controller.sport.isComplete) ||
+          (controller.step === 'favorites' && !controller.favorites.isComplete) ||
+          (controller.step === 'availability' && !controller.availability.isComplete)
         }
       >
         {controller.isSubmitting && <Loader2 className="size-4 animate-spin" />}
