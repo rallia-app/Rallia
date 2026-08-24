@@ -10,8 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeStyles } from '@rallia/shared-hooks';
 import { spacingPixels } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
-
-import { ProgressDots } from './ProgressDots';
+import { WizardProgressDots } from '@rallia/shared-components';
 
 interface WizardHeaderProps {
   currentStep: number;
@@ -57,7 +56,7 @@ export function WizardHeader({
         )}
       </View>
 
-      {showDots ? <ProgressDots current={currentStep} total={totalSteps} /> : <View />}
+      {showDots ? <WizardProgressDots current={currentStep} total={totalSteps} /> : <View />}
 
       <View style={styles.sideSlot}>
         {onClose && (
