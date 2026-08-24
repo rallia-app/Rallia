@@ -232,6 +232,76 @@
               "scheme": "https",
               "host": "rallia.app",
               "pathPattern": "/.*/suggestions"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPrefix": "/invite"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/invite/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPrefix": "/match"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/match/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPrefix": "/join"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/join/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPrefix": "/community/join"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/community/join/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPrefix": "/player"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/player/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "path": "/games"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/games"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "path": "/suggestions"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/suggestions"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
