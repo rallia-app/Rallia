@@ -23,13 +23,7 @@ import { navigationRef } from '#/navigation/navigationRef';
 import { isWeeklyCheckInActive } from '#/features/weekly-checkin/isWizardActive';
 import { IS_E2E } from '#/utils/e2e';
 
-const MILESTONE_SHOWN_KEY = '@rallia/milestone-1000-shown';
-
-// The campaign window. Before the start this is a no-op that retries on the
-// next launch; past the end the flag is persisted and we stop checking for
-// good. Both are local Montréal time.
-const MILESTONE_START_ISO = '2026-09-01T12:00:00-04:00';
-const MILESTONE_END_ISO = '2026-09-30T00:00:00-04:00';
+import { MILESTONE_SHOWN_KEY, MILESTONE_START_ISO, MILESTONE_END_ISO } from './milestoneCampaign';
 
 // Let the home screen settle before presenting.
 const OPEN_DELAY_MS = 700;

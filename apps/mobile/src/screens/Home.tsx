@@ -82,6 +82,8 @@ import { useCheckInContext } from '#/features/weekly-checkin/api';
 import { WEEKLY_CHECKIN_ENABLED } from '#/features/weekly-checkin/featureFlag';
 import { isWeeklyCheckInActive } from '#/features/weekly-checkin/isWizardActive';
 import { isSerie2AnnouncementActive } from '#/features/tournaments/announcement/isAnnouncementActive';
+import { isMilestoneActive } from '#/features/milestone/isMilestoneActive';
+import { isMilestonePending } from '#/features/milestone/milestoneCampaign';
 import { CopilotStep, WalkthroughableView } from '#/context/TourContext';
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import {
@@ -644,6 +646,15 @@ const Home = () => {
         await incrementOnboardedLaunchCount();
         const show = await shouldShowReferralInvite(hasReferredUser);
         if (show) {
+          // The 1000-player takeover owns the moment while the campaign still
+          // owes it: it makes the same ask, but thanks the player first. Stamp
+          // the counter on the way out so this prompt takes a breather rather
+          // than firing the launch straight after the celebration.
+          if (await isMilestonePending()) {
+            await markSheetShown();
+            Logger.logUserAction('referral_invite_deferred_for_milestone', {});
+            return;
+          }
           // Never stack on another pop-up. The wizard owns the screen when
           // it's presenting, and any already-open sheet was either user-intent
           // (deep link) or another auto-opener that got there first. This
@@ -653,6 +664,7 @@ const Home = () => {
           if (
             isWeeklyCheckInActive() ||
             isSerie2AnnouncementActive() ||
+            isMilestoneActive() ||
             getSheetStack().length > 0
           ) {
             Logger.logUserAction('referral_invite_suppressed_for_wizard', {
