@@ -865,6 +865,28 @@ export function serie2AnnouncementDismissed(): void {
   capture('serie2_announcement_dismissed');
 }
 
+// ---- 1000-player milestone ----
+
+/** The takeover was presented (step 1). */
+export function milestoneViewed(): void {
+  capture('milestone_1000_viewed');
+}
+
+/** The player advanced to a later step. Step 1 -> 2 is the emotion-to-ask rate. */
+export function milestoneStepViewed(step: number): void {
+  capture('milestone_1000_step_viewed', { step });
+}
+
+/** The player completed a share from the takeover. */
+export function milestoneShared(props: { channel: 'share_sheet' | 'copy_link' }): void {
+  capture('milestone_1000_shared', props);
+}
+
+/** The player closed the takeover without sharing. `step` is where they left. */
+export function milestoneDismissed(props: { step: number }): void {
+  capture('milestone_1000_dismissed', props);
+}
+
 // ---- Subscription ----
 
 export function paywallViewed(): void {

@@ -130,6 +130,7 @@ import { MyBookingsScreen, BookingDetailScreen } from '#/features/bookings';
 import { InviteReferralScreen } from '#/screens/InviteReferralScreen';
 import { WeeklyCheckInScreen } from '#/features/weekly-checkin/WeeklyCheckInScreen';
 import { Serie2AnnouncementScreen } from '#/features/tournaments/announcement/Serie2AnnouncementScreen';
+import { MilestoneScreen } from '#/features/milestone/MilestoneScreen';
 
 import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
@@ -1731,6 +1732,16 @@ export default function AppNavigator() {
           headerShown: false,
           presentation: 'modal',
           // Promo, not a flow: swipe-to-dismiss stays available.
+        }}
+      />
+
+      <RootStack.Screen
+        name="Milestone1000"
+        getComponent={() => MilestoneScreen}
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+          // Celebration, not a flow: swipe-to-dismiss stays available.
         }}
       />
     </RootStack.Navigator>

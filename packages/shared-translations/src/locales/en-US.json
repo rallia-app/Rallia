@@ -1,4 +1,22 @@
 {
+  "milestone1000": {
+    "badge": "1,000 players",
+    "title": "1,000 players. One community.",
+    "body1": "A few months ago, Rallia was just an idea between two players tired of never finding anyone free to hit with.",
+    "body2": "Today, 1,000 of you have joined in. Playing, organizing your games, and keeping recreational tennis and pickleball alive in Montreal.",
+    "body3": "Thank you for believing in it. Thank you for playing. Thank you for being here.",
+    "signature": "Jean & Mathis",
+    "continueCta": "Continue",
+    "ctaTitle": "Help us reach 2,000",
+    "ctaSubtitle": "The next chapter is yours to write. Share Rallia with someone you would like to play with.",
+    "prize": "Up for grabs: {prize}",
+    "yourCode": "Your code",
+    "shareCta": "Share Rallia",
+    "copyLink": "Copy my link",
+    "copyCode": "Copy my code",
+    "shareTitle": "Join me on Rallia",
+    "shareMessage": "There are already 1,000 of us playing on Rallia in Montreal. Find yourself a game, it takes two minutes: {link}"
+  },
   "serie1Announcement": {
     "badge": "Série 1",
     "title": "Our first tournaments are here",
@@ -5086,6 +5104,7 @@
     "create": "Create an event",
     "createSubtitle": "Run a tournament or a league",
     "myEvents": "My events",
+    "viewAllMine": "View all",
     "searchPlaceholder": "Search events...",
     "empty": "No events yet",
     "emptyDescription": "Nothing open near you right now. Check back soon, or create your own.",
@@ -6117,6 +6136,8 @@
     "viewAll": "View All",
     "myMatches": "My games",
     "myMatchesSubtitle": "Your upcoming games",
+    "myEvents": "My events",
+    "myEventsSubtitle": "Tournaments and leagues you're in",
     "myMatchesStatus": {
       "confirmed": "Confirmed",
       "needsPlayers": "Needs players",

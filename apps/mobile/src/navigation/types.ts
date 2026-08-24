@@ -137,6 +137,9 @@ export type RootStackParamList = {
   // the params so the screen renders complete on first frame; opened only by
   // Serie2AnnouncementAutoOpener.
   Serie2Announcement: Serie2AnnouncementParams;
+
+  // 1000-player milestone takeover, presented by MilestoneAutoOpener.
+  Milestone1000: undefined;
 };
 
 // =============================================================================

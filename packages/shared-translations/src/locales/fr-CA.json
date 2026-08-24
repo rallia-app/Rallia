@@ -1,4 +1,22 @@
 {
+  "milestone1000": {
+    "badge": "1000 joueurs",
+    "title": "1000 joueurs. Une communauté.",
+    "body1": "Il y a quelques mois, Rallia n'était qu'une idée entre deux passionnés tannés de chercher un partenaire de jeu disponible.",
+    "body2": "Aujourd'hui, vous êtes 1000 à avoir embarqué. À jouer, à organiser vos parties, à faire vivre le tennis et le pickleball récréatif à Montréal.",
+    "body3": "Merci d'y avoir cru. Merci d'avoir joué. Merci d'être là.",
+    "signature": "Jean & Mathis",
+    "continueCta": "Continuer",
+    "ctaTitle": "Aide-nous à atteindre 2000",
+    "ctaSubtitle": "Le prochain chapitre s'écrit avec toi. Partage Rallia avec quelqu'un avec qui tu aimerais jouer.",
+    "prize": "À gagner : {prize}",
+    "yourCode": "Ton code",
+    "shareCta": "Partager Rallia",
+    "copyLink": "Copier mon lien",
+    "copyCode": "Copier mon code",
+    "shareTitle": "Rejoins-moi sur Rallia",
+    "shareMessage": "On est déjà 1000 à jouer sur Rallia à Montréal. Trouve-toi une partie, ça prend deux minutes : {link}"
+  },
   "serie1Announcement": {
     "badge": "Série 1",
     "title": "Nos premiers tournois sont là",
@@ -5086,6 +5104,7 @@
     "create": "Créer un événement",
     "createSubtitle": "Pars un tournoi ou une ligue",
     "myEvents": "Mes événements",
+    "viewAllMine": "Voir tout",
     "searchPlaceholder": "Rechercher des événements...",
     "empty": "Aucun événement pour le moment",
     "emptyDescription": "Rien d'ouvert près de chez toi en ce moment. Reviens bientôt, ou crée le tien.",
@@ -6117,6 +6136,8 @@
     "viewAll": "Voir tout",
     "myMatches": "Mes parties",
     "myMatchesSubtitle": "Tes parties à venir",
+    "myEvents": "Mes événements",
+    "myEventsSubtitle": "Les tournois et ligues où tu es inscrit",
     "myMatchesStatus": {
       "confirmed": "Confirmé",
       "needsPlayers": "Cherche des joueurs",
