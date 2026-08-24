@@ -13087,6 +13087,7 @@ export type Database = {
           tier: string
         }[]
       }
+      milestone_1000_reached: { Args: never; Returns: boolean }
       min_favorite_facilities: { Args: never; Returns: number }
       mo_opponent_agrees: { Args: { p_message_id: string }; Returns: number }
       momentum_bucket: {

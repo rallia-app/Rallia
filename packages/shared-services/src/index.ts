@@ -51,6 +51,7 @@ export * from './tour';
 export * from './feedback';
 export * from './admin';
 export * from './referral';
+export * from './milestone';
 export * from './invitation';
 export * from './review';
 
