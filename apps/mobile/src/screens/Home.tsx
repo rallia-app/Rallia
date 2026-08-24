@@ -1939,7 +1939,7 @@ const Home = () => {
     } else if (!isOnboarded) {
       // Signed in but not onboarded: show complete profile prompt
       headerComponents.push(
-        <View key="complete-profile">
+        <View key="complete-profile" style={styles.emptyStateFill}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderText}>
               <Text variant="display" size="xl" weight="bold" color={colors.text}>
@@ -1947,7 +1947,7 @@ const Home = () => {
               </Text>
             </View>
           </View>
-          <View style={styles.myMatchesEmptyWrap}>
+          <View style={[styles.myMatchesEmptyWrap, styles.emptyStateFillCenter]}>
             <View style={[styles.myMatchesEmpty, { backgroundColor: colors.card }]}>
               <Ionicons name="person-add-outline" size={32} color={colors.textMuted} />
               <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
@@ -1975,7 +1975,11 @@ const Home = () => {
       headerComponents.push(<View key="section-header">{renderSectionHeader()}</View>);
     }
 
-    return <View>{headerComponents}</View>;
+    return (
+      <View style={!!session && !isOnboarded ? styles.emptyStateFill : undefined}>
+        {headerComponents}
+      </View>
+    );
   }, [
     session,
     isOnboarded,
@@ -2375,6 +2379,14 @@ const styles = StyleSheet.create({
   },
   myMatchesSection: {
     overflow: 'visible', // Allow corner badges to extend outside cards
+  },
+  /** Absorbs leftover viewport so a short empty state does not leave dead space. */
+  emptyStateFill: {
+    flexGrow: 1,
+  },
+  emptyStateFillCenter: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   // Full-width empty-state card — replaces the carousel entirely when there
   // are no upcoming games, so the message reads as a section instead of a
