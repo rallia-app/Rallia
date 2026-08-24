@@ -28,7 +28,7 @@ import {
   useToast,
 } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { SheetManager, getSheetStack } from 'react-native-actions-sheet';
+import { SheetManager } from 'react-native-actions-sheet';
 import {
   useNearbyOpenCourtCount,
   useProfile,
@@ -43,7 +43,6 @@ import {
   useOtherSportsUnreadCount,
   useSports,
   useProfileCompleteness,
-  useReferral,
   useAdminStatus,
   useMySportRank,
   useMyTournamentRanking,
@@ -80,10 +79,6 @@ import {
 } from '#/navigation/deepLinkStore';
 import { useCheckInContext } from '#/features/weekly-checkin/api';
 import { WEEKLY_CHECKIN_ENABLED } from '#/features/weekly-checkin/featureFlag';
-import { isWeeklyCheckInActive } from '#/features/weekly-checkin/isWizardActive';
-import { isSerie2AnnouncementActive } from '#/features/tournaments/announcement/isAnnouncementActive';
-import { isMilestoneActive } from '#/features/milestone/isMilestoneActive';
-import { isMilestonePending } from '#/features/milestone/milestoneCampaign';
 import { CopilotStep, WalkthroughableView } from '#/context/TourContext';
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import {
@@ -121,13 +116,7 @@ import { SuggestionCard } from '#/components/SuggestionCard';
 import BillingIssueBanner from '#/components/BillingIssueBanner';
 import ReferenceRequestsBanner from '#/components/ReferenceRequestsBanner';
 import HomeBanner, { HomeBannerLayoutProvider } from '#/components/HomeBanner';
-import {
-  incrementOnboardedLaunchCount,
-  shouldShowReferralInvite,
-  markSheetShown,
-} from '#/utils/referralInviteFrequency';
 import { runWhenIdle } from '#/utils/runWhenIdle';
-import { IS_E2E } from '#/utils/e2e';
 
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
@@ -631,54 +620,6 @@ const Home = () => {
   useEffect(() => {
     if (player?.id) processDeepLink();
   }, [player?.id, processDeepLink]);
-
-  // Referral invite prompt — shown every 3 launches (0 referrals) or 7 launches (1+ referrals).
-  // Deferred past first paint — this is a periodic prompt, never time-sensitive.
-  const { stats: referralStats, statsLoading: referralStatsLoading } = useReferral(player?.id);
-  useEffect(() => {
-    if (IS_E2E) return;
-    if (!isOnboarded || !player?.id || referralStatsLoading) return;
-
-    const hasReferredUser = (referralStats?.total_converted ?? 0) >= 1;
-
-    const handle = runWhenIdle(() => {
-      (async () => {
-        await incrementOnboardedLaunchCount();
-        const show = await shouldShowReferralInvite(hasReferredUser);
-        if (show) {
-          // The 1000-player takeover owns the moment while the campaign still
-          // owes it: it makes the same ask, but thanks the player first. Stamp
-          // the counter on the way out so this prompt takes a breather rather
-          // than firing the launch straight after the celebration.
-          if (await isMilestonePending()) {
-            await markSheetShown();
-            Logger.logUserAction('referral_invite_deferred_for_milestone', {});
-            return;
-          }
-          // Never stack on another pop-up. The wizard owns the screen when
-          // it's presenting, and any already-open sheet was either user-intent
-          // (deep link) or another auto-opener that got there first. This
-          // prompt is periodic and deferrable, so it always yields. Same guard
-          // Serie1AnnouncementAutoOpener and useApplyUpdateOnResume use. The
-          // launch counter still ticks so it's eligible again next launch.
-          if (
-            isWeeklyCheckInActive() ||
-            isSerie2AnnouncementActive() ||
-            isMilestoneActive() ||
-            getSheetStack().length > 0
-          ) {
-            Logger.logUserAction('referral_invite_suppressed_for_wizard', {
-              openSheets: getSheetStack().length,
-            });
-            return;
-          }
-          await markSheetShown();
-          SheetManager.show('referral-invite');
-        }
-      })();
-    });
-    return () => handle.cancel();
-  }, [isOnboarded, player?.id, referralStatsLoading, referralStats?.total_converted]);
 
   const { selectedSport, isLoading: sportLoading, userSports, setSelectedSport } = useSport();
 

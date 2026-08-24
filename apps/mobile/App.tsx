@@ -209,9 +209,7 @@ import { TourCompleteModal } from './src/components/TourCompleteModal';
 import { WelcomeTourModal } from './src/components/WelcomeTourModal';
 import { WeeklyCheckInAutoOpener } from './src/features/weekly-checkin/WeeklyCheckInAutoOpener';
 import { WEEKLY_CHECKIN_ENABLED } from './src/features/weekly-checkin/featureFlag';
-import { Serie1AnnouncementAutoOpener } from './src/features/tournaments/announcement/Serie1AnnouncementAutoOpener';
-import { Serie2AnnouncementAutoOpener } from './src/features/tournaments/announcement/Serie2AnnouncementAutoOpener';
-import { MilestoneAutoOpener } from './src/features/milestone/MilestoneAutoOpener';
+import { LaunchPromptCoordinator } from './src/features/launch-prompts/LaunchPromptCoordinator';
 import { isWeeklyCheckInActive } from './src/features/weekly-checkin/isWizardActive';
 import { linking } from './src/navigation/linking';
 import { navigationRef } from './src/navigation';
@@ -1055,9 +1053,7 @@ function AppContent() {
       <AccountSuspendedHandler />
       <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
       {WEEKLY_CHECKIN_ENABLED && <WeeklyCheckInAutoOpener isSplashComplete={isSplashComplete} />}
-      <Serie1AnnouncementAutoOpener isSplashComplete={isSplashComplete} />
-      <Serie2AnnouncementAutoOpener isSplashComplete={isSplashComplete} />
-      <MilestoneAutoOpener isSplashComplete={isSplashComplete} />
+      <LaunchPromptCoordinator isSplashComplete={isSplashComplete} />
       <TourCompleteModal
         visible={showCompletionModal}
         onDismiss={dismissCompletionModal}

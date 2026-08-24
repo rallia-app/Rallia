@@ -138,7 +138,7 @@ export type RootStackParamList = {
   // Serie2AnnouncementAutoOpener.
   Serie2Announcement: Serie2AnnouncementParams;
 
-  // 1000-player milestone takeover, presented by MilestoneAutoOpener.
+  // 1000-player milestone takeover, presented by the launch-prompt registry.
   Milestone1000: undefined;
 };
 
