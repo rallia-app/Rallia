@@ -257,7 +257,7 @@ export default async function EventsPage({ params }: { params: Promise<{ locale:
           <Trophy className="size-4" />
           {t('eyebrow')}
         </span>
-        <h1 className="text-4xl sm:text-5xl">{t('title')}</h1>
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{t('title')}</h1>
         <p className="text-lg text-muted-foreground">{t('subtitle')}</p>
       </div>
 

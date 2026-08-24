@@ -126,6 +126,10 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: 1.5rem;
+  /* Tailwind's defaults for these two sit below --radius-xl, which inverted the
+     scale: rounded-2xl rendered smaller than rounded-xl. Keep them ascending. */
+  --radius-2xl: 2rem;
+  --radius-3xl: 2.5rem;
 }
 
 /* Dark mode base styles - Energy & Trust theme */

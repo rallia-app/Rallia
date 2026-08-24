@@ -2,6 +2,9 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+
 type Props = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{
@@ -46,27 +49,24 @@ export default async function MatchInviteConfirmPage({ params, searchParams }: P
   ).toString()}`;
 
   return (
-    <main className="mx-auto max-w-md px-6 py-16">
-      <div className="rounded-xl border border-neutral-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">{t('title')}</h1>
+    <div className="mx-auto max-w-md px-6 py-16">
+      <Card className="p-8">
+        <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
         {valid && summary ? (
-          <p className="mt-3 text-sm leading-relaxed text-neutral-600">
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {t('subtitle')}
             <br />
-            <span className="font-medium text-neutral-900">{summary}</span>
+            <span className="font-medium text-foreground">{summary}</span>
           </p>
         ) : (
-          <p className="mt-3 text-sm leading-relaxed text-neutral-600">{t('errorMessage')}</p>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{t('errorMessage')}</p>
         )}
         {valid && (
-          <Link
-            href={appLink}
-            className="mt-6 inline-block rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-teal-700"
-          >
-            {t('confirmButton')}
-          </Link>
+          <Button asChild className="mt-6">
+            <Link href={appLink}>{t('confirmButton')}</Link>
+          </Button>
         )}
-      </div>
-    </main>
+      </Card>
+    </div>
   );
 }

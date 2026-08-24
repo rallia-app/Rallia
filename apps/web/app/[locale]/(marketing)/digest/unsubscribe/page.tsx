@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+
+import { Card } from '@/components/ui/card';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -23,17 +24,17 @@ export default async function DigestUnsubscribePage({ params, searchParams }: Pr
   const message = isSuccess ? t('successMessage') : t('errorMessage');
 
   return (
-    <main className="mx-auto max-w-md px-6 py-16">
-      <div className="rounded-xl border border-neutral-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">{title}</h1>
-        <p className="mt-3 text-sm leading-relaxed text-neutral-600">{message}</p>
-        <Link
-          href={`/${locale}/settings/notifications`}
-          className="mt-6 inline-block text-sm font-semibold text-teal-600 underline-offset-4 hover:underline"
+    <div className="mx-auto max-w-md px-6 py-16">
+      <Card className="p-8">
+        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{message}</p>
+        <a
+          href={`/api/go?to=notificationPreferences&locale=${locale}&src=digest_unsubscribe`}
+          className="mt-6 inline-block text-sm font-semibold text-primary underline-offset-4 hover:underline"
         >
           {t('managePreferences')}
-        </Link>
-      </div>
-    </main>
+        </a>
+      </Card>
+    </div>
   );
 }
