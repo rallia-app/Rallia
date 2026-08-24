@@ -2,8 +2,8 @@
 
 <p>
   Tout ce que tu avais soulevé dans le doc du 13 août est corrigé et en ligne sur staging. Ce guide
-  sert à le revalider, rien de plus. Six ligues <i>[JDL v3]</i> ont été préparées, une par sujet,
-  avec ton compte jdl.sonkin@gmail.com.
+  sert à le revalider, rien de plus. Sept ligues <i>[JDL v3]</i> ont été préparées, une par sujet.
+  Tout se fait avec ton compte jdl.sonkin@gmail.com, sauf la section 9 qui demande le compte +10.
 </p>
 
 <p>
@@ -238,6 +238,27 @@
   </li>
 </ol>
 
+<h2>9. Le lien de séance qui ne mène nulle part</h2>
+<p>Ligue: <i>[JDL v3] Séance privée</i>, avec ton compte jdl.sonkin+10</p>
+<p>
+  Un lien de séance ouvert par quelqu'un qui n'est pas membre ramenait à la page de la ligue en
+  silence, ce qui donne l'impression d'un lien brisé. Il dit maintenant pourquoi.
+</p>
+<p>
+  Ce test ne marche qu'avec le compte +10: ton compte principal est admin sur staging, et un admin
+  voit toutes les séances, donc le message ne se déclencherait jamais. On a retiré le rôle admin du
+  +10 pour ça.
+</p>
+<p>Connecte-toi avec jdl.sonkin+10, puis ouvre ce lien:</p>
+<p>
+  https://rallia.app/invite/GTUFXBLF?type=league&amp;id=2b9d9656-b66a-4f25-ae89-9d8a4c0fd2d2&amp;share=19769f8bc5ea446fafc0db8a012b14fa&amp;session=775453ec-389c-47ed-b436-d835aa91defa
+</p>
+<p>
+  Attendu: tu atterris sur la page de la ligue avec le message "Cette séance est réservée aux
+  membres. Rejoins la ligue pour la voir." Le test se fait une seule fois par compte: si tu utilises
+  le bouton pour rejoindre, tu deviens membre et le message n'apparaîtra plus.
+</p>
+
 <h2>Deux réponses à tes questions</h2>
 <p>
   <b>Comment l'app fait les pairages.</b> Elle prend les joueurs confirmés et les met en ordre: le
@@ -254,12 +275,7 @@
   republies.
 </p>
 
-<h2>Ce qu'on ne peut pas tester avec ton compte</h2>
-<p>
-  Le message "Cette séance est réservée aux membres", quand un non-membre ouvre un lien de séance.
-  Tes deux comptes (jdl.sonkin et jdl.sonkin+10) sont admin sur staging, donc l'app te laisse voir
-  la séance et le message ne se déclenche jamais. On le valide de notre côté.
-</p>
+<h2>Ce qu'on ne peut pas tester</h2>
 <p>
   Le "Sois le premier" sur une saison payante: c'est le seul cas où il doit encore apparaître, et il
   faudrait une saison payante pour le voir. Le point de la correction, lui, se vérifie à la section

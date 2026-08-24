@@ -30,6 +30,10 @@
 --                    that now mints a PLAYER link.
 --   File d'attente   organized by a fixture player, full with the waitlist on
 --                    and Jean queued first: "1re en file pour une place".
+--   Séance privée    private league neither of Jean's accounts belongs to, so
+--                    a session link bounces with the members-only message.
+--                    Only reachable from a NON-staff account: RLS hides the
+--                    session, and staff sees everything.
 --
 -- Idempotent: cleans '[JDL v3]%' (and their notifications) first.
 -- Run via psql in ONE transaction:  psql "$STAGING_DB_URL" -1 -v ON_ERROR_STOP=1 \
@@ -383,7 +387,51 @@ BEGIN
     v_season := public.season_create(v_league.id, 'Été 2026', current_date - 7, current_date + 50);
     v_season := public.season_open(v_season.id, v_season.version);
 
-    RAISE NOTICE '[JDL v3] fixtures seeded: 6 leagues';
+    -- =====================================================================
+    -- 7. [JDL v3] Séance privée — the members-only bounce
+    -- =====================================================================
+    -- The bounce fires only when RLS HIDES the session, which needs a
+    -- non-public league and a reader who is neither organizer, member, nor
+    -- staff. Both of Jean's accounts were super_admin, which is why this was
+    -- untestable until jdl.sonkin+10 lost the role (2026-08-24). Neither
+    -- account is a member here, and the final SELECT prints the session URL
+    -- to send him.
+    v_fakes := pg_temp.fakes(72, 5);
+    PERFORM pg_temp.as_user(v_fakes[1]);
+    PERFORM pg_temp.staff_on(v_fakes[1]);
+    v_league := public.league_create(
+        p_name        => '[JDL v3] Séance privée',
+        p_sport_id    => v_tennis,
+        p_description => 'Ligue privée. Ni toi ni ton compte +10 n''en êtes membres: le lien de séance doit expliquer pourquoi il ne mène pas à la séance.',
+        p_visibility  => 'private',
+        p_join_mode   => 'open');
+    PERFORM pg_temp.staff_off(v_fakes[1]);
+
+    FOR v_i IN 2..5 LOOP
+        PERFORM pg_temp.as_user(v_fakes[v_i]);
+        PERFORM public.league_join(v_league.id);
+    END LOOP;
+
+    PERFORM pg_temp.as_user(v_fakes[1]);
+    v_season := public.season_create(v_league.id, 'Été 2026', current_date - 7, current_date + 50);
+    v_season := public.season_open(v_season.id, v_season.version);
+    v_sess   := public.session_create(v_season.id, 'Séance mystère', now() + interval '4 days');
+    v_sess   := public.session_publish(v_sess.id, NULL, v_sess.version);
+
+    PERFORM public.session_confirm_presence(v_sess.id, 'confirmed');
+    FOR v_i IN 2..5 LOOP
+        PERFORM pg_temp.as_user(v_fakes[v_i]);
+        PERFORM public.session_confirm_presence(v_sess.id, 'confirmed');
+    END LOOP;
+
+    PERFORM pg_temp.as_user(v_fakes[1]);
+    v_sess := public.session_generate_sheet(v_sess.id, v_sess.version);
+    v_sess := public.session_publish_sheet(v_sess.id, v_sess.version);
+    -- invite_only would refuse league_join (NOT_INVITED), so the league is
+    -- private + open and the organizer link is minted here.
+    PERFORM public.league_invite_get_or_create(v_league.id);
+
+    RAISE NOTICE '[JDL v3] fixtures seeded: 7 leagues';
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -400,3 +448,13 @@ SELECT l.name AS league,
   FROM leagues l
  WHERE l.name LIKE '[JDL v3]%'
  ORDER BY l.name;
+
+-- The session URL to send for the members-only bounce. One shot per account:
+-- redeeming the link makes the reader a member and the message stops firing.
+SELECT 'https://rallia.app/invite/' || public.get_or_create_player_referral_code(l.organizer_id)
+       || '?type=league&id=' || l.id || '&share=' || il.token || '&session=' || s.id AS bounce_url
+  FROM leagues l
+  JOIN league_invite_links il ON il.league_id = l.id
+  JOIN seasons se ON se.league_id = l.id
+  JOIN sessions s ON s.season_id = se.id
+ WHERE l.name = '[JDL v3] Séance privée';
