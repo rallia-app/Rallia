@@ -39,6 +39,16 @@ const nextConfig: NextConfig = {
         destination: 'https://www.rallia.app/:path*',
         permanent: true,
       })),
+      // Apex -> www, except /.well-known/*. associatedDomains names the apex
+      // (applinks:rallia.app), and neither Apple's CDN nor Android's verifier
+      // follows a redirect when fetching the association files, so the apex has
+      // to serve them itself or universal links never verify.
+      {
+        source: '/:path((?!\\.well-known).*)',
+        has: [{ type: 'host' as const, value: 'rallia.app' }],
+        destination: 'https://www.rallia.app/:path',
+        permanent: true,
+      },
       // Bare/foreign locale prefixes otherwise fall through to next-intl, which
       // prepends the default locale and 404s (/fr -> /en-US/fr).
       ...(

@@ -29,7 +29,7 @@
       "bundleIdentifier": "com.mathisl971.rallia-app",
       "appleTeamId": "587DRRMTV8",
       "usesAppleSignIn": true,
-      "associatedDomains": ["applinks:rallia.app"],
+      "associatedDomains": ["applinks:rallia.app", "applinks:www.rallia.app"],
       "privacyManifests": {
         "NSPrivacyTracking": true,
         "NSPrivacyTrackingDomains": [
