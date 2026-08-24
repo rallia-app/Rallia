@@ -45,7 +45,7 @@
       <td>16</td>
     </tr>
     <tr>
-      <td>Laura B.</td>
+      <td>Julie O.</td>
       <td>4</td>
     </tr>
     <tr>
@@ -53,13 +53,13 @@
       <td>1</td>
     </tr>
     <tr>
-      <td>Julie O.</td>
+      <td>Laura B.</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
 <p>
-  Laura B. a perdu 7-6 6-7 7-6: son set arraché lui vaut 4 points, contre 1 aux deux autres joueuses
+  Julie O. a perdu 7-6 6-7 7-6: son set arraché lui vaut 4 points, contre 1 aux deux autres joueuses
   battues en deux sets.
 </p>
 <ol>
@@ -98,7 +98,7 @@
 </p>
 <ol>
   <li>Onglet Détails. Attendu: "Séances: Période flexible".</li>
-  <li>La séance "Semaine 1" affiche une période, du 23 au 30 août, pas une heure.</li>
+  <li>La séance "Semaine 1" affiche une période, du 24 au 31 août, pas une heure.</li>
   <li>
     Crée "Semaine 2". Attendu: un sélecteur "Période de jeu" avec 3, 7, 14 ou 28 jours. Sur une
     série récurrente, les choix plus longs que l'écart entre deux séances disparaissent.
@@ -108,45 +108,55 @@
     soir").
   </li>
   <li>
-    Regarde les dates de la saison: elle commence le 1er du mois et doit s'afficher comme ça. Avant,
+    Regarde les dates de la saison: elle commence le 1er août et doit s'afficher comme ça. Avant,
     une date de saison reculait d'une journée.
   </li>
 </ol>
 
-<h2>4. Le pairage manuel et la feuille en brouillon</h2>
+<h2>4. Le pairage manuel, la feuille en brouillon et l'échange de joueurs</h2>
 <p>Ligue: <i>[JDL v3] Feuille brouillon</i></p>
 <p>
-  La feuille reste un brouillon que toi seul vois, jusqu'à ce que tu la publies. Et un mode "Manuel"
-  place les joueurs dans l'ordre des confirmations au lieu de choisir à ta place.
+  La feuille reste un brouillon que toi seul vois, jusqu'à ce que tu la publies. Un mode "Manuel"
+  place les joueurs dans l'ordre des confirmations au lieu de choisir à ta place. Et l'échange de
+  joueurs ne regarde plus que la ronde où tu l'utilises.
 </p>
 <p>
-  La Ronde 1 a été générée en mode Manuel. Les pairages doivent donc suivre l'ordre des
-  confirmations:
+  La séance "Ronde 1" a deux rondes et cinq joueurs confirmés, donc un bye par ronde. L'ordre des
+  confirmations est Jean, Marie-Ève R., Marie C., Martin G., Mathieu L., et le pairage manuel
+  apparie les voisins:
 </p>
 <table>
   <thead>
     <tr>
-      <th>Ronde 1, pairage manuel</th>
+      <th>Ronde</th>
+      <th>Parties</th>
+      <th>Bye</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>Jean d. contre Marie-Ève R.</td>
+      <td>1</td>
+      <td>Marie-Ève R. contre Marie C., Martin G. contre Mathieu L.</td>
+      <td>Jean</td>
     </tr>
     <tr>
-      <td>Marie C. contre Martin G.</td>
-    </tr>
-    <tr>
-      <td>Mathieu L. contre Maude J.</td>
+      <td>2</td>
+      <td>Jean contre Marie-Ève R., Martin G. contre Mathieu L.</td>
+      <td>Marie C.</td>
     </tr>
   </tbody>
 </table>
 <ol>
   <li>
-    Ouvre la séance "Ronde 1". Attendu: le bandeau "Brouillon. Toi seul vois ces pairages.
-    Ajuste-les, puis publie." et les pairages du tableau.
+    Ouvre "Ronde 1". Attendu: le bandeau "Brouillon. Toi seul vois ces pairages. Ajuste-les, puis
+    publie." et les pairages du tableau.
   </li>
-  <li>Échange deux joueurs. Attendu: seuls ces deux-là bougent, le reste de la feuille tient.</li>
+  <li>
+    Dans la ronde 1, échange Marie-Ève R. contre toi, qui es en bye. Attendu: la ronde 1 change, la
+    ronde 2 reste exactement pareille, et personne ne se retrouve contre lui-même. C'est le bug que
+    tu avais vu: l'échange allait chercher la partie du joueur entrant n'importe où dans la séance,
+    alors il pouvait la prendre dans l'autre ronde.
+  </li>
   <li>Publie la feuille. Attendu: le bandeau disparaît et la feuille part chez les membres.</li>
   <li>
     Séance "Ronde 2", déjà publiée. Régénère-la. Attendu: elle retourne en brouillon, et rien ne se
@@ -161,14 +171,18 @@
 <p>Ligue: <i>[JDL v3] Complet</i></p>
 <ol>
   <li>
-    Onglet Membres, section Demandes. Deux demandes t'attendent (Nicolas L. et Olivier C.) et,
-    au-dessus, la note "La ligue est pleine (5/5). Libère une place avant d'approuver." Avant,
-    l'échec n'arrivait qu'après le tap.
+    Onglet Membres, section Demandes. Trois demandes t'attendent (Nicolas L., Olivier C. et Patrick
+    É.) et, au-dessus, la note "La ligue est pleine (5/5). Libère une place avant d'approuver."
+    Avant, l'échec n'arrivait qu'après le tap.
+  </li>
+  <li>
+    Patrick É. est arrivé une fois les places prises: sa ligne doit dire "1re en file pour une
+    place", au féminin.
   </li>
   <li>Onglet Détails. Attendu: "Capacité: 5 places + file d'attente".</li>
   <li>
-    Le membre suspendu affiche jusqu'à quand: "Suspendu jusqu'au 31 août". L'information existait,
-    elle ne s'affichait nulle part.
+    Nathalie S. est suspendue et sa ligne dit jusqu'à quand: "Suspendu jusqu'au 2 sept."
+    L'information existait, elle ne s'affichait nulle part.
   </li>
   <li>
     Le point resté ouvert de ton doc, l'erreur au premier essai d'approbation. Monte la capacité à 6
@@ -177,7 +191,7 @@
     côté. Ce qu'on a déjà changé: quand une demande a bougé entre-temps, le message le dit et la
     liste se rafraîchit toute seule, alors ton deuxième essai part de données à jour.
   </li>
-  <li>Refuse l'autre demande. Le joueur reçoit une notification.</li>
+  <li>Refuse une autre demande. Le joueur reçoit une notification.</li>
 </ol>
 
 <h2>6. Côté joueur</h2>
@@ -202,7 +216,7 @@
   </li>
 </ol>
 
-<h2>7. La file d'attente</h2>
+<h2>7. La file d'attente, côté joueur</h2>
 <p>Ligue: <i>[JDL v3] File d'attente</i></p>
 <p>
   Trois places, trois prises, ta demande est en file. Attendu: la pastille dit "1re en file pour une
@@ -214,11 +228,13 @@
   <li>
     Dans une ligue que tu organises, Partager, puis Réinitialiser le lien. Attendu: le message de
     confirmation apparaît par-dessus la feuille. Avant, il passait derrière et personne ne le
-    voyait.
+    voyait. Le même correctif est passé sur la feuille de partage des tournois, si tu veux vérifier
+    les deux.
   </li>
   <li>
     Copie un lien de séance, ferme l'app complètement (pas seulement en arrière-plan), puis ouvre le
-    lien. Attendu: tu atterris sur la séance.
+    lien. Attendu: tu atterris sur la séance. Refais-le avec l'app déjà ouverte en arrière-plan:
+    c'est ce cas-là qui repartait à l'accueil.
   </li>
 </ol>
 
@@ -243,4 +259,9 @@
   Le message "Cette séance est réservée aux membres", quand un non-membre ouvre un lien de séance.
   Tes deux comptes (jdl.sonkin et jdl.sonkin+10) sont admin sur staging, donc l'app te laisse voir
   la séance et le message ne se déclenche jamais. On le valide de notre côté.
+</p>
+<p>
+  Le "Sois le premier" sur une saison payante: c'est le seul cas où il doit encore apparaître, et il
+  faudrait une saison payante pour le voir. Le point de la correction, lui, se vérifie à la section
+  6.
 </p>

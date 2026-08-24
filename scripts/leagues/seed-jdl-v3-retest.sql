@@ -13,13 +13,17 @@
 --                    and the window picker when the organizer creates the next
 --                    one.
 --   Feuille brouillon  two sessions, one sheet in DRAFT generated in manual
---                    pairing mode (confirmation order, stamped a minute apart
---                    so the order is predictable) and one already published:
---                    draft banner, swap, regenerate, publish.
+--                    pairing mode over TWO rounds and an odd roster (the only
+--                    shape where the round-blind swap bug could show), and one
+--                    already published: draft banner, swap, regenerate,
+--                    publish. Confirmations are stamped a minute apart so the
+--                    manual order is predictable.
 --   Complet          approval league, every seat taken (4 active + 1 suspended
---                    = 5/5) and 2 requests waiting: the full-league notice
---                    before the tap, the suspended-until row, capacity on the
---                    Details tab, and the approve/refuse retest.
+--                    = 5/5) with 2 plain requests and 1 waitlisted: the
+--                    full-league notice before the tap, the queue ordinal on
+--                    the organizer's request row, the suspended-until row,
+--                    capacity on the Details tab, and the approve/refuse
+--                    retest.
 --   Où je joue       organized by a fixture player, Jean is a member with a
 --                    draft sheet he must NOT get organizer copy for (staff is
 --                    not identity), a free open season, and a share button
@@ -104,7 +108,6 @@ DECLARE
     v_jdl     uuid := pg_temp.jdl();
     v_tennis  uuid := (SELECT id FROM sport WHERE name = 'tennis');
     v_fakes   uuid[];
-    v_roster  uuid[];
     v_league  leagues;
     v_season  seasons;
     v_sess    sessions;
@@ -208,7 +211,7 @@ BEGIN
     v_league := public.league_create(
         p_name        => '[JDL v3] Feuille brouillon',
         p_sport_id    => v_tennis,
-        p_description => 'Ronde 1 est un brouillon en pairage manuel: personne d''autre que toi ne la voit. Ronde 2 est déjà publiée. Ajuste, publie, puis régénère la publiée pour la voir retourner en brouillon.',
+        p_description => 'Ronde 1 est un brouillon en pairage manuel, deux rondes avec un bye: personne d''autre que toi ne la voit. Ronde 2 est déjà publiée. Ajuste, publie, puis régénère la publiée pour la voir retourner en brouillon.',
         p_visibility  => 'public',
         p_join_mode   => 'open');
 
@@ -217,7 +220,6 @@ BEGIN
         PERFORM pg_temp.as_user(v_fakes[v_i]);
         PERFORM public.league_join(v_league.id);
     END LOOP;
-    v_roster := ARRAY[v_jdl] || v_fakes;
 
     PERFORM pg_temp.as_user(v_jdl);
     v_season := public.season_create(
@@ -225,20 +227,26 @@ BEGIN
         date_trunc('month', current_date)::date, current_date + 60);
     v_season := public.season_open(v_season.id, v_season.version);
 
-    -- Ronde 1: manual pairing, sheet left in draft.
+    -- Ronde 1: manual pairing, sheet left in draft. Two rounds and an ODD
+    -- roster on purpose. session_swap_player was round-blind (it picked an
+    -- arbitrary match for the arriving player and could seat someone against
+    -- himself), and a one-round sheet is the only shape where that cannot
+    -- happen, which is exactly why the original test missed it. Five
+    -- confirmed over two rounds gives a bye per round and a real swap target.
     v_sess := public.session_create(
         p_season_id    => v_season.id,
         p_name         => 'Ronde 1',
         p_scheduled_at => now() + interval '2 days',
+        p_rounds       => 2::smallint,
         p_pairing_mode => 'manual');
     v_sess := public.session_publish(v_sess.id, NULL, v_sess.version);
 
     PERFORM public.session_confirm_presence(v_sess.id, 'confirmed');
-    FOR v_i IN 1..5 LOOP
+    FOR v_i IN 1..4 LOOP
         PERFORM pg_temp.as_user(v_fakes[v_i]);
         PERFORM public.session_confirm_presence(v_sess.id, 'confirmed');
     END LOOP;
-    PERFORM pg_temp.stamp_presence(v_sess.id, v_roster);
+    PERFORM pg_temp.stamp_presence(v_sess.id, ARRAY[v_jdl] || v_fakes[1:4]);
 
     PERFORM pg_temp.as_user(v_jdl);
     v_sess := public.session_generate_sheet(v_sess.id, v_sess.version);
@@ -267,7 +275,7 @@ BEGIN
     v_league := public.league_create(
         p_name        => '[JDL v3] Complet',
         p_sport_id    => v_tennis,
-        p_description => 'Cinq places, cinq occupées (dont une suspendue, qui garde sa place). Deux demandes attendent: la liste te dit que la ligue est pleine avant que tu approuves.',
+        p_description => 'Cinq places, cinq occupées (dont une suspendue, qui garde sa place). Trois demandes attendent, dont une en file: la liste te dit que la ligue est pleine avant que tu approuves.',
         p_visibility  => 'public',
         p_join_mode   => 'approval');
 
@@ -295,6 +303,13 @@ BEGIN
        SET member_capacity = 5, waitlist_enabled = true, version = version + 1
      WHERE id = v_league.id;
 
+    -- One more request, this one arriving AFTER the seats filled, so it lands
+    -- in the waitlist: that is the organizer-side row carrying the ordinal
+    -- ("1re en file pour une place"), which the queue chip alone never shows.
+    PERFORM pg_temp.as_user((pg_temp.fakes(62, 1))[1]);
+    PERFORM public.league_join(v_league.id);
+
+    PERFORM pg_temp.as_user(v_jdl);
     v_season := public.season_create(v_league.id, 'Été 2026', current_date - 7, current_date + 50);
     v_season := public.season_open(v_season.id, v_season.version);
 
