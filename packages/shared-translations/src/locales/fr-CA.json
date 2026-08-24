@@ -17,29 +17,6 @@
     "shareTitle": "Rejoins-moi sur Rallia",
     "shareMessage": "On est déjà 1000 à jouer sur Rallia à Montréal. Trouve-toi une partie, ça prend deux minutes : {link}"
   },
-  "serie1Announcement": {
-    "badge": "Série 1",
-    "title": "Nos premiers tournois sont là",
-    "subtitle": "Des tableaux simples et gratuits, ouverts à tout le Grand Montréal. Trois catégories, pis des points Rallia pour tous ceux qui embarquent.",
-    "catBeginner": "Débutant 1.5+",
-    "catIntermediate": "Intermédiaire 3.0+",
-    "catAdvanced": "Avancé 4.0+",
-    "dates": "Inscriptions jusqu'au 25 juillet · Ça commence le 26",
-    "cta": "Voir les tournois",
-    "later": "Plus tard"
-  },
-  "serie2Announcement": {
-    "badge": "Série 2",
-    "title": "La Série 1 a ses champions",
-    "titleChampion": "T'as gagné la Série 1",
-    "subtitleChampion": "Le tableau {label}, c'est toi qui l'as gagné. Chapeau! La Série 2 s'en vient, avec une vraie bourse à gagner. Défends ton titre.",
-    "subtitlePlayed": "Dans ton tableau {label}, c'est {name} qui repart avec le titre. Merci d'avoir embarqué! La Série 2 s'en vient: c'est le temps de ta revanche.",
-    "subtitleGeneric": "La première série est dans les livres. La Série 2 s'en vient: des tableaux par région et par calibre, avec une vraie bourse à gagner.",
-    "featuredTitle": "Ton tableau pour la Série 2",
-    "deadline": "Les inscriptions ferment le {date}. Les places sont limitées.",
-    "cta": "Je m'inscris",
-    "seeAll": "Voir tous les tableaux"
-  },
   "suggestionCard": {
     "courtsAvailable": "{count} terrains disponibles"
   },

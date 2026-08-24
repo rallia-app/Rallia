@@ -118,8 +118,6 @@ import {
   FoundingMemberExplainerActionSheet,
   CircuitRankingExplainerActionSheet,
 } from '#/components/explainers';
-// Summer League announcement
-import { Serie1AnnouncementActionSheet } from '#/features/tournaments/announcement/Serie1AnnouncementSheet';
 // Availability grid payload type. Flat `Set<string>` of `${day}-${hour}`
 // cell keys from the hourly 7×17 grid (hours 6..22). Defined inline to keep
 // this declaration free of feature-folder imports.
@@ -995,9 +993,6 @@ declare module 'react-native-actions-sheet' {
         proofTitle: string;
       };
     }>;
-    'serie1-announcement': SheetDefinition<{
-      payload?: Record<string, never>;
-    }>;
     feedback: SheetDefinition;
     'match-detail': SheetDefinition;
     'main-actions': SheetDefinition;
@@ -1110,8 +1105,6 @@ export const Sheets = () => {
         'match-suggestions': MatchSuggestionsActionSheet,
         'match-invite-confirm': MatchInviteConfirmActionSheet,
         'suggest-match-time': SuggestMatchTimeActionSheet,
-        // Série 1 tournaments announcement
-        'serie1-announcement': Serie1AnnouncementActionSheet,
       }}
     />
   );

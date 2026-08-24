@@ -1,7 +1,7 @@
 /**
  * MilestoneScreen — the 1000-player takeover: a thank-you, then the ask.
  *
- * Same chassis as Serie2AnnouncementScreen (gradient canvas, close X, footer
+ * Full-screen campaign modal chassis (gradient canvas, close X, footer
  * CTA) but two steps instead of one, so it borrows the check-in pager: both
  * steps sit side by side in a row two screens wide and a single translateX
  * slides between them.

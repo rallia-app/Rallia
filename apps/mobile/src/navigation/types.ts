@@ -21,8 +21,6 @@ import type {
   SpotsAvailableFilter,
 } from '@rallia/shared-types';
 
-import type { Serie2AnnouncementParams } from '#/features/tournaments/announcement/serie2AnnouncementTypes';
-
 // =============================================================================
 // ROOT STACK PARAM LIST
 // Includes all shared screens that are accessible from anywhere in the app
@@ -131,12 +129,6 @@ export type RootStackParamList = {
   // Entry points: Home banner CTA, splash-complete auto-opener, push deep link.
   // `source` is for analytics (which entry point opened the wizard).
   WeeklyCheckIn: { source?: string } | undefined;
-
-  // Série 2 announcement — one-time campaign modal (single step, no wizard).
-  // The precomputed personal content (one winner, one featured draw) rides in
-  // the params so the screen renders complete on first frame; opened only by
-  // Serie2AnnouncementAutoOpener.
-  Serie2Announcement: Serie2AnnouncementParams;
 
   // 1000-player milestone takeover, presented by the launch-prompt registry.
   Milestone1000: undefined;
