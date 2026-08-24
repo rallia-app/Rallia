@@ -30,7 +30,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text, Button, Card, useToast, WizardProgressDots } from '@rallia/shared-components';
+import { Text, Button, Card, WizardProgressDots } from '@rallia/shared-components';
+import { Logger } from '@rallia/shared-services';
 import { useAuth, useReferral } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels, base, neutral, primary, accent } from '@rallia/design-system';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
@@ -53,11 +54,14 @@ export function MilestoneScreen() {
   const insets = useSafeAreaInsets();
   const { t, locale } = useTranslation();
   const navigation = useAppNavigation();
-  const toast = useToast();
   const { session } = useAuth();
   const { code, referralLink, contest, stats } = useReferral(session?.user?.id, locale);
 
   const [step, setStep] = useState(1);
+  // In-place confirmation: this screen is a native modal, so the root toast
+  // overlay renders behind it (same reason the check-in wizard never toasts).
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Tracks whether the player got as far as sharing, so the unmount cleanup
   // can tell a completed run apart from a drop-off. Every close path (X, swipe,
@@ -144,35 +148,39 @@ export function MilestoneScreen() {
       }
     } catch (error) {
       if (error instanceof Error && error.message !== 'User did not share') {
-        toast.error(t('common.error'));
+        Logger.error('Milestone share failed', error);
       }
     }
-  }, [referralLink, t, toast]);
+  }, [referralLink, t]);
 
   const handleCopyCode = useCallback(async () => {
     if (!code) return;
     try {
       await Clipboard.setStringAsync(code);
+      void lightHaptic();
       sharedRef.current = true;
       milestoneShared({ channel: 'copy_code' });
-      toast.success(t('common.copied'));
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
     } catch {
-      toast.error(t('common.error'));
+      // Clipboard failure: the label simply doesn't flip.
     }
-  }, [code, toast, t]);
+  }, [code]);
 
   const handleCopyLink = useCallback(async () => {
     if (!referralLink) return;
     try {
       await Clipboard.setStringAsync(referralLink);
+      void lightHaptic();
       sharedRef.current = true;
       milestoneShared({ channel: 'copy_link' });
       invitationLinkGenerated({ invitation_type: 'referral', channel: 'copy_link' });
-      toast.success(t('common.copied'));
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
     } catch {
-      toast.error(t('common.error'));
+      // Clipboard failure: the label simply doesn't flip.
     }
-  }, [referralLink, toast, t]);
+  }, [referralLink]);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -344,7 +352,7 @@ export function MilestoneScreen() {
                     {code}
                   </Text>
                   <Text size="xs" align="center" color={colors.primary} style={styles.copyHint}>
-                    {t('milestone1000.copyCode')}
+                    {copiedCode ? t('common.copied') : t('milestone1000.copyCode')}
                   </Text>
                 </Card>
               )}
@@ -388,7 +396,7 @@ export function MilestoneScreen() {
               isDark={isDark}
               themeColors={buttonThemeColors}
             >
-              {t('milestone1000.copyLink')}
+              {copiedLink ? t('common.copied') : t('milestone1000.copyLink')}
             </Button>
           </>
         )}
