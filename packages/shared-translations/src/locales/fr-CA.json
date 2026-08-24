@@ -2674,7 +2674,6 @@
     "deleteGroup": "Supprimer le groupe",
     "leaveGroup": "Quitter le groupe",
     "joinGroup": "Rejoindre le groupe",
-    "groupOptions": "Options du groupe",
     "groupName": "Nom du groupe",
     "groupNamePlaceholder": "Entrez le nom du groupe",
     "enterGroupName": "Entrez le nom du groupe...",
@@ -2934,11 +2933,9 @@
     },
     "recentGames": {
       "title": "Parties récentes",
-      "noGames": "Aucune partie jouée dans les 180 derniers jours",
       "competitive": "Compétitif",
       "practice": "Pratique",
       "player": "Joueur",
-      "daysAgo": "Il y a {count} jours",
       "viewAll": "Voir tout"
     },
     "detail": {
