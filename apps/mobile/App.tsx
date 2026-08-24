@@ -211,6 +211,7 @@ import { WeeklyCheckInAutoOpener } from './src/features/weekly-checkin/WeeklyChe
 import { WEEKLY_CHECKIN_ENABLED } from './src/features/weekly-checkin/featureFlag';
 import { Serie1AnnouncementAutoOpener } from './src/features/tournaments/announcement/Serie1AnnouncementAutoOpener';
 import { Serie2AnnouncementAutoOpener } from './src/features/tournaments/announcement/Serie2AnnouncementAutoOpener';
+import { MilestoneAutoOpener } from './src/features/milestone/MilestoneAutoOpener';
 import { isWeeklyCheckInActive } from './src/features/weekly-checkin/isWizardActive';
 import { linking } from './src/navigation/linking';
 import { navigationRef } from './src/navigation';
@@ -1056,6 +1057,7 @@ function AppContent() {
       {WEEKLY_CHECKIN_ENABLED && <WeeklyCheckInAutoOpener isSplashComplete={isSplashComplete} />}
       <Serie1AnnouncementAutoOpener isSplashComplete={isSplashComplete} />
       <Serie2AnnouncementAutoOpener isSplashComplete={isSplashComplete} />
+      <MilestoneAutoOpener isSplashComplete={isSplashComplete} />
       <TourCompleteModal
         visible={showCompletionModal}
         onDismiss={dismissCompletionModal}
