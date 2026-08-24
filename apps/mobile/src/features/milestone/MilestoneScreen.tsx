@@ -30,9 +30,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text, Button, useToast, WizardProgressDots } from '@rallia/shared-components';
+import { Text, Button, Card, useToast, WizardProgressDots } from '@rallia/shared-components';
 import { useAuth, useReferral } from '@rallia/shared-hooks';
-import { spacingPixels, base, neutral, primary, accent } from '@rallia/design-system';
+import { spacingPixels, radiusPixels, base, neutral, primary, accent } from '@rallia/design-system';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 
 import { useThemeStyles, useTranslation } from '#/hooks';
@@ -55,7 +55,7 @@ export function MilestoneScreen() {
   const navigation = useAppNavigation();
   const toast = useToast();
   const { session } = useAuth();
-  const { code, referralLink, contest } = useReferral(session?.user?.id, locale);
+  const { code, referralLink, contest, stats } = useReferral(session?.user?.id, locale);
 
   const [step, setStep] = useState(1);
 
@@ -149,6 +149,18 @@ export function MilestoneScreen() {
     }
   }, [referralLink, t, toast]);
 
+  const handleCopyCode = useCallback(async () => {
+    if (!code) return;
+    try {
+      await Clipboard.setStringAsync(code);
+      sharedRef.current = true;
+      milestoneShared({ channel: 'copy_code' });
+      toast.success(t('common.copied'));
+    } catch {
+      toast.error(t('common.error'));
+    }
+  }, [code, toast, t]);
+
   const handleCopyLink = useCallback(async () => {
     if (!referralLink) return;
     try {
@@ -233,6 +245,15 @@ export function MilestoneScreen() {
             <Text size="base" align="center" color={colors.textMuted} style={styles.body}>
               {t('milestone1000.body2')}
             </Text>
+            <Text
+              size="base"
+              weight="semibold"
+              align="center"
+              color={colors.text}
+              style={styles.body}
+            >
+              {t('milestone1000.body2b')}
+            </Text>
             <Text size="base" align="center" color={colors.text} style={styles.body}>
               {t('milestone1000.body3')}
             </Text>
@@ -250,38 +271,84 @@ export function MilestoneScreen() {
           {/* Step 2 — the ask. */}
           <ScrollView
             style={{ width: SCREEN_WIDTH }}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={styles.scrollContentSpread}
             showsVerticalScrollIndicator={false}
           >
-            <View style={[styles.heroIconRing, ringStyle]}>
-              <RNText style={styles.heroEmoji}>🎯</RNText>
+            <View style={styles.stepGroup}>
+              <View style={[styles.heroIconRing, ringStyle]}>
+                <RNText style={styles.heroEmoji}>🎯</RNText>
+              </View>
+
+              <Text size={25} weight="bold" align="center" color={colors.text} style={styles.title}>
+                {t('milestone1000.ctaTitle')}
+              </Text>
+              <Text size="base" align="center" color={colors.textMuted} style={styles.body}>
+                {t('milestone1000.ctaSubtitle')}
+              </Text>
             </View>
 
-            <Text size={25} weight="bold" align="center" color={colors.text} style={styles.title}>
-              {t('milestone1000.ctaTitle')}
-            </Text>
-            <Text size="base" align="center" color={colors.textMuted} style={styles.body}>
-              {t('milestone1000.ctaSubtitle')}
-            </Text>
-
-            {contest?.prizeDescription && (
-              <View style={[styles.prizePill, { backgroundColor: `${accent[500]}1F` }]}>
-                <Text size="sm" weight="semibold" color={isDark ? accent[300] : accent[700]}>
-                  {t('milestone1000.prize').replace('{prize}', contest.prizeDescription)}
+            <View style={styles.statsRow}>
+              <View style={styles.stat}>
+                <Text size={28} weight="bold" align="center" color={colors.text}>
+                  {stats?.total_clicked ?? 0}
+                </Text>
+                <Text size="xs" weight="semibold" align="center" color={colors.textMuted}>
+                  {t('referral.clicked').toUpperCase()}
                 </Text>
               </View>
-            )}
+              <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.stat}>
+                <Text size={28} weight="bold" align="center" color={colors.primary}>
+                  {stats?.total_converted ?? 0}
+                </Text>
+                <Text size="xs" weight="semibold" align="center" color={colors.textMuted}>
+                  {t('referral.signedUp').toUpperCase()}
+                </Text>
+              </View>
+            </View>
 
-            {code && (
-              <>
-                <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.codeLabel}>
-                  {t('milestone1000.yourCode').toUpperCase()}
-                </Text>
-                <Text size="xl" weight="bold" color={colors.text} style={styles.code}>
-                  {code}
-                </Text>
-              </>
-            )}
+            <View style={styles.stepGroup}>
+              {contest?.prizeDescription && (
+                <View style={[styles.prizePill, { backgroundColor: `${accent[500]}1F` }]}>
+                  <Text size="sm" weight="semibold" color={isDark ? accent[300] : accent[700]}>
+                    {t('milestone1000.prize').replace('{prize}', contest.prizeDescription)}
+                  </Text>
+                </View>
+              )}
+
+              {code && (
+                <Card
+                  variant="outlined"
+                  onPress={() => void handleCopyCode()}
+                  backgroundColor={colors.cardBackground}
+                  borderRadius={radiusPixels.xl}
+                  padding={spacingPixels[4]}
+                  style={{ alignSelf: 'stretch', borderColor: colors.border }}
+                >
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    align="center"
+                    color={colors.textMuted}
+                    style={styles.codeLabel}
+                  >
+                    {t('milestone1000.yourCode').toUpperCase()}
+                  </Text>
+                  <Text
+                    size="xl"
+                    weight="bold"
+                    align="center"
+                    color={colors.text}
+                    style={styles.code}
+                  >
+                    {code}
+                  </Text>
+                  <Text size="xs" align="center" color={colors.primary} style={styles.copyHint}>
+                    {t('milestone1000.copyCode')}
+                  </Text>
+                </Card>
+              )}
+            </View>
           </ScrollView>
         </Animated.View>
       </View>
@@ -356,6 +423,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   scrollContent: {
+    // Fill and centre: both steps are shorter than the viewport on most
+    // devices, so without this the content stacks at the top and leaves a
+    // dead band above the footer. Still scrolls normally when it overflows
+    // (small screens, large text sizes).
+    flexGrow: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacingPixels[5],
     paddingTop: spacingPixels[4],
@@ -403,13 +476,45 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[2],
     borderRadius: 999,
   },
+  scrollContentSpread: {
+    // Step 2 carries less copy than step 1, so centring still left it adrift.
+    // Two groups pushed apart span the canvas instead.
+    flexGrow: 1,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[5],
+    paddingTop: spacingPixels[6],
+    paddingBottom: spacingPixels[5],
+  },
+  stepGroup: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[5],
+  },
+  stat: {
+    minWidth: 96,
+    gap: 2,
+  },
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    marginVertical: spacingPixels[1],
+  },
   codeLabel: {
     letterSpacing: 0.6,
-    marginTop: spacingPixels[7],
   },
   code: {
     letterSpacing: 2,
     marginTop: spacingPixels[1],
+  },
+  copyHint: {
+    marginTop: spacingPixels[2],
   },
   footer: {
     paddingHorizontal: spacingPixels[5],

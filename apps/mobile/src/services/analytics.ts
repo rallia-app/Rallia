@@ -838,7 +838,9 @@ export function milestoneStepViewed(step: number): void {
 }
 
 /** The player completed a share from the takeover. */
-export function milestoneShared(props: { channel: 'share_sheet' | 'copy_link' }): void {
+export function milestoneShared(props: {
+  channel: 'share_sheet' | 'copy_link' | 'copy_code';
+}): void {
   capture('milestone_1000_shared', props);
 }
 
