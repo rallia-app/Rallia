@@ -26,6 +26,13 @@ interface SportContextValue {
   selectedSport: Sport | null;
   /** All sports the user has registered for */
   userSports: Sport[];
+  /**
+   * True when at least one userSports entry is a real active player_sport row.
+   * False while the roster is only the guest-selection fallback — server RPCs
+   * that count active player_sport rows (e.g. record_weekly_checkin) will
+   * reject such players even though userSports is non-empty.
+   */
+  hasSyncedSports: boolean;
   /** Whether sports data is loading */
   isLoading: boolean;
   /** Select a sport */
@@ -192,6 +199,15 @@ export function SportProvider({ children, userId }: SportProviderProps) {
   const availableSports = userId ? userSports : allSports;
   const isLoading = userId ? playerSportsLoading : guestSportsLoading;
 
+  // Mirrors record_weekly_checkin's guard (active player_sport rows only):
+  // guest-fallback rows keep the switcher populated pre-onboarding but must
+  // not count as server-recognized sports.
+  const hasSyncedSports = useMemo(
+    () =>
+      !!userId && (playerSports ?? []).some(ps => ps.is_active === true && !ps.is_guest_fallback),
+    [userId, playerSports]
+  );
+
   // Memoized so provider re-renders (React Compiler bails on this component
   // because of the try/catch value blocks above) don't hand every consumer a
   // new identity and cascade re-renders through the tree.
@@ -199,12 +215,21 @@ export function SportProvider({ children, userId }: SportProviderProps) {
     () => ({
       selectedSport,
       userSports: availableSports,
+      hasSyncedSports,
       isLoading,
       setSelectedSport,
       setSelectedSportsOrdered,
       refetch,
     }),
-    [selectedSport, availableSports, isLoading, setSelectedSport, setSelectedSportsOrdered, refetch]
+    [
+      selectedSport,
+      availableSports,
+      hasSyncedSports,
+      isLoading,
+      setSelectedSport,
+      setSelectedSportsOrdered,
+      refetch,
+    ]
   );
 
   return <SportContext.Provider value={value}>{children}</SportContext.Provider>;
