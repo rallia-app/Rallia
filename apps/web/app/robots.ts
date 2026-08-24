@@ -17,7 +17,6 @@ const DISALLOW_PRIVATE = [
   '/*/join/',
   '/*/match-invite/',
   '/*/community/join/',
-  '/*/digest/',
 ];
 
 export default function robots(): MetadataRoute.Robots {

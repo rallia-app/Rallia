@@ -9,6 +9,7 @@ const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'ut
 interface UtmForwardingLinkProps {
   href: string;
   className?: string;
+  rel?: string;
   children: React.ReactNode;
 }
 
@@ -17,7 +18,7 @@ interface UtmForwardingLinkProps {
  *  string, and the rallia_utm cookie only exists after analytics consent —
  *  forwarding through the URL is the only consent-free way to carry campaign
  *  attribution into the invite page (where URL UTMs win over the cookie). */
-export function UtmForwardingLink({ href, className, children }: UtmForwardingLinkProps) {
+export function UtmForwardingLink({ href, className, rel, children }: UtmForwardingLinkProps) {
   const [finalHref, setFinalHref] = useState(href);
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export function UtmForwardingLink({ href, className, children }: UtmForwardingLi
   }, [href]);
 
   return (
-    <Link href={finalHref} className={className}>
+    <Link href={finalHref} className={className} rel={rel}>
       {children}
     </Link>
   );

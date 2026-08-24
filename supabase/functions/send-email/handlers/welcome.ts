@@ -117,7 +117,7 @@ export class WelcomeHandler {
     const baseUrl =
       Deno.env.get('NEXT_PUBLIC_BASE_URL') ||
       Deno.env.get('NEXT_PUBLIC_SITE_URL') ||
-      'https://www.rallia.ca';
+      'https://www.rallia.app';
 
     // CTAs go through the /api/go bouncer: it opens the mobile app via the
     // rallia:// scheme, or falls back to the website home page on desktop.

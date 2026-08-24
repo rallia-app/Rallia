@@ -102,7 +102,7 @@ export class InvitationHandler {
     const baseUrl =
       Deno.env.get('NEXT_PUBLIC_BASE_URL') ||
       Deno.env.get('NEXT_PUBLIC_SITE_URL') ||
-      'https://www.rallia.ca';
+      'https://www.rallia.app';
 
     let rolePath = 'sign-in';
     if (record.role === 'admin') {

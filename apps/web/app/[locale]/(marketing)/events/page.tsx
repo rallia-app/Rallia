@@ -146,6 +146,7 @@ function EventCard({ event, locale, t }: { event: PublicEvent; locale: Locale; t
   return (
     <UtmForwardingLink
       href={`/invite/${event.referralCode}?type=tournament&id=${event.id}`}
+      rel="nofollow"
       className="group relative flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full"
     >
       <div className="relative h-44 w-full overflow-hidden">
