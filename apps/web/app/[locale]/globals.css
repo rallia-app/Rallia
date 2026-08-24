@@ -903,13 +903,9 @@ textarea {
 /* Enhanced micro-interactions */
 
 /* Button hover effects - Energy & Trust theme */
+/* Elevation only. Colour is the button variant's to own, so no background here. */
 .button-scale:hover {
-  background: linear-gradient(
-    135deg,
-    var(--secondary-600) 0%,
-    var(--secondary-700) 100%
-  );
-  box-shadow: 0 8px 25px -5px rgba(255, 107, 107, 0.3);
+  box-shadow: 0 8px 25px -5px rgb(0 0 0 / 0.25);
 }
 
 /* Enhanced badge interactions */

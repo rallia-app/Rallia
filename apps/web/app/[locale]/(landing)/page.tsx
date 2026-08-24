@@ -18,6 +18,7 @@ import {
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { buildPageMetadata } from '@/lib/seo';
+import { createClient } from '@/lib/supabase/server';
 import { JsonLd, faqPageJsonLd } from '@/components/json-ld';
 import { AppStoreButtons } from '@/components/app-store-buttons';
 import { HeroDownloadCta } from '@/components/hero-download-cta';
@@ -48,6 +49,21 @@ export default async function Home({ params }: { params: Promise<{ locale: Local
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations('home');
+
+  // An onboarded player has nothing left to create, so the hero asks them to install.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let isOnboarded = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profile')
+      .select('onboarding_completed')
+      .eq('id', user.id)
+      .maybeSingle();
+    isOnboarded = profile?.onboarding_completed === true;
+  }
 
   const faqItems = FAQ_KEYS.map(key => ({
     question: t(`landing.faq.questions.${key}.question`),
@@ -84,23 +100,28 @@ export default async function Home({ params }: { params: Promise<{ locale: Local
           <h2 className="text-xl md:text-2xl text-white/60 max-w-2xl">
             {t('landing.hero.subheadline')}
           </h2>
-          {/* Account creation is the primary ask; the store badges stay as the direct route. */}
+          {/* Account creation is the primary ask, unless the visitor already has one. */}
           <div className="mt-6 flex flex-col items-center gap-5">
-            <Button
-              asChild
-              size="lg"
-              className="button-scale text-lg px-8 py-6 bg-[var(--secondary-500)] hover:bg-[var(--secondary-600)] text-white"
-            >
-              <Link href="/get-started">
-                {t('landing.hero.createAccount')}
-                <ArrowRight className="size-5" />
-              </Link>
-            </Button>
+            {!isOnboarded && (
+              <Button
+                asChild
+                size="lg"
+                className="button-scale text-lg px-8 py-6 bg-[var(--secondary-500)] hover:bg-[var(--secondary-600)] text-white"
+              >
+                <Link href="/get-started">
+                  {t('landing.hero.createAccount')}
+                  <ArrowRight className="size-5" />
+                </Link>
+              </Button>
+            )}
             <div className="md:hidden">
               <AppStoreButtons badgeHeight={40} />
             </div>
             <div className="hidden md:block">
-              <HeroDownloadCta label={t('landing.hero.downloadButton')} variant="secondary" />
+              <HeroDownloadCta
+                label={t('landing.hero.downloadButton')}
+                variant={isOnboarded ? 'primary' : 'secondary'}
+              />
             </div>
           </div>
           <a

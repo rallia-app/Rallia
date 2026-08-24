@@ -237,10 +237,13 @@ export function GetStartedWizard({
         {step === 'availability' && <AvailabilitySelectStep controller={controller} />}
       </div>
 
-      {/* Sticky so Continue stays reachable under the tall availability grid. */}
-      <div className="sticky bottom-0 z-10 -mx-4 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6 sm:-mx-6 sm:px-6">
-        <OnboardingNav controller={controller} t={t} finishLabel={tFunnel('finish')} />
-      </div>
+      {/* Sticky so Continue stays reachable under the tall availability grid. Skipped
+          when OnboardingNav renders nothing, or its gradient shows as a stray bar. */}
+      {controller.isProfileStep && (
+        <div className="sticky bottom-0 z-10 -mx-4 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6 sm:-mx-6 sm:px-6">
+          <OnboardingNav controller={controller} t={t} finishLabel={tFunnel('finish')} />
+        </div>
+      )}
     </div>
   );
 }
