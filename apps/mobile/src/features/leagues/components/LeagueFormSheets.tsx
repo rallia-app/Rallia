@@ -26,14 +26,12 @@ import { LeagueCreationWizard, type LeagueEditData } from './LeagueCreationWizar
 function LeagueFormSheet({
   sheetId,
   editLeague,
-  onCreated,
   // Edit mode with no payload yet: the ActionSheet must still mount (returning
   // null before it mounts breaks the sheet), so gate the children instead.
   ready,
 }: {
-  sheetId: 'league-create' | 'league-edit';
+  sheetId: 'league-edit';
   editLeague?: LeagueEditData;
-  onCreated?: (leagueId: string) => void;
   ready: boolean;
 }) {
   const { colors } = useThemeStyles();
@@ -44,13 +42,9 @@ function LeagueFormSheet({
     void SheetManager.hide(sheetId);
   }, [sheetId]);
 
-  const handleSuccess = useCallback(
-    (leagueId: string) => {
-      void SheetManager.hide(sheetId);
-      onCreated?.(leagueId);
-    },
-    [sheetId, onCreated]
-  );
+  const handleSuccess = useCallback(() => {
+    void SheetManager.hide(sheetId);
+  }, [sheetId]);
 
   return (
     <ActionSheet
@@ -77,11 +71,6 @@ function LeagueFormSheet({
 export function LeagueEditActionSheet({ payload }: SheetProps<'league-edit'>) {
   const league = payload?.league;
   return <LeagueFormSheet sheetId="league-edit" editLeague={league} ready={!!league} />;
-}
-
-/** Create: onCreated lets the opener navigate to the new league. */
-export function LeagueCreateActionSheet({ payload }: SheetProps<'league-create'>) {
-  return <LeagueFormSheet sheetId="league-create" onCreated={payload?.onCreated} ready />;
 }
 
 const styles = StyleSheet.create({

@@ -39,6 +39,8 @@ import {
   setTournamentSeeds,
   previewTournamentBracket,
   previewTournamentPools,
+  getTournamentSeedSuggestions,
+  setTournamentSeedingMode,
   generateTournamentPools,
   getTournamentPoolStandings,
   generateTournamentKnockout,
@@ -78,6 +80,8 @@ import {
   type TournamentMatch,
   type PreviewBracketMatch,
   type PreviewPoolSlot,
+  type TournamentSeedSuggestion,
+  type SeedingMode,
   type PoolStandingRow,
   type TournamentRoundDeadline,
   type RoundDeadlineInput,
@@ -119,6 +123,8 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'bracketPreview', tournamentId] as const,
   poolPreview: (tournamentId: string) =>
     [...tournamentKeys.all, 'poolPreview', tournamentId] as const,
+  seedSuggestions: (tournamentId: string) =>
+    [...tournamentKeys.all, 'seedSuggestions', tournamentId] as const,
   poolStandings: (tournamentId: string) =>
     [...tournamentKeys.all, 'poolStandings', tournamentId] as const,
   roundDeadlines: (tournamentId: string) =>
@@ -573,6 +579,19 @@ export function useTournamentPoolPreview(tournamentId: string | undefined, enabl
   });
 }
 
+/**
+ * Effective seed order with the Circuit Rallia points and rating behind each
+ * entry (organizer only). The setup screen starts from this order; the
+ * organizer's reorder is written back through useSetTournamentSeeds.
+ */
+export function useTournamentSeedSuggestions(tournamentId: string | undefined, enabled: boolean) {
+  return useQuery<TournamentSeedSuggestion[]>({
+    queryKey: tournamentKeys.seedSuggestions(tournamentId ?? ''),
+    queryFn: () => getTournamentSeedSuggestions(tournamentId!),
+    enabled: !!tournamentId && enabled,
+  });
+}
+
 /** Organizer publishes the pool phase (pool_knockout twin of bracket gen). */
 export function useGenerateTournamentPools(options: MutationOptions<TournamentMatch[]> = {}) {
   const invalidate = useTournamentDetailInvalidator();
@@ -736,8 +755,41 @@ export function useSetTournamentSeeds(options: MutationOptions<TournamentRegistr
       setTournamentSeeds(tournamentId, orderedRegistrationIds, versionWas),
     onSuccess: (regs, vars) => {
       qc.invalidateQueries({ queryKey: tournamentKeys.bracketPreview(vars.tournamentId) });
+      qc.invalidateQueries({ queryKey: tournamentKeys.poolPreview(vars.tournamentId) });
+      qc.invalidateQueries({ queryKey: tournamentKeys.seedSuggestions(vars.tournamentId) });
       invalidate(vars.tournamentId);
       options.onSuccess?.(regs);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Organizer picks which ladder seeds the draw. The server clears or freezes
+ * seed_rank depending on the mode, so both previews and the suggestion order
+ * are invalidated alongside the detail.
+ */
+export function useSetTournamentSeedingMode(options: MutationOptions<Tournament> = {}) {
+  const qc = useQueryClient();
+  const invalidate = useTournamentDetailInvalidator();
+  const mutation = useMutation<
+    Tournament,
+    Error,
+    { tournamentId: string; mode: SeedingMode; versionWas: number }
+  >({
+    mutationFn: ({ tournamentId, mode, versionWas }) =>
+      setTournamentSeedingMode(tournamentId, mode, versionWas),
+    onSuccess: (tournament, vars) => {
+      qc.invalidateQueries({ queryKey: tournamentKeys.bracketPreview(vars.tournamentId) });
+      qc.invalidateQueries({ queryKey: tournamentKeys.poolPreview(vars.tournamentId) });
+      qc.invalidateQueries({ queryKey: tournamentKeys.seedSuggestions(vars.tournamentId) });
+      invalidate(vars.tournamentId);
+      options.onSuccess?.(tournament);
     },
     onError: e => options.onError?.(e),
   });

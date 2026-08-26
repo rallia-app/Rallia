@@ -22,16 +22,23 @@ export const sharedAvailabilityKeys = {
     [...sharedAvailabilityKeys.all, [...playerIds].sort().join(',')] as const,
 };
 
+// Cached payload stays a string[] (JSON-safe for the AsyncStorage persister);
+// the Set is built in `select`, which runs on read and is never persisted.
+// Array.isArray guards entries persisted before this fix, which a JSON
+// round-trip degraded to `{}`.
+const toCellSet = (data: string[]): ReadonlySet<string> => new Set(Array.isArray(data) ? data : []);
+
 export function useSharedAvailability(playerIds: string[] | undefined) {
   const ids = playerIds ?? [];
 
   return useQuery({
     queryKey: sharedAvailabilityKeys.forPlayers(ids),
-    queryFn: async (): Promise<ReadonlySet<string>> => {
+    queryFn: async (): Promise<string[]> => {
       const { data, error } = await AvailabilityService.getSharedAvailabilityCells(ids);
       if (error) throw new Error(error.message);
-      return new Set(data ?? []);
+      return data ?? [];
     },
+    select: toCellSet,
     enabled: ids.length > 0,
     // Availability is recurring and rarely edited mid-session; the pairing
     // save path invalidates this key explicitly when it changes.

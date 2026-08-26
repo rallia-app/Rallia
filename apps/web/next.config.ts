@@ -31,6 +31,38 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // rallia.ca served a full duplicate of the canonical rallia.app origin
+      // (SITE_URL), so every page carried a cross-domain canonical. Fold it in.
+      ...['rallia.ca', 'www.rallia.ca'].map(host => ({
+        source: '/:path*',
+        has: [{ type: 'host' as const, value: host }],
+        destination: 'https://www.rallia.app/:path*',
+        permanent: true,
+      })),
+      // Apex -> www, except /.well-known/*. associatedDomains names the apex
+      // (applinks:rallia.app), and neither Apple's CDN nor Android's verifier
+      // follows a redirect when fetching the association files, so the apex has
+      // to serve them itself or universal links never verify.
+      {
+        source: '/:path((?!\\.well-known).*)',
+        has: [{ type: 'host' as const, value: 'rallia.app' }],
+        destination: 'https://www.rallia.app/:path',
+        permanent: true,
+      },
+      // Bare/foreign locale prefixes otherwise fall through to next-intl, which
+      // prepends the default locale and 404s (/fr -> /en-US/fr).
+      ...(
+        [
+          ['en', 'en-US'],
+          ['en-CA', 'en-US'],
+          ['en-GB', 'en-US'],
+          ['fr', 'fr-CA'],
+          ['fr-FR', 'fr-CA'],
+        ] as const
+      ).flatMap(([alias, locale]) => [
+        { source: `/${alias}`, destination: `/${locale}`, permanent: true },
+        { source: `/${alias}/:path*`, destination: `/${locale}/:path*`, permanent: true },
+      ]),
       // /games and /courts merged into /play (constrained to real locales so
       // authenticated routes like /app/games are untouched)
       {
@@ -50,6 +82,29 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/:locale(en-US|fr-CA)/courts',
+        destination: '/:locale/play',
+        permanent: true,
+      },
+      // Public routes retired without a redirect: /beta (pre-launch signup,
+      // removed in a8b3e075) and /find-a-match (WTP smoke test, removed in
+      // ea8172c3 — it lived on rallia.ca, which is where the 404s surfaced).
+      {
+        source: '/beta',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/:locale(en-US|fr-CA)/beta',
+        destination: '/:locale',
+        permanent: true,
+      },
+      {
+        source: '/find-a-match',
+        destination: '/play',
+        permanent: true,
+      },
+      {
+        source: '/:locale(en-US|fr-CA)/find-a-match',
         destination: '/:locale/play',
         permanent: true,
       },

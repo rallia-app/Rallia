@@ -1,9 +1,7 @@
 /**
- * ProgressDots — 4-dot indicator with the active dot stretching to a pill.
- *
- * Lifts the PreOnboardingScreen progress dot pattern (lines 349-362):
- * legacy React Native Animated, 280ms cubic easing, native driver, active
- * dot expands from 8px circle to 22px pill.
+ * Step indicator as dots, the active one stretching to a pill. The compact
+ * alternative to WizardProgressBar for full-screen flows with no room for a
+ * labelled bar.
  */
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
@@ -14,12 +12,13 @@ const DOT_SIZE = 8;
 const ACTIVE_WIDTH = 22;
 const DURATION = 280;
 
-interface ProgressDotsProps {
-  current: number; // 1-based step
+export interface WizardProgressDotsProps {
+  /** 1-based index of the current step. */
+  current: number;
   total: number;
 }
 
-export function ProgressDots({ current, total }: ProgressDotsProps) {
+export function WizardProgressDots({ current, total }: WizardProgressDotsProps) {
   return (
     <View
       style={styles.row}
@@ -47,9 +46,8 @@ function Dot({ index, current }: { index: number; current: number }) {
     }).start();
   }, [index, current, widthAnim]);
 
-  // Color: filled primary for current, light primary tint for completed,
-  // lightest tint for upcoming. In dark mode we deepen the "upcoming" tint
-  // so the inactive dots stay visible against the dark canvas.
+  // Filled primary for current, lighter tint for completed, lightest for
+  // upcoming — deepened in dark mode so inactive dots stay visible.
   const isCompleted = index < current;
   const isActive = index === current;
   const backgroundColor = isActive

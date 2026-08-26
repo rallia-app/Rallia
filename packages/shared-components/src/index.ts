@@ -116,6 +116,7 @@ export type { PreferencesChipsProps } from './preferences';
 export {
   WizardHeader,
   WizardProgressBar,
+  WizardProgressDots,
   WizardFooter,
   WizardOptionCard,
   WizardFieldLabel,
@@ -125,6 +126,7 @@ export type {
   WizardColors,
   WizardHeaderProps,
   WizardProgressBarProps,
+  WizardProgressDotsProps,
   WizardFooterProps,
   WizardOptionCardProps,
   WizardRatingBoundPickerProps,

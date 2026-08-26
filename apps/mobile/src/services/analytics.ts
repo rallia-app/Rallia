@@ -825,44 +825,28 @@ export function appOpened(props: { cold_start: boolean }): void {
   capture('app_opened', props);
 }
 
-// ---- Série 1 tournaments ----
+// ---- 1000-player milestone ----
 
-/** The Série 1 tournaments announcement popup was shown to the player. */
-export function serie1AnnouncementViewed(): void {
-  capture('serie1_announcement_viewed');
+/** The takeover was presented (step 1). */
+export function milestoneViewed(): void {
+  capture('milestone_1000_viewed');
 }
 
-/** The player tapped "See the tournaments" from the announcement. */
-export function serie1AnnouncementCtaPressed(): void {
-  capture('serie1_announcement_cta_pressed');
+/** The player advanced to a later step. Step 1 -> 2 is the emotion-to-ask rate. */
+export function milestoneStepViewed(step: number): void {
+  capture('milestone_1000_step_viewed', { step });
 }
 
-/** The player dismissed the announcement without visiting the tournaments. */
-export function serie1AnnouncementDismissed(): void {
-  capture('serie1_announcement_dismissed');
+/** The player completed a share from the takeover. */
+export function milestoneShared(props: {
+  channel: 'share_sheet' | 'copy_link' | 'copy_code';
+}): void {
+  capture('milestone_1000_shared', props);
 }
 
-// ---- Série 2 tournaments ----
-
-/** The Série 2 announcement screen was shown, at the given personalization
- *  level: champion (viewer won their Série 1 draw), played, or generic. */
-export function serie2AnnouncementViewed(variant: 'champion' | 'played' | 'generic'): void {
-  capture('serie2_announcement_viewed', { variant });
-}
-
-/** The player tapped "See the tournaments" from the announcement. */
-export function serie2AnnouncementCtaPressed(): void {
-  capture('serie2_announcement_cta_pressed');
-}
-
-/** The player tapped a specific open draw row from the announcement. */
-export function serie2AnnouncementDrawPressed(tournamentId: string): void {
-  capture('serie2_announcement_draw_pressed', { tournament_id: tournamentId });
-}
-
-/** The player closed the announcement without visiting any tournament. */
-export function serie2AnnouncementDismissed(): void {
-  capture('serie2_announcement_dismissed');
+/** The player closed the takeover without sharing. `step` is where they left. */
+export function milestoneDismissed(props: { step: number }): void {
+  capture('milestone_1000_dismissed', props);
 }
 
 // ---- Subscription ----

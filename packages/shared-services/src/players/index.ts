@@ -4,3 +4,4 @@
 
 export * from './playerService';
 export * from './phoneVerificationService';
+export * from './onboardingGapsService';

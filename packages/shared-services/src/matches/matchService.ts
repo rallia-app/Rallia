@@ -4332,7 +4332,9 @@ const GET_MATCH_NEEDING_FEEDBACK_RPC_PARAMS = {
   p_player_id: '' as string,
   p_time_filter: 'past' as const,
   p_sport_id: null as null,
-  p_limit: 50,
+  // 'feedback_needed' applies the joined / not-completed / full / 48h filter server-side.
+  p_status_filter: 'feedback_needed' as const,
+  p_limit: 10,
   p_offset: 0,
 };
 

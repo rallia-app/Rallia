@@ -5,7 +5,7 @@ import { CalendarDays, MapPin } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getTournamentLogoUrl } from '@rallia/shared-utils';
 
-import { IOSCodeHandoff } from './_components/ios-code-handoff';
+import { IOSCodeHandoff } from '@/components/ios-code-handoff';
 
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { logReferralClick, buildPlayStoreUrl, APP_STORE_URL } from '@/lib/referral-tracking';

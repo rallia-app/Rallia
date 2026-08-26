@@ -178,61 +178,6 @@ export async function listPublicTournaments(
   return toListItems((data ?? []) as ListRow[]);
 }
 
-/** One completed draw of a named series and its winner, for recap surfaces
- *  like the Série 2 announcement popup. */
-export interface SeriesChampion {
-  tournamentId: string;
-  tournamentName: string;
-  completedAt: string | null;
-  championUserId: string;
-  championPartnerUserId: string | null;
-  championName: string;
-  championAvatarUrl: string | null;
-}
-
-/**
- * Winners of a finished series: every completed public certified-organizer
- * tournament whose name starts with `namePrefix` (e.g. 'Série 1'), with its
- * champion. Wraps tournament_series_champions.
- */
-type SeriesChampionRow =
-  Database['public']['Functions']['tournament_series_champions']['Returns'][number];
-
-export async function listSeriesChampions(namePrefix: string): Promise<SeriesChampion[]> {
-  const { data, error } = await supabase.rpc('tournament_series_champions', {
-    p_name_prefix: namePrefix,
-  });
-  if (error) throw new Error(error.message);
-  return ((data ?? []) as SeriesChampionRow[]).map(row => ({
-    tournamentId: row.tournament_id,
-    tournamentName: row.tournament_name,
-    completedAt: row.completed_at,
-    championUserId: row.champion_user_id,
-    championPartnerUserId: row.champion_partner_user_id ?? null,
-    championName: row.champion_name,
-    championAvatarUrl: row.champion_avatar_url ?? null,
-  }));
-}
-
-/**
- * Of the given tournaments, the ids where the caller holds a live entry (as
- * captain or doubles partner). One indexed read; RLS scopes it to own rows.
- */
-export async function listMyRegisteredTournamentIds(
-  userId: string,
-  tournamentIds: string[]
-): Promise<string[]> {
-  if (!userId || tournamentIds.length === 0) return [];
-  const { data, error } = await supabase
-    .from('tournament_registrations')
-    .select('tournament_id')
-    .in('tournament_id', tournamentIds)
-    .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`)
-    .in('status', ['registered', 'pending', 'payment_pending']);
-  if (error) throw new Error(error.message);
-  return [...new Set((data ?? []).map(r => r.tournament_id))];
-}
-
 /**
  * List the caller's tournaments — ones they organize (any status, incl.
  * drafts) plus ones they hold an active registration in (as captain or
@@ -1202,6 +1147,66 @@ export async function previewTournamentPools(tournamentId: string): Promise<Prev
   });
   if (error) throw new Error(error.message);
   return (data ?? []) as PreviewPoolSlot[];
+}
+
+/**
+ * One registered entry in the effective seed order, with the Circuit Rallia
+ * points and active rating behind it. `seed_rank` is the organizer's override
+ * (null until tournament_set_seeds ran); `suggested_seed` is the position the
+ * publish RPCs will use: seed_rank, then Circuit points (partners summed on
+ * the doubles board), then rating, then sign-up order.
+ */
+export type TournamentSeedSuggestion = {
+  registration_id: string;
+  suggested_seed: number;
+  seed_rank: number | null;
+  circuit_points: number;
+  circuit_rank: number | null;
+  rating: number | null;
+};
+
+/**
+ * Effective seed order for the bracket-setup screen (organizer only). Same
+ * ladder the preview and publish RPCs read, so what the organizer sees is
+ * what gets published unless they reorder.
+ */
+export async function getTournamentSeedSuggestions(
+  tournamentId: string
+): Promise<TournamentSeedSuggestion[]> {
+  const { data, error } = await supabase.rpc('tournament_seed_suggestions', {
+    p_tournament_id: tournamentId,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentSeedSuggestion[];
+}
+
+/**
+ * Which ladder seeds a draw. `circuit` ranks on Circuit Rallia points,
+ * `rating` on the players' rating, `signup` on registration order, `manual`
+ * on whatever the organizer arranged. An organizer seed_rank still overrides
+ * the computed order in every mode.
+ */
+export const SEEDING_MODES = ['circuit', 'rating', 'signup', 'manual'] as const;
+export type SeedingMode = (typeof SEEDING_MODES)[number];
+
+/**
+ * Organizer picks the seeding ladder. Switching to a computed mode drops any
+ * hand-ordered seeds; switching to `manual` freezes the order the previous
+ * mode produced so the organizer keeps their starting point. Refused once the
+ * draw exists. Does not bump tournament.version.
+ */
+export async function setTournamentSeedingMode(
+  tournamentId: string,
+  mode: SeedingMode,
+  versionWas: number
+): Promise<Tournament> {
+  const { data, error } = await supabase.rpc('tournament_set_seeding_mode', {
+    p_tournament_id: tournamentId,
+    p_mode: mode,
+    p_version_was: versionWas,
+  });
+  if (error) throw new Error(error.message);
+  return data as Tournament;
 }
 
 /**

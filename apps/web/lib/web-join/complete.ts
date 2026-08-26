@@ -1,19 +1,21 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-
-import type { Database } from '@/types';
-
 import { joinMatch, leaveMatch, setSupabaseInstance } from '@rallia/shared-services';
 
+import type { Database } from '@/types';
 import {
   DEFAULT_WEB_ONBOARDING_PREFERENCES,
+  completeOnboarding,
   writeWebOnboardingProfile,
   type WebOnboardingProfilePayload,
 } from '@/lib/web-onboarding/profile';
+import { writeFavoriteFacilities } from '@/lib/web-onboarding/player-extras';
 
 /** Defaults when web join skips the preferences step (aligned with mobile onboarding). */
 export const DEFAULT_WEB_JOIN_PREFERENCES = DEFAULT_WEB_ONBOARDING_PREFERENCES;
 
-export type WebJoinProfilePayload = WebOnboardingProfilePayload;
+export type WebJoinProfilePayload = WebOnboardingProfilePayload & {
+  favoriteFacilityIds: string[];
+};
 
 export type WebJoinResult = {
   joinStatus: 'joined' | 'requested' | 'waitlisted';
@@ -94,6 +96,9 @@ export async function completeWebJoinProfile(
     referralInvitationType: 'match',
     referralTargetId: matchId,
   });
+  await writeFavoriteFacilities(admin, userId, payload.sportId, payload.favoriteFacilityIds);
+  // Refuses (and skips the join) when the record is still short of the minimum.
+  await completeOnboarding(admin, userId);
 
   return {
     joinStatus: await resolveJoinStatus(admin, matchId, userId),

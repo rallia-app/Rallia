@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { getTimeDifferenceFromNow } from '@rallia/shared-utils';
 import { ArrowRight, CheckCircle2, Loader2, LogOut, MessageCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { WebJoinMatchContext } from './_lib/match-context';
@@ -13,6 +13,7 @@ import { MatchActionLinks } from './_components/match-action-links';
 import {
   AuthStep,
   ConsentStep,
+  FavoritesStep,
   LocationStep,
   OnboardingError,
   OnboardingNav,
@@ -87,6 +88,8 @@ function joinErrorMessage(code: string, t: ReturnType<typeof useTranslations<'we
       return t('errors.eligibilityUnverified');
     case 'MINIMUM_AGE':
       return t('errors.minimumAge');
+    case 'ONBOARDING_INCOMPLETE':
+      return t('errors.onboardingIncomplete');
     default:
       return t('errors.submitFailed');
   }
@@ -168,6 +171,7 @@ export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps)
             sportId: payload.sportId,
             ratingScoreId: payload.ratingScoreId,
             location: payload.location,
+            favoriteFacilityIds: payload.favoriteFacilityIds,
           }
         : { matchId: match.id, locale: pageLocale };
 
@@ -196,6 +200,15 @@ export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps)
     [t]
   );
 
+  // The game's facility is the obvious first favourite; the player can still untick it.
+  const pinnedFacilities = useMemo(
+    () =>
+      match.facility_id && match.facility
+        ? [{ id: match.facility_id, name: match.facility.name, city: match.facility.city }]
+        : [],
+    [match.facility_id, match.facility]
+  );
+
   const controller = useWebOnboarding({
     sportId: match.sport_id,
     returnPath: `/${pageLocale}/join/match/${match.id}`,
@@ -204,6 +217,7 @@ export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps)
     resolveAuthenticatedStep,
     onSubmitProfile,
     mapSubmitError,
+    preselectedFacilityIds: pinnedFacilities.map(f => f.id),
   });
 
   const { step, setStep, setErrorMessage, setIsSubmitting, isSubmitting } = controller;
@@ -328,6 +342,9 @@ export function WebJoinWizard({ match, locale: pageLocale }: WebJoinWizardProps)
           <RatingStep controller={controller} t={t} sportName={match.sport?.name ?? ''} />
         )}
         {step === 'location' && <LocationStep controller={controller} t={t} />}
+        {step === 'favorites' && (
+          <FavoritesStep controller={controller} t={t} pinned={pinnedFacilities} />
+        )}
 
         {step === 'success' && (
           <SuccessCard

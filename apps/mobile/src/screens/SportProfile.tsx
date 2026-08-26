@@ -1060,10 +1060,18 @@ const SportProfile = () => {
         },
       });
     } else if (openSheet === 'rating') {
+      // Wait for player_sport so handleSaveRating can set the active rating
+      if (loadingSportStatus || loadingRating) return;
       setDidAutoOpenSheet(true);
       const sheetName =
         sportName.toLowerCase() === 'pickleball' ? 'pickleball-rating' : 'tennis-rating';
-      SheetManager.show(sheetName);
+      SheetManager.show(sheetName, {
+        payload: {
+          mode: 'edit',
+          initialRating: ratingInfo?.ratingScoreId,
+          onSave: handleSaveRating,
+        },
+      });
     } else if (openSheet === 'favorite-facilities') {
       if (loadingFavorites || !location) return;
       setDidAutoOpenSheet(true);
@@ -1116,7 +1124,15 @@ const SportProfile = () => {
         },
       });
     }
-  }, [openSheet, playOptionsLoadedOnce, didAutoOpenSheet, loadingFavorites, location]);
+  }, [
+    openSheet,
+    playOptionsLoadedOnce,
+    didAutoOpenSheet,
+    loadingFavorites,
+    location,
+    loadingSportStatus,
+    loadingRating,
+  ]);
 
   // Don't render until we have userId from context
   if (!userId) {

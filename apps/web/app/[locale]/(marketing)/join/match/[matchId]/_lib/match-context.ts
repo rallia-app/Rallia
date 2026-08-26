@@ -34,6 +34,7 @@ export type WebJoinMatchContext = {
   custom_latitude: number | null;
   custom_longitude: number | null;
   sport: { name: string; slug: string } | null;
+  facility_id: string | null;
   facility: {
     name: string;
     city: string;
@@ -51,7 +52,7 @@ export async function getMatchForWebJoin(matchId: string): Promise<WebJoinMatchC
   const { data } = await supabase
     .from('match')
     .select(
-      `id, sport_id, format, join_mode, match_date, start_time, end_time, timezone,
+      `id, sport_id, facility_id, format, join_mode, match_date, start_time, end_time, timezone,
        location_name, location_address, notes, cancelled_at,
        player_expectation, court_status, is_court_free, estimated_cost,
        preferred_opponent_gender, custom_latitude, custom_longitude,
@@ -88,10 +89,11 @@ export async function getMatchForWebJoin(matchId: string): Promise<WebJoinMatchC
     preferred_opponent_gender: data.preferred_opponent_gender,
     custom_latitude: data.custom_latitude,
     custom_longitude: data.custom_longitude,
-    sport: data.sport as WebJoinMatchContext['sport'],
+    sport: data.sport,
+    facility_id: data.facility_id,
     facility: data.facility as WebJoinMatchContext['facility'],
     court: data.court as WebJoinMatchContext['court'],
-    min_rating_score: data.min_rating_score as WebJoinMatchContext['min_rating_score'],
+    min_rating_score: data.min_rating_score,
     participants: data.participants as WebJoinMatchContext['participants'],
   };
 }

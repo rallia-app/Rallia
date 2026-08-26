@@ -40,12 +40,49 @@ export type WebOnboardingAttribution = {
   acquisitionChannel: string;
   referralInvitationType?: string;
   referralTargetId?: string;
+  /** Profile id of the referrer, resolved server-side from a referral code. */
+  referredBy?: string;
+  /** Inbound campaign context, persisted on the account rather than only in the clipboard token. */
+  utm?: {
+    source?: string;
+    medium?: string;
+    campaign?: string;
+    term?: string;
+    content?: string;
+  };
 };
+
+/** complete_onboarding() refused: the stable gap codes the client can localize. */
+export class OnboardingIncompleteError extends Error {
+  readonly code = 'ONBOARDING_INCOMPLETE' as const;
+  constructor(readonly missing: string[]) {
+    super('ONBOARDING_INCOMPLETE');
+    this.name = 'OnboardingIncompleteError';
+  }
+}
+
+/**
+ * The only way web code flips `profile.onboarding_completed`: the RPC re-checks the
+ * invariant (postal code, sport, rating, favourites) and refuses with the missing codes.
+ */
+export async function completeOnboarding(
+  admin: SupabaseClient<Database>,
+  userId: string
+): Promise<void> {
+  const { data, error } = await admin.rpc('complete_onboarding', { p_player_id: userId });
+  if (error) throw new Error(`Failed to complete onboarding: ${error.message}`);
+
+  const result = data as { ok?: boolean; missing?: string[] } | null;
+  if (!result?.ok) throw new OnboardingIncompleteError(result?.missing ?? []);
+}
 
 /**
  * Creates the player records a web signup needs: profile, player, the primary
  * sport, and a self-reported rating. Shared by the /games join gate and the
  * /courts booking gate so both produce identically-shaped accounts.
+ *
+ * Does NOT mark onboarding complete; callers write favourites, then call
+ * `completeOnboarding()`.
  */
 export async function writeWebOnboardingProfile(
   admin: SupabaseClient<Database>,
@@ -65,7 +102,6 @@ export async function writeWebOnboardingProfile(
       display_name: displayName,
       birth_date: payload.birthDate,
       preferred_locale: payload.locale === 'fr-CA' ? 'fr-CA' : 'en-US',
-      onboarding_completed: true,
       acquisition_channel: attribution.acquisitionChannel,
       ...(attribution.referralInvitationType
         ? {
@@ -73,6 +109,12 @@ export async function writeWebOnboardingProfile(
             referral_target_id: attribution.referralTargetId,
           }
         : {}),
+      ...(attribution.referredBy ? { referred_by: attribution.referredBy } : {}),
+      ...(attribution.utm?.source ? { utm_source: attribution.utm.source } : {}),
+      ...(attribution.utm?.medium ? { utm_medium: attribution.utm.medium } : {}),
+      ...(attribution.utm?.campaign ? { utm_campaign: attribution.utm.campaign } : {}),
+      ...(attribution.utm?.term ? { utm_term: attribution.utm.term } : {}),
+      ...(attribution.utm?.content ? { utm_content: attribution.utm.content } : {}),
     },
     { onConflict: 'id' }
   );

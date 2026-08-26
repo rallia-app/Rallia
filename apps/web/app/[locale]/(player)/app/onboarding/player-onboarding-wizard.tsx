@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { DayEnum, FacilitySearchResult } from '@rallia/shared-types';
+import type { DayEnum } from '@rallia/shared-types';
 import { useSports } from '@rallia/shared-hooks';
 import {
   MIN_AVAILABILITY_CELLS,
@@ -14,13 +14,13 @@ import {
   type HourGrid,
 } from '@rallia/shared-utils';
 
-import { AvailabilityStep } from './availability-step';
-import { FavoriteFacilitiesStep, MIN_FAVORITE_FACILITIES } from './favorite-facilities-step';
-import { SportStep } from './sport-step';
+import { AvailabilityStep } from '@/components/web-onboarding/availability-step';
+import { SportStep } from '@/components/web-onboarding/sport-step';
 
 import { AvatarPicker } from '@/components/app/inputs/avatar-picker';
 import {
   ConsentStep,
+  FavoritesStep,
   LocationStep,
   OnboardingError,
   OnboardingNav,
@@ -35,11 +35,12 @@ import { Stepper } from '@/components/web-onboarding/wizard-primitives';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
-/** Our own steps: one before the shared wizard's, three after. */
+/** Our own steps: one before the shared wizard's, two after. */
 const SPORT_STEP = 'sport';
 const AVAILABILITY_STEP = 'availability';
-const FAVORITES_STEP = 'favorites';
 const CONSENT_STEP = 'consent';
+/** Owned by the shared controller; named here for the journey and its label. */
+const FAVORITES_STEP = 'favorites';
 
 /**
  * The whole walk, in order. The sport step drops out when the account has one.
@@ -54,8 +55,8 @@ const JOURNEY_STEPS = [
   'personal',
   'rating',
   'location',
-  AVAILABILITY_STEP,
   FAVORITES_STEP,
+  AVAILABILITY_STEP,
   CONSENT_STEP,
 ];
 
@@ -116,11 +117,10 @@ export function PlayerOnboardingWizard({
   const sportIdRef = useRef(sportId);
   sportIdRef.current = sportId;
 
-  // The shared wizard submits at its location step; we intercept that payload and hold
-  // it until availability and favourites are collected, then post everything at once.
+  // The shared wizard submits at its favourites step; we intercept that payload and hold
+  // it until availability is collected, then post everything at once.
   const [profilePayload, setProfilePayload] = useState<OnboardingProfilePayload | null>(null);
   const [availability, setAvailability] = useState<HourGrid>(emptyGrid);
-  const [favorites, setFavorites] = useState<FacilitySearchResult[]>([]);
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(
     initialProfilePictureUrl
   );
@@ -152,8 +152,8 @@ export function PlayerOnboardingWizard({
   }, []);
 
   const submitProfile = useCallback(async (payload: OnboardingProfilePayload) => {
-    // Nothing is written yet — an account without availability or favourites is exactly
-    // the half-record this wizard exists to avoid.
+    // Nothing is written yet — an account without availability is exactly the
+    // half-record this wizard exists to avoid.
     setProfilePayload(payload);
     return AVAILABILITY_STEP;
   }, []);
@@ -193,7 +193,7 @@ export function PlayerOnboardingWizard({
       // profile write cannot lose it.
       await acceptPolicies();
 
-      const response = await fetch('/api/player-onboarding/complete', {
+      const response = await fetch('/api/web-onboarding/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -206,7 +206,7 @@ export function PlayerOnboardingWizard({
           availability: Array.from(availability)
             .map(parseCellKey)
             .filter((cell): cell is { day: DayEnum; hour: number } => cell !== null),
-          favoriteFacilityIds: favorites.map(facility => facility.id),
+          favoriteFacilityIds: profilePayload.favoriteFacilityIds,
         }),
       });
 
@@ -223,7 +223,7 @@ export function PlayerOnboardingWizard({
       setFinishError(code === 'MINIMUM_AGE' ? t('errors.minimumAge') : t('errors.submitFailed'));
       setIsFinishing(false);
     }
-  }, [profilePayload, availability, favorites, profilePictureUrl, locale, acceptPolicies, t]);
+  }, [profilePayload, availability, profilePictureUrl, locale, acceptPolicies, t]);
 
   // Prefill gender and birth date, which applyResolvedStep does not carry. Runs once
   // the controller is ready so it cannot clobber something the player just typed.
@@ -312,25 +312,10 @@ export function PlayerOnboardingWizard({
         )}
         {step === 'rating' && <RatingStep controller={controller} t={t} sportName={sportName} />}
         {step === 'location' && <LocationStep controller={controller} t={t} />}
+        {step === FAVORITES_STEP && <FavoritesStep controller={controller} t={t} />}
 
         {step === AVAILABILITY_STEP && (
           <AvailabilityStep value={availability} onChange={setAvailability} />
-        )}
-
-        {step === FAVORITES_STEP && profilePayload && (
-          <FavoriteFacilitiesStep
-            sportId={profilePayload.sportId}
-            latitude={profilePayload.location.latitude}
-            longitude={profilePayload.location.longitude}
-            selected={favorites}
-            onToggle={facility =>
-              setFavorites(current =>
-                current.some(entry => entry.id === facility.id)
-                  ? current.filter(entry => entry.id !== facility.id)
-                  : [...current, facility]
-              )
-            }
-          />
         )}
 
         {step === CONSENT_STEP && (
@@ -361,7 +346,12 @@ export function PlayerOnboardingWizard({
 
         {step === AVAILABILITY_STEP && (
           <div className="flex gap-3">
-            <Button type="button" variant="outline" size="lg" onClick={() => setStep('location')}>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={() => setStep(FAVORITES_STEP)}
+            >
               <ArrowLeft className="size-4" />
               {t('back')}
             </Button>
@@ -370,30 +360,6 @@ export function PlayerOnboardingWizard({
               size="lg"
               className="flex-1 font-semibold"
               disabled={countSelected(availability) < MIN_AVAILABILITY_CELLS}
-              onClick={() => setStep(FAVORITES_STEP)}
-            >
-              {t('continue')}
-              <ArrowRight className="size-4" />
-            </Button>
-          </div>
-        )}
-
-        {step === FAVORITES_STEP && (
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => setStep(AVAILABILITY_STEP)}
-            >
-              <ArrowLeft className="size-4" />
-              {t('back')}
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              className="flex-1 font-semibold"
-              disabled={favorites.length < MIN_FAVORITE_FACILITIES}
               onClick={() => setStep(CONSENT_STEP)}
             >
               {t('continue')}
@@ -408,7 +374,7 @@ export function PlayerOnboardingWizard({
               type="button"
               variant="outline"
               size="lg"
-              onClick={() => setStep(FAVORITES_STEP)}
+              onClick={() => setStep(AVAILABILITY_STEP)}
               disabled={isFinishing}
             >
               <ArrowLeft className="size-4" />

@@ -85,6 +85,8 @@ export * from './useSportLeaderboard';
 export * from './useTournamentRanking';
 export * from './useMapData';
 export * from './useProfileCompleteness';
+export * from './useOnboardingGaps';
+export * from './onboardingGapItems';
 export * from './useCoverageCheck';
 
 // Platform-specific exports - Metro resolves .native.ts for React Native builds

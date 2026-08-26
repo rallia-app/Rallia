@@ -79,7 +79,7 @@ export function WeeklyCheckInScreen() {
   // The wizard is sport-specific: opportunities, plan proposals, the weekly
   // goal and the streak are all scoped to the app's selected sport mode. Only
   // availability stays player-wide (the schedule is the schedule).
-  const { selectedSport, userSports, isLoading: sportLoading } = useSport();
+  const { selectedSport, hasSyncedSports, isLoading: sportLoading } = useSport();
   const wizard = useWeeklyCheckInWizard({ sportId: selectedSport?.id ?? null });
 
   const { session } = useAuth();
@@ -118,15 +118,17 @@ export function WeeklyCheckInScreen() {
 
   // A sportless player can only fail record_weekly_checkin, and a reminder tap
   // routes here past the is_pending_check_in gate (Sentry REACT-NATIVE-BX).
-  // Gate on the roster: selectedSport lands a render after isLoading flips.
+  // hasSyncedSports, not userSports.length: the guest-selection fallback
+  // populates userSports for players with zero player_sport rows, which is
+  // exactly the population the submit RPC rejects.
   const bailedNoSportRef = useRef(false);
   useEffect(() => {
     if (bailedNoSportRef.current) return;
-    if (sportLoading || userSports.length > 0) return;
+    if (sportLoading || hasSyncedSports) return;
     bailedNoSportRef.current = true;
     Logger.warn('Weekly check-in opened with no active sport, closing', { source });
     dismissModal();
-  }, [sportLoading, userSports, source, dismissModal]);
+  }, [sportLoading, hasSyncedSports, source, dismissModal]);
 
   // Fire `weekly_checkin_opened` once, after the cold-start context loads so the
   // streak + recap variant are populated.

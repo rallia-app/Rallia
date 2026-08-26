@@ -126,6 +126,10 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: 1.5rem;
+  /* Tailwind's defaults for these two sit below --radius-xl, which inverted the
+     scale: rounded-2xl rendered smaller than rounded-xl. Keep them ascending. */
+  --radius-2xl: 2rem;
+  --radius-3xl: 2.5rem;
 }
 
 /* Dark mode base styles - Energy & Trust theme */
@@ -899,14 +903,9 @@ textarea {
 /* Enhanced micro-interactions */
 
 /* Button hover effects - Energy & Trust theme */
+/* Elevation only. Colour is the button variant's to own, so no background here. */
 .button-scale:hover {
-  background: linear-gradient(
-    135deg,
-    var(--secondary-600) 0%,
-    var(--secondary-700) 100%
-  );
-  box-shadow: 0 8px 25px -5px rgba(255, 107, 107, 0.3);
-  border-radius: 0.3rem;
+  box-shadow: 0 8px 25px -5px rgb(0 0 0 / 0.25);
 }
 
 /* Enhanced badge interactions */

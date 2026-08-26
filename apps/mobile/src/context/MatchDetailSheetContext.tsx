@@ -13,6 +13,8 @@
 import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
 import { SheetManager, getSheetStack } from 'react-native-actions-sheet';
 import type { MatchWithDetails } from '@rallia/shared-types';
+
+import type { MatchDeepLinkAction } from '../navigation/deepLinkStore';
 import { getMatchWithDetails } from '@rallia/shared-services';
 
 import * as Analytics from '#/services/analytics';
@@ -39,7 +41,13 @@ interface MatchDetailSheetContextType {
   /** Open the Match Detail bottom sheet with the specified match */
   openSheet: (
     match: MatchDetailData,
-    options?: { onMatchRemoved?: () => void; onDismiss?: () => void; source?: string }
+    options?: {
+      onMatchRemoved?: () => void;
+      onDismiss?: () => void;
+      source?: string;
+      /** Sub-destination to run once the match has loaded (email CTA deep links). */
+      autoAction?: MatchDeepLinkAction;
+    }
   ) => void;
 
   /** Close the Match Detail bottom sheet */
@@ -60,6 +68,10 @@ interface MatchDetailSheetContextType {
   /** Surface the current match was opened from — read by the sheet's join
    *  handlers so match_joined/match_join_requested carry discovery_source. */
   discoverySourceRef: React.RefObject<string>;
+
+  /** Pending sub-destination from a deep link. The sheet consumes it once the
+   *  match has loaded, then clears it so a later manual open stays inert. */
+  autoActionRef: React.RefObject<MatchDeepLinkAction | null>;
 }
 
 // =============================================================================
@@ -80,6 +92,7 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
   const onMatchRemovedRef = React.useRef<(() => void) | null>(null);
   const onDismissRef = React.useRef<(() => void) | null>(null);
   const discoverySourceRef = React.useRef<string>('match_card');
+  const autoActionRef = React.useRef<MatchDeepLinkAction | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<MatchDetailData | null>(null);
 
   /**
@@ -91,9 +104,15 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
   const openSheet = useCallback(
     (
       match: MatchDetailData,
-      options?: { onMatchRemoved?: () => void; onDismiss?: () => void; source?: string }
+      options?: {
+        onMatchRemoved?: () => void;
+        onDismiss?: () => void;
+        source?: string;
+        autoAction?: MatchDeepLinkAction;
+      }
     ) => {
       discoverySourceRef.current = options?.source ?? 'match_card';
+      autoActionRef.current = options?.autoAction ?? null;
       Analytics.matchViewed({
         match_id: match.id,
         source: discoverySourceRef.current,
@@ -142,6 +161,7 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
   const handleSheetDismiss = useCallback(() => {
     setSelectedMatch(null);
     discoverySourceRef.current = 'match_card';
+    autoActionRef.current = null;
     if (onDismissRef.current) {
       onDismissRef.current();
       onDismissRef.current = null;
@@ -163,6 +183,7 @@ export const MatchDetailSheetProvider: React.FC<MatchDetailSheetProviderProps> =
     handleSheetDismiss,
     onMatchRemovedRef,
     discoverySourceRef,
+    autoActionRef,
   };
 
   return (

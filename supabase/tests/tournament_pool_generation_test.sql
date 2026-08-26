@@ -159,15 +159,13 @@ BEGIN
         RAISE EXCEPTION 'pool sizes %, expected {4,4,3,3}', v_sizes;
     END IF;
 
-    -- Serpentine: the 4 top seeds land in 4 distinct pools. Inside this
-    -- transaction registered_at is frozen, so derive seed order exactly the
-    -- way the RPC does (seed_rank NULLS LAST, registered_at, id).
+    -- Serpentine: the 4 top seeds land in 4 distinct pools. Read the seed
+    -- order from the same ladder the RPC reads (lt_tournament_seed_order).
     SELECT count(DISTINCT p.pool_number) INTO v_top_pools
       FROM public.tournament_preview_pools(v_t.id) p
      WHERE p.registration_id IN (
-        SELECT tr.id FROM tournament_registrations tr
-         WHERE tr.tournament_id = v_t.id AND tr.status = 'registered'
-         ORDER BY tr.seed_rank ASC NULLS LAST, tr.registered_at ASC, tr.id ASC
+        SELECT o.registration_id FROM public.lt_tournament_seed_order(v_t.id) o
+         ORDER BY o.suggested_seed
          LIMIT 4);
     IF v_top_pools <> 4 THEN
         RAISE EXCEPTION 'top seeds share a pool (% distinct)', v_top_pools;

@@ -1,26 +1,22 @@
 {
-  "serie1Announcement": {
-    "badge": "Série 1",
-    "title": "Nos premiers tournois sont là",
-    "subtitle": "Des tableaux simples et gratuits, ouverts à tout le Grand Montréal. Trois catégories, pis des points Rallia pour tous ceux qui embarquent.",
-    "catBeginner": "Débutant 1.5+",
-    "catIntermediate": "Intermédiaire 3.0+",
-    "catAdvanced": "Avancé 4.0+",
-    "dates": "Inscriptions jusqu'au 25 juillet · Ça commence le 26",
-    "cta": "Voir les tournois",
-    "later": "Plus tard"
-  },
-  "serie2Announcement": {
-    "badge": "Série 2",
-    "title": "La Série 1 a ses champions",
-    "titleChampion": "T'as gagné la Série 1",
-    "subtitleChampion": "Le tableau {label}, c'est toi qui l'as gagné. Chapeau! La Série 2 s'en vient, avec une vraie bourse à gagner. Défends ton titre.",
-    "subtitlePlayed": "Dans ton tableau {label}, c'est {name} qui repart avec le titre. Merci d'avoir embarqué! La Série 2 s'en vient: c'est le temps de ta revanche.",
-    "subtitleGeneric": "La première série est dans les livres. La Série 2 s'en vient: des tableaux par région et par calibre, avec une vraie bourse à gagner.",
-    "featuredTitle": "Ton tableau pour la Série 2",
-    "deadline": "Les inscriptions ferment le {date}. Les places sont limitées.",
-    "cta": "Je m'inscris",
-    "seeAll": "Voir tous les tableaux"
+  "milestone1000": {
+    "badge": "1000 joueurs",
+    "title": "1000 joueurs. Une communauté.",
+    "body1": "Il y a quelques mois, Rallia n'était qu'une idée entre deux passionnés tannés de chercher quelqu'un pour jouer.",
+    "body2": "Aujourd'hui, vous êtes 1000 à avoir embarqué. À jouer, à organiser vos parties, à faire vivre le tennis et le pickleball récréatif à Montréal.",
+    "body2b": "Et tu en fais partie.",
+    "body3": "Merci d'y avoir cru. Merci d'avoir joué. Merci d'être là.",
+    "signature": "Jean & Mathis",
+    "continueCta": "Continuer",
+    "ctaTitle": "Et si on était 2000?",
+    "ctaSubtitle": "Partage Rallia avec quelqu'un avec qui tu aimerais jouer. Ta prochaine partie se trouve peut-être déjà dans tes contacts.",
+    "prize": "À gagner : {prize}",
+    "yourCode": "Ton code",
+    "shareCta": "Partager Rallia",
+    "copyLink": "Copier mon lien",
+    "copyCode": "Copier mon code",
+    "shareTitle": "Rejoins-moi sur Rallia",
+    "shareMessage": "On est déjà 1000 à jouer sur Rallia à Montréal. Trouve-toi une partie, ça prend deux minutes : {link}"
   },
   "suggestionCard": {
     "courtsAvailable": "{count} terrains disponibles"
@@ -1856,7 +1852,10 @@
       "verificationCodeSent": "Code de vérification envoyé!",
       "cityRequired": "Veuillez entrer votre ville",
       "postalCodeRequired": "Le code postal est requis. Veuillez retourner et compléter la configuration de l'emplacement.",
-      "failedToSaveLocation": "Échec de l'enregistrement de votre localisation. Veuillez réessayer."
+      "failedToSaveLocation": "Échec de l'enregistrement de votre localisation. Veuillez réessayer.",
+      "verifyPostalCode": "Entrez un code postal que nous pouvons localiser pour continuer.",
+      "missingDetailsTitle": "Presque terminé",
+      "missingDetails": "Il manque encore quelques infos avant de terminer votre profil. On les complète ensemble."
     },
     "successMessages": {
       "personalInfoUpdated": "Informations personnelles mises à jour avec succès",
@@ -1931,6 +1930,8 @@
     "locationStep": {
       "title": "Confirmez votre emplacement",
       "subtitle": "Ajoutez votre adresse pour des matchs plus précis, ou continuez avec votre code postal",
+      "postalCodeTitle": "Où jouez-vous?",
+      "postalCodeSubtitle": "Entrez votre code postal pour qu'on trouve des parties et des joueurs près de chez vous.",
       "savedPostalCode": "Votre emplacement enregistré",
       "editPostalCode": "Modifier",
       "postalCodeUpdated": "Code postal mis à jour",
@@ -2674,7 +2675,6 @@
     "deleteGroup": "Supprimer le groupe",
     "leaveGroup": "Quitter le groupe",
     "joinGroup": "Rejoindre le groupe",
-    "groupOptions": "Options du groupe",
     "groupName": "Nom du groupe",
     "groupNamePlaceholder": "Entrez le nom du groupe",
     "enterGroupName": "Entrez le nom du groupe...",
@@ -2934,11 +2934,9 @@
     },
     "recentGames": {
       "title": "Parties récentes",
-      "noGames": "Aucune partie jouée dans les 180 derniers jours",
       "competitive": "Compétitif",
       "practice": "Pratique",
       "player": "Joueur",
-      "daysAgo": "Il y a {count} jours",
       "viewAll": "Voir tout"
     },
     "detail": {
@@ -3913,7 +3911,7 @@
     "shareTitle": "Rejoins-moi sur Rallia!",
     "shareMessage": "Hey! J'ai trouvé cette app Rallia pour trouver des joueurs et organiser des parties de {sport}. Ça m'a fait penser à toi!\n\n{link}",
     "yourStats": "Vos statistiques de parrainage",
-    "clicked": "Cliqué",
+    "clicked": "Clics",
     "signedUp": "Inscrits",
     "haveReferralCode": "Vous avez un code de parrainage?",
     "enterCode": "Entrer le code de parrainage",
@@ -5081,6 +5079,7 @@
     "create": "Créer un événement",
     "createSubtitle": "Pars un tournoi ou une ligue",
     "myEvents": "Mes événements",
+    "viewAllMine": "Voir tout",
     "searchPlaceholder": "Rechercher des événements...",
     "empty": "Aucun événement pour le moment",
     "emptyDescription": "Rien d'ouvert près de chez toi en ce moment. Reviens bientôt, ou crée le tien.",
@@ -5315,7 +5314,30 @@
   },
   "bracketSetup": {
     "title": "Préparer le tableau",
-    "intro": "Le classement est optionnel. L'ordre ci-dessous détermine les duels du premier tour, donc place tes meilleurs joueurs en haut. Les numéros de tête de série sont visibles par tout le monde.",
+    "intro": "Choisis comment le tableau est classé, puis réorganise qui tu veux à la main. L'ordre détermine les duels du premier tour et les numéros sont visibles par tout le monde.",
+    "modeLabel": "Méthode de classement",
+    "modeError": "Impossible de changer le classement. Réessaie.",
+    "modes": {
+      "circuit": {
+        "title": "Circuit Rallia",
+        "description": "Le sommet du Circuit est classé en premier. La cote départage."
+      },
+      "rating": {
+        "title": "Cote",
+        "description": "La meilleure cote est classée en premier. Les points Circuit départagent."
+      },
+      "signup": {
+        "title": "Ordre d'inscription",
+        "description": "Le premier inscrit est tête de série 1. Rien d'autre ne compte."
+      },
+      "manual": {
+        "title": "Manuel",
+        "description": "Tu établis l'ordre toi-même."
+      }
+    },
+    "circuitPoints": "Circuit Rallia · {points} pts",
+    "noCircuitPoints": "Pas encore de points Circuit",
+    "ratingValue": "Cote {rating}",
     "seedsLabel": "Têtes de série",
     "previewLabel": "Premier tour",
     "previewSummary": "{players} joueurs · {rounds} tours · {byes} exempts",
@@ -6089,6 +6111,8 @@
     "viewAll": "Voir tout",
     "myMatches": "Mes parties",
     "myMatchesSubtitle": "Tes parties à venir",
+    "myEvents": "Mes événements",
+    "myEventsSubtitle": "Les tournois et ligues où tu es inscrit",
     "myMatchesStatus": {
       "confirmed": "Confirmé",
       "needsPlayers": "Cherche des joueurs",
@@ -6385,7 +6409,8 @@
         "headline": "Ta prochaine partie commence ici.",
         "subheadline": "Télécharge l'application, connecte-toi avec des joueurs de ton niveau, et commence à jouer aujourd'hui.",
         "downloadButton": "Télécharger l'application",
-        "learnMore": "En savoir plus"
+        "learnMore": "En savoir plus",
+        "createAccount": "Crée ton compte"
       },
       "leadAnswer": {
         "headline": "Qu'est-ce que Rallia ?",
@@ -6920,7 +6945,31 @@
     "roleHint": "Sélectionnez le rôle qui décrit le mieux votre position dans cette organisation.",
     "createButton": "Créer l'organisation",
     "creating": "Création...",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "funnel": {
+      "pageTitle": "Créez votre compte Rallia",
+      "pageDescription": "Créez votre compte joueur en quelques étapes, puis installez l'application et jouez.",
+      "heading": "Créez votre compte",
+      "subheading": "Quelques étapes rapides, puis installez l'application et jouez.",
+      "auth": {
+        "title": "Connectez-vous pour commencer",
+        "description": "Utilisez Google ou votre courriel. Vous vous connecterez de la même façon dans l'application."
+      },
+      "finish": "Créer mon compte",
+      "handoff": {
+        "title": "Votre compte est prêt",
+        "body": "Les parties se passent dans l'application Rallia. Installez-la et connectez-vous pour trouver des joueurs et des parties près de chez vous.",
+        "signIn": {
+          "google": "Connectez-vous avec Google dans l'application, comme ici.",
+          "apple": "Connectez-vous avec Apple dans l'application, comme ici.",
+          "facebook": "Connectez-vous avec Facebook dans l'application, comme ici.",
+          "email": "Connectez-vous avec votre courriel ({email}) dans l'application, comme ici.",
+          "generic": "Connectez-vous avec le même compte dans l'application."
+        },
+        "qrHint": "Scannez avec votre téléphone pour installer Rallia.",
+        "installHint": "Installez l'application, puis connectez-vous. Votre profil est déjà prêt."
+      }
+    }
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -11725,7 +11774,10 @@
       "profile": "Profil",
       "level": "Niveau",
       "location": "Secteur",
-      "preferences": "Préférences"
+      "preferences": "Préférences",
+      "favorites": "Favoris",
+      "sport": "Sport",
+      "availability": "Disponibilités"
     },
     "auth": {
       "title": "Connectez-vous pour rejoindre",
@@ -11836,7 +11888,11 @@
       "alreadyHost": "Vous êtes le créateur de cette partie, vous y êtes déjà.",
       "eligibilityUnverified": "Nous n'avons pas pu vérifier votre admissibilité à cette partie. Veuillez réessayer.",
       "matchStarted": "Cette partie a déjà commencé, vous ne pouvez donc pas la quitter ici.",
-      "consentRequired": "Veuillez accepter la Politique de confidentialité et les Conditions générales d’utilisation pour continuer."
+      "consentRequired": "Veuillez accepter la Politique de confidentialité et les Conditions générales d’utilisation pour continuer.",
+      "selectFavorites": "Choisissez au moins {min} terrains favoris pour continuer.",
+      "onboardingIncomplete": "Il manque quelque chose à votre profil. Revenez en arrière et vérifiez vos réponses.",
+      "selectSport": "Choisissez un sport pour continuer.",
+      "selectAvailability": "Choisissez au moins {min} plages horaires pour continuer."
     },
     "chat": {
       "title": "Clavardage de la partie",
@@ -11855,6 +11911,17 @@
         "body": "Restez respectueux, gardez les messages en lien avec la partie et évitez de partager vos coordonnées personnelles tant que vous n'êtes pas à l'aise. Les messages peuvent être modérés.",
         "accept": "Compris, on clavarde"
       }
+    },
+    "favorites": {
+      "title": "Vos terrains favoris",
+      "description": "Choisissez au moins {min} endroits où vous aimez jouer. On s'en sert pour vous proposer des parties près de chez vous.",
+      "counter": "{count} / {min} sélectionnés",
+      "searchLabel": "Rechercher un terrain",
+      "searchPlaceholder": "Recherchez par nom ou par ville...",
+      "noLocation": "Entrez d'abord votre code postal pour voir les terrains près de chez vous.",
+      "noResults": "Aucun terrain ne correspond à votre recherche.",
+      "noFacilitiesNearby": "Aucun terrain trouvé près de chez vous. Essayez une recherche par nom.",
+      "hint": "Vous pouvez modifier vos terrains favoris en tout temps dans votre profil."
     }
   },
   "webBook": {
@@ -11885,7 +11952,8 @@
       "consent": "Consentement",
       "profile": "Profil",
       "level": "Niveau",
-      "location": "Endroit"
+      "location": "Endroit",
+      "favorites": "Favoris"
     },
     "auth": {
       "title": "Connecte-toi pour réserver",
@@ -11953,7 +12021,20 @@
       "invalidPostalCode": "Entre un code postal valide.",
       "ratingsLoadFailed": "Impossible de charger les niveaux. Rafraîchis la page pis réessaie.",
       "submitFailed": "Une erreur est survenue. Réessaie.",
-      "facilityUnavailable": "Ce terrain n’est plus disponible."
+      "facilityUnavailable": "Ce terrain n’est plus disponible.",
+      "selectFavorites": "Choisissez au moins {min} terrains favoris pour continuer.",
+      "onboardingIncomplete": "Il manque quelque chose à votre profil. Revenez en arrière et vérifiez vos réponses."
+    },
+    "favorites": {
+      "title": "Vos terrains favoris",
+      "description": "Choisissez au moins {min} endroits où vous aimez jouer. On s'en sert pour vous proposer des parties près de chez vous.",
+      "counter": "{count} / {min} sélectionnés",
+      "searchLabel": "Rechercher un terrain",
+      "searchPlaceholder": "Recherchez par nom ou par ville...",
+      "noLocation": "Entrez d'abord votre code postal pour voir les terrains près de chez vous.",
+      "noResults": "Aucun terrain ne correspond à votre recherche.",
+      "noFacilitiesNearby": "Aucun terrain trouvé près de chez vous. Essayez une recherche par nom.",
+      "hint": "Vous pouvez modifier vos terrains favoris en tout temps dans votre profil."
     }
   },
   "playPage": {
@@ -12538,6 +12619,15 @@
       "phone": "Ajouter votre numéro de téléphone",
       "displayName": "Choisir un nom d'affichage",
       "playStyle": "Définir votre style de jeu"
+    },
+    "required": "Requis",
+    "gapBannerDescription": "Il manque quelques infos essentielles, alors les joueurs près de chez vous ne vous trouvent pas encore pour des parties. Ça se règle en une minute.",
+    "gapBannerCta": "Corriger",
+    "gaps": {
+      "sport": "Choisir votre sport",
+      "rating": "Choisir votre niveau au {sport}",
+      "favorites": "Choisir au moins {count} terrains favoris pour le {sport}",
+      "postalCode": "Ajouter votre code postal"
     }
   },
   "donate": {

@@ -28,7 +28,7 @@ import {
   useToast,
 } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
-import { SheetManager, getSheetStack } from 'react-native-actions-sheet';
+import { SheetManager } from 'react-native-actions-sheet';
 import {
   useNearbyOpenCourtCount,
   useProfile,
@@ -43,7 +43,6 @@ import {
   useOtherSportsUnreadCount,
   useSports,
   useProfileCompleteness,
-  useReferral,
   useAdminStatus,
   useMySportRank,
   useMyTournamentRanking,
@@ -80,8 +79,6 @@ import {
 } from '#/navigation/deepLinkStore';
 import { useCheckInContext } from '#/features/weekly-checkin/api';
 import { WEEKLY_CHECKIN_ENABLED } from '#/features/weekly-checkin/featureFlag';
-import { isWeeklyCheckInActive } from '#/features/weekly-checkin/isWizardActive';
-import { isSerie2AnnouncementActive } from '#/features/tournaments/announcement/isAnnouncementActive';
 import { CopilotStep, WalkthroughableView } from '#/context/TourContext';
 import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import {
@@ -119,13 +116,7 @@ import { SuggestionCard } from '#/components/SuggestionCard';
 import BillingIssueBanner from '#/components/BillingIssueBanner';
 import ReferenceRequestsBanner from '#/components/ReferenceRequestsBanner';
 import HomeBanner, { HomeBannerLayoutProvider } from '#/components/HomeBanner';
-import {
-  incrementOnboardedLaunchCount,
-  shouldShowReferralInvite,
-  markSheetShown,
-} from '#/utils/referralInviteFrequency';
 import { runWhenIdle } from '#/utils/runWhenIdle';
-import { IS_E2E } from '#/utils/e2e';
 
 import TennisIcon from '../../assets/icons/tennis.svg';
 import PickleballIcon from '../../assets/icons/pickleball.svg';
@@ -465,7 +456,11 @@ const Home = () => {
       switch (payload.type) {
         case 'match': {
           const match = await getMatchWithDetails(payload.matchId);
-          if (match) openMatchDetail(match as MatchDetailData, { source: 'deep_link' });
+          if (match)
+            openMatchDetail(match as MatchDetailData, {
+              source: 'deep_link',
+              autoAction: payload.action,
+            });
           break;
         }
         case 'group': {
@@ -626,44 +621,6 @@ const Home = () => {
     if (player?.id) processDeepLink();
   }, [player?.id, processDeepLink]);
 
-  // Referral invite prompt — shown every 3 launches (0 referrals) or 7 launches (1+ referrals).
-  // Deferred past first paint — this is a periodic prompt, never time-sensitive.
-  const { stats: referralStats, statsLoading: referralStatsLoading } = useReferral(player?.id);
-  useEffect(() => {
-    if (IS_E2E) return;
-    if (!isOnboarded || !player?.id || referralStatsLoading) return;
-
-    const hasReferredUser = (referralStats?.total_converted ?? 0) >= 1;
-
-    const handle = runWhenIdle(() => {
-      (async () => {
-        await incrementOnboardedLaunchCount();
-        const show = await shouldShowReferralInvite(hasReferredUser);
-        if (show) {
-          // Never stack on another pop-up. The wizard owns the screen when
-          // it's presenting, and any already-open sheet was either user-intent
-          // (deep link) or another auto-opener that got there first. This
-          // prompt is periodic and deferrable, so it always yields. Same guard
-          // Serie1AnnouncementAutoOpener and useApplyUpdateOnResume use. The
-          // launch counter still ticks so it's eligible again next launch.
-          if (
-            isWeeklyCheckInActive() ||
-            isSerie2AnnouncementActive() ||
-            getSheetStack().length > 0
-          ) {
-            Logger.logUserAction('referral_invite_suppressed_for_wizard', {
-              openSheets: getSheetStack().length,
-            });
-            return;
-          }
-          await markSheetShown();
-          SheetManager.show('referral-invite');
-        }
-      })();
-    });
-    return () => handle.cancel();
-  }, [isOnboarded, player?.id, referralStatsLoading, referralStats?.total_converted]);
-
   const { selectedSport, isLoading: sportLoading, userSports, setSelectedSport } = useSport();
 
   // Refs so processDeepLink (stable callback) can auto-switch sport without stale closures
@@ -694,7 +651,21 @@ const Home = () => {
   // Profile completeness for banner
   const profileCompleteness = useProfileCompleteness();
   const profileCompletionBanner = useProfileCompletionBannerVisibility(
-    profileCompleteness.isComplete
+    profileCompleteness.isComplete,
+    profileCompleteness.hasOnboardingGaps
+  );
+
+  // Gaps get fixed on other screens (SportProfile, UserProfile); re-ask on return.
+  const gapsFocusedOnceRef = useRef(false);
+  const { hasOnboardingGaps, refetchOnboardingGaps } = profileCompleteness;
+  useFocusEffect(
+    useCallback(() => {
+      if (!gapsFocusedOnceRef.current) {
+        gapsFocusedOnceRef.current = true;
+        return;
+      }
+      if (hasOnboardingGaps) void refetchOnboardingGaps();
+    }, [hasOnboardingGaps, refetchOnboardingGaps])
   );
 
   // Billing-issue banner dismissal — lifted out of the banner so Home knows
@@ -727,6 +698,9 @@ const Home = () => {
         );
       } else if (item.actionType === 'sheet' && item.actionSheet) {
         // For sheet actions, navigate to UserProfile where the sheets are available
+        (appNavigation.navigate as (...args: unknown[]) => void)('UserProfile');
+      } else if (item.actionType === 'sport_setup') {
+        // Sport activation (rating + favourites wizard) lives on UserProfile
         (appNavigation.navigate as (...args: unknown[]) => void)('UserProfile');
       } else if (item.actionType === 'image_picker') {
         appNavigation.navigate('UserProfile' as never);
@@ -1918,7 +1892,7 @@ const Home = () => {
     } else if (!isOnboarded) {
       // Signed in but not onboarded: show complete profile prompt
       headerComponents.push(
-        <View key="complete-profile">
+        <View key="complete-profile" style={styles.emptyStateFill}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderText}>
               <Text variant="display" size="xl" weight="bold" color={colors.text}>
@@ -1926,7 +1900,7 @@ const Home = () => {
               </Text>
             </View>
           </View>
-          <View style={styles.myMatchesEmptyWrap}>
+          <View style={[styles.myMatchesEmptyWrap, styles.emptyStateFillCenter]}>
             <View style={[styles.myMatchesEmpty, { backgroundColor: colors.card }]}>
               <Ionicons name="person-add-outline" size={32} color={colors.textMuted} />
               <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
@@ -1954,7 +1928,11 @@ const Home = () => {
       headerComponents.push(<View key="section-header">{renderSectionHeader()}</View>);
     }
 
-    return <View>{headerComponents}</View>;
+    return (
+      <View style={!!session && !isOnboarded ? styles.emptyStateFill : undefined}>
+        {headerComponents}
+      </View>
+    );
   }, [
     session,
     isOnboarded,
@@ -2354,6 +2332,14 @@ const styles = StyleSheet.create({
   },
   myMatchesSection: {
     overflow: 'visible', // Allow corner badges to extend outside cards
+  },
+  /** Absorbs leftover viewport so a short empty state does not leave dead space. */
+  emptyStateFill: {
+    flexGrow: 1,
+  },
+  emptyStateFillCenter: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   // Full-width empty-state card — replaces the carousel entirely when there
   // are no upcoming games, so the message reads as a section instead of a

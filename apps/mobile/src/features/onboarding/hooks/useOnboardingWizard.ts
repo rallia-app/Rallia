@@ -15,6 +15,7 @@ import DatabaseService, {
   type PendingPolicyConsent,
 } from '@rallia/shared-services';
 import type { FacilitySearchResult } from '@rallia/shared-types';
+import { MIN_FAVORITE_FACILITIES, type OnboardingGaps } from '@rallia/shared-utils';
 
 import {
   cellKey,
@@ -29,6 +30,13 @@ import * as Analytics from '#/services/analytics';
  */
 export const GUEST_SPORTS_STORAGE_KEY = '@rallia/guest-selected-sports';
 
+/**
+ * AsyncStorage key written by pre-onboarding's PostalCodeStep (via
+ * UserLocationContext). Kept in sync with `USER_HOME_LOCATION_KEY` in
+ * apps/mobile/src/context/UserLocationContext.tsx.
+ */
+const HOME_LOCATION_STORAGE_KEY = '@rallia/user-home-location';
+
 interface GuestSportEntry {
   id: string;
   name: string;
@@ -37,6 +45,8 @@ interface GuestSportEntry {
 export type OnboardingStepId =
   | 'consent'
   | 'personal'
+  | 'sports'
+  | 'location'
   | 'tennis-rating'
   | 'pickleball-rating'
   | 'preferences'
@@ -119,6 +129,8 @@ interface UseOnboardingWizardReturn {
   // Navigation
   goToNextStep: () => void;
   goToPrevStep: () => void;
+  /** Jump to a step, inserting the sport/location step if it was not in the list. */
+  jumpToStep: (stepId: OnboardingStepId) => void;
   canGoNext: boolean;
   canGoBack: boolean;
   isLastStep: boolean;
@@ -134,6 +146,66 @@ interface UseOnboardingWizardReturn {
 }
 
 const DEFAULT_AVAILABILITIES: HourGrid = emptyGrid();
+
+/**
+ * Steps the wizard only shows when pre-onboarding's hand-off left a hole:
+ * no resolvable sport, or no postal code on the player row nor on the device.
+ * Decided once after the initial load (and forced on by a server refusal), so
+ * the step list never shifts under the user mid-wizard.
+ */
+export interface OnboardingExtraSteps {
+  sports: boolean;
+  location: boolean;
+}
+
+export function buildOnboardingSteps(
+  extra: OnboardingExtraSteps,
+  hasTennis: boolean,
+  hasPickleball: boolean
+): OnboardingStepId[] {
+  const steps: OnboardingStepId[] = ['consent', 'personal'];
+  if (extra.sports) steps.push('sports');
+  if (hasTennis) steps.push('tennis-rating');
+  if (hasPickleball) steps.push('pickleball-rating');
+  if (extra.location) steps.push('location');
+  steps.push('preferences', 'favorite-sites', 'availabilities', 'success', 'suggestions');
+  return steps;
+}
+
+/**
+ * Map complete_onboarding() gap codes to the wizard step that fixes them and
+ * return the earliest one in wizard order (upstream gaps block downstream
+ * steps, e.g. no sport means no rating and no favourites). Null when nothing
+ * is missing or no step can fix what the server reported.
+ */
+export function resolveOnboardingGapStep(
+  gaps: OnboardingGaps,
+  steps: readonly OnboardingStepId[],
+  sportNameById: (sportId: string) => string | undefined
+): OnboardingStepId | null {
+  const candidates: OnboardingStepId[] = [];
+  if (gaps.sport) candidates.push('sports');
+  if (gaps.postalCode) candidates.push('location');
+  for (const sportId of gaps.unratedSportIds) {
+    const name = sportNameById(sportId);
+    if (name === 'tennis') candidates.push('tennis-rating');
+    else if (name === 'pickleball') candidates.push('pickleball-rating');
+    else candidates.push('sports');
+  }
+  if (gaps.underFavoritedSportIds.length > 0) candidates.push('favorite-sites');
+
+  // The sport and location steps may be absent from the list; they are
+  // inserted on demand, so order them by where they would sit.
+  const order = buildOnboardingSteps({ sports: true, location: true }, true, true);
+  let best: OnboardingStepId | null = null;
+  for (const candidate of candidates) {
+    if (!steps.includes(candidate) && candidate !== 'sports' && candidate !== 'location') continue;
+    if (best === null || order.indexOf(candidate) < order.indexOf(best)) best = candidate;
+  }
+  // A rating gap for a sport the wizard does not know about: re-ask the sports.
+  if (best === null && candidates.length > 0) return 'sports';
+  return best;
+}
 
 const INITIAL_FORM_DATA: OnboardingFormData = {
   hasAcceptedPrivacy: false,
@@ -223,6 +295,16 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
         formData.gender
       );
 
+    case 'sports':
+      return formData.selectedSportIds.length > 0;
+
+    case 'location':
+      return !!(
+        formData.postalCode.trim() &&
+        formData.latitude !== null &&
+        formData.longitude !== null
+      );
+
     case 'tennis-rating':
       return !!formData.tennisRatingId;
 
@@ -234,17 +316,19 @@ function isStepComplete(stepId: OnboardingStepId, formData: OnboardingFormData):
       return !!(formData.playingHand && formData.maxTravelDistance);
 
     case 'favorite-sites': {
-      // Require at least 2 favorites; when both sports selected, need 2 per sport.
-      // Must match the gate in OnboardingWizard (isButtonDisabled +
-      // validateAndSaveStep) and the MIN_* constants in FavoriteSitesStep.
+      // MIN_FAVORITE_FACILITIES per sport; mirrors the server-side invariant
+      // and the gate in OnboardingWizard (isButtonDisabled + validateAndSaveStep).
       const bothSports =
         formData.selectedSportNames.includes('tennis') &&
         formData.selectedSportNames.includes('pickleball');
       if (bothSports) {
         const counts = computeFavoriteSportCounts(formData);
-        return counts.tennisCount >= 2 && counts.pickleballCount >= 2;
+        return (
+          counts.tennisCount >= MIN_FAVORITE_FACILITIES &&
+          counts.pickleballCount >= MIN_FAVORITE_FACILITIES
+        );
       }
-      return formData.favoriteFacilities.length >= 2;
+      return formData.favoriteFacilities.length >= MIN_FAVORITE_FACILITIES;
     }
 
     case 'availabilities':
@@ -284,9 +368,11 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [formData, setFormData] = useState<OnboardingFormData>(INITIAL_FORM_DATA);
   const [isComplete, setIsComplete] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isLoadingExisting, setIsLoadingExisting] = useState(true);
   const [isAlreadyOnboarded, setIsAlreadyOnboarded] = useState(false);
   const [hasInitializedStep, setHasInitializedStep] = useState(false);
+  // Sport/location recovery steps, decided once by loadExistingData (null = undecided).
+  const [extraSteps, setExtraSteps] = useState<OnboardingExtraSteps | null>(null);
 
   // Computed values
   const hasTennis = formData.selectedSportNames.includes('tennis');
@@ -316,6 +402,33 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
       } catch (guestError) {
         Logger.warn('Failed to read pre-onboarding sport selection', { error: guestError });
       }
+
+      // Postal code captured by pre-onboarding's PostalCodeStep. When it is
+      // missing here AND on the player row, the wizard re-asks (location step).
+      let hasDeviceHomeLocation = false;
+      try {
+        const homeRaw = await AsyncStorage.getItem(HOME_LOCATION_STORAGE_KEY);
+        if (homeRaw) {
+          const parsed = JSON.parse(homeRaw) as { postalCode?: unknown; latitude?: unknown };
+          hasDeviceHomeLocation =
+            typeof parsed?.postalCode === 'string' && typeof parsed?.latitude === 'number';
+        }
+      } catch (homeError) {
+        Logger.warn('Failed to read pre-onboarding home location', { error: homeError });
+      }
+
+      // Decide the recovery steps once. Frozen afterwards so picking a sport in
+      // the sport step does not remove the step out from under the user.
+      const decideExtraSteps = (sportCount: number, playerHasLocation: boolean) => {
+        const next: OnboardingExtraSteps = {
+          sports: sportCount === 0,
+          location: !playerHasLocation && !hasDeviceHomeLocation,
+        };
+        if (next.sports || next.location) {
+          Logger.info('Onboarding wizard inserting recovery steps', { ...next });
+        }
+        setExtraSteps(next);
+      };
 
       // Apply the guest selection to the form unless sports are already set.
       // Safe to call from any failure path — it never clobbers loaded data.
@@ -353,7 +466,8 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           // No session at all: still seed the sport selection so the wizard is
           // usable, then stop — we can't read or write user rows without a user.
           seedSportsFromGuest();
-          setIsLoadingData(false);
+          decideExtraSteps(guestSports?.length ?? 0, false);
+          setIsLoadingExisting(false);
           return;
         }
 
@@ -611,34 +725,39 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
           setFormData(prev => ({ ...prev, ...updates }));
         }
 
+        decideExtraSteps(
+          updates.selectedSportIds?.length ?? 0,
+          !!(updates.postalCode && updates.latitude != null && updates.longitude != null)
+        );
+
         Logger.debug('Loaded existing onboarding data', { updates });
       } catch (error) {
         Logger.error('Failed to load existing onboarding data', error as Error);
         // Don't let a failed DB load strand the user on "select a sport first":
         // apply the pre-onboarding sport selection so the wizard stays usable.
         seedSportsFromGuest();
+        decideExtraSteps(guestSports?.length ?? 0, false);
       } finally {
-        setIsLoadingData(false);
+        setIsLoadingExisting(false);
       }
     };
 
     loadExistingData();
   }, []);
 
-  // Calculate steps dynamically based on selected sports (resolved from
-  // pre-onboarding's saved player_sport rows in the load-existing-data effect)
-  const steps = useMemo<OnboardingStepId[]>(() => {
-    const baseSteps: OnboardingStepId[] = ['consent', 'personal'];
+  const isLoadingData = isLoadingExisting || extraSteps === null;
 
-    // Add rating steps based on selected sports
-    if (hasTennis) baseSteps.push('tennis-rating');
-    if (hasPickleball) baseSteps.push('pickleball-rating');
-
-    // Add preferences, favorite sites, and availabilities
-    baseSteps.push('preferences', 'favorite-sites', 'availabilities', 'success', 'suggestions');
-
-    return baseSteps;
-  }, [hasTennis, hasPickleball]);
+  // Calculate steps dynamically: sport/location recovery steps when the
+  // pre-onboarding hand-off left holes, rating steps per selected sport.
+  const steps = useMemo<OnboardingStepId[]>(
+    () =>
+      buildOnboardingSteps(
+        extraSteps ?? { sports: false, location: false },
+        hasTennis,
+        hasPickleball
+      ),
+    [extraSteps, hasTennis, hasPickleball]
+  );
 
   const totalSteps = steps.length - 2; // Don't count success or suggestions as steps
   const currentStep = Math.min(currentStepIndex + 1, totalSteps);
@@ -697,6 +816,30 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
   }, [currentStepIndex, steps]);
 
   /**
+   * Jump straight to a step (server refused completion and named the gap).
+   * Inserts the sport/location step when it was not part of the list.
+   */
+  const jumpToStep = useCallback(
+    (stepId: OnboardingStepId) => {
+      const nextExtra: OnboardingExtraSteps = {
+        sports: (extraSteps?.sports ?? false) || stepId === 'sports',
+        location: (extraSteps?.location ?? false) || stepId === 'location',
+      };
+      const nextSteps = buildOnboardingSteps(nextExtra, hasTennis, hasPickleball);
+      const index = nextSteps.indexOf(stepId);
+      if (index < 0) return;
+      Logger.logNavigation('onboarding_jump_to_step', {
+        from: steps[currentStepIndex],
+        to: stepId,
+      });
+      setExtraSteps(nextExtra);
+      setIsComplete(false);
+      setCurrentStepIndex(index);
+    },
+    [extraSteps, hasTennis, hasPickleball, steps, currentStepIndex]
+  );
+
+  /**
    * Go to previous step
    */
   const goToPrevStep = useCallback(() => {
@@ -728,6 +871,7 @@ export function useOnboardingWizard(): UseOnboardingWizardReturn {
     updateFormData,
     goToNextStep,
     goToPrevStep,
+    jumpToStep,
     canGoNext,
     canGoBack,
     isLastStep,

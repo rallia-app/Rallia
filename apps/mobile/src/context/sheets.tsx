@@ -15,10 +15,8 @@ import { CreateListActionSheet } from '#/features/shared-lists/components/Create
 import { ShareMatchActionSheet } from '#/features/shared-lists/components/ShareMatchModal';
 import { AddContactActionSheet } from '#/features/shared-lists/components/AddContactModal';
 import { ImportContactsActionSheet } from '#/features/shared-lists/components/ImportContactsModal';
-import { GroupOptionsActionSheet } from '#/features/groups/components/GroupOptionsModal';
 import { MemberOptionsActionSheet } from '#/features/groups/components/MemberOptionsModal';
 import { InviteLinkActionSheet } from '#/features/groups/components/InviteLinkModal';
-import { RecentGamesActionSheet } from '#/features/groups/components/RecentGamesModal';
 import { ComparisonOverlay } from '#/features/matches/components/leaderboard/ComparisonOverlay';
 import { AddGroupMemberActionSheet } from '#/features/groups/components/AddGroupMemberModal';
 import { MemberListActionSheet } from '#/features/groups/components/MemberListModal';
@@ -44,10 +42,7 @@ import { TournamentInvitePlayersActionSheet } from '#/features/tournaments/compo
 import { TournamentCoOrganizerActionSheet } from '#/features/tournaments/components/TournamentCoOrganizerSheet';
 import { LeagueInvitePlayersActionSheet } from '#/features/leagues/components/LeagueInvitePlayersSheet';
 import { LeagueInviteSheet } from '#/features/leagues/components/LeagueInviteSheet';
-import {
-  LeagueEditActionSheet,
-  LeagueCreateActionSheet,
-} from '#/features/leagues/components/LeagueFormSheets';
+import { LeagueEditActionSheet } from '#/features/leagues/components/LeagueFormSheets';
 import { CreateSeasonActionSheet } from '#/features/leagues/components/CreateSeasonSheet';
 import { CreateSessionActionSheet } from '#/features/leagues/components/CreateSessionSheet';
 import { SessionLinkMatchActionSheet } from '#/features/leagues/components/SessionLinkMatchSheet';
@@ -118,8 +113,6 @@ import {
   FoundingMemberExplainerActionSheet,
   CircuitRankingExplainerActionSheet,
 } from '#/components/explainers';
-// Summer League announcement
-import { Serie1AnnouncementActionSheet } from '#/features/tournaments/announcement/Serie1AnnouncementSheet';
 // Availability grid payload type. Flat `Set<string>` of `${day}-${hour}`
 // cell keys from the hourly 7×17 grid (hours 6..22). Defined inline to keep
 // this declaration free of feature-folder imports.
@@ -253,18 +246,6 @@ declare module 'react-native-actions-sheet' {
       };
     }>;
     // Group sheets
-    'group-options': SheetDefinition<{
-      payload: {
-        options: Array<{
-          id: string;
-          label: string;
-          icon: string;
-          onPress: () => void;
-          destructive?: boolean;
-        }>;
-        title?: string;
-      };
-    }>;
     'member-options': SheetDefinition<{
       payload: {
         member: {
@@ -291,13 +272,6 @@ declare module 'react-native-actions-sheet' {
         currentUserId: string;
         isModerator: boolean;
         type?: 'group' | 'community';
-      };
-    }>;
-    'recent-games': SheetDefinition<{
-      payload: {
-        matches: unknown[];
-        onMatchPress?: (match: unknown) => void;
-        onPlayerPress?: (playerId: string) => void;
       };
     }>;
     'leaderboard-comparison': SheetDefinition<{
@@ -469,11 +443,6 @@ declare module 'react-native-actions-sheet' {
     'league-edit': SheetDefinition<{
       payload: {
         league: LeagueEditData;
-      };
-    }>;
-    'league-create': SheetDefinition<{
-      payload: {
-        onCreated?: (leagueId: string) => void;
       };
     }>;
     'tournament-invite': SheetDefinition<{
@@ -995,9 +964,6 @@ declare module 'react-native-actions-sheet' {
         proofTitle: string;
       };
     }>;
-    'serie1-announcement': SheetDefinition<{
-      payload?: Record<string, never>;
-    }>;
     feedback: SheetDefinition;
     'match-detail': SheetDefinition;
     'main-actions': SheetDefinition;
@@ -1026,10 +992,8 @@ export const Sheets = () => {
         'match-organizer-setup': MatchOrganizerSetupActionSheet,
         'match-organizer-custom-slot': MatchOrganizerCustomSlotActionSheet,
         // Group sheets
-        'group-options': GroupOptionsActionSheet,
         'member-options': MemberOptionsActionSheet,
         'invite-link': InviteLinkActionSheet,
-        'recent-games': RecentGamesActionSheet,
         'leaderboard-comparison': ComparisonOverlay,
         'add-group-member': AddGroupMemberActionSheet,
         'member-list': MemberListActionSheet,
@@ -1054,7 +1018,6 @@ export const Sheets = () => {
         'league-invite': LeagueInviteSheet,
         'league-invite-players': LeagueInvitePlayersActionSheet,
         'league-edit': LeagueEditActionSheet,
-        'league-create': LeagueCreateActionSheet,
         'create-season': CreateSeasonActionSheet,
         'create-session': CreateSessionActionSheet,
         'court-selection': CourtSelectionActionSheet,
@@ -1110,8 +1073,6 @@ export const Sheets = () => {
         'match-suggestions': MatchSuggestionsActionSheet,
         'match-invite-confirm': MatchInviteConfirmActionSheet,
         'suggest-match-time': SuggestMatchTimeActionSheet,
-        // Série 1 tournaments announcement
-        'serie1-announcement': Serie1AnnouncementActionSheet,
       }}
     />
   );

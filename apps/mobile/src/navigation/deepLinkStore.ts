@@ -38,8 +38,15 @@ export interface PendingReferral {
   enteredManually?: boolean;
 }
 
+/**
+ * Sub-destination inside a match, carried by the notification-email CTAs:
+ * `feedback` opens the score + rating wizard, `requests` expands the pending
+ * join requests. Absent means the game screen itself.
+ */
+export type MatchDeepLinkAction = 'feedback' | 'requests';
+
 export type DeepLinkPayload =
-  | { type: 'match'; matchId: string }
+  | { type: 'match'; matchId: string; action?: MatchDeepLinkAction }
   | { type: 'group'; inviteCode: string }
   | { type: 'community'; inviteCode: string }
   | { type: 'publicMatches' }

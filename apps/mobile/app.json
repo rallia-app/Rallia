@@ -29,7 +29,7 @@
       "bundleIdentifier": "com.mathisl971.rallia-app",
       "appleTeamId": "587DRRMTV8",
       "usesAppleSignIn": true,
-      "associatedDomains": ["applinks:rallia.app"],
+      "associatedDomains": ["applinks:rallia.app", "applinks:www.rallia.app"],
       "privacyManifests": {
         "NSPrivacyTracking": true,
         "NSPrivacyTrackingDomains": [
@@ -232,6 +232,76 @@
               "scheme": "https",
               "host": "rallia.app",
               "pathPattern": "/.*/suggestions"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPrefix": "/invite"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/invite/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPrefix": "/match"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/match/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPrefix": "/join"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/join/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPrefix": "/community/join"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/community/join/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPrefix": "/player"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/player/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "path": "/games"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/games"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "path": "/suggestions"
+            },
+            {
+              "scheme": "https",
+              "host": "www.rallia.app",
+              "pathPattern": "/.*/suggestions"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
@@ -300,6 +370,24 @@
           "photosPermission": "$(PRODUCT_NAME) uses your photo library to set a player, group, or community profile picture and to submit rating proof, for example selecting a video of your gameplay to verify your skill level.",
           "cameraPermission": "$(PRODUCT_NAME) uses your camera to take a profile picture, record video proof of your playing level (for example, filming yourself during a rally to verify your skill rating), and scan invite QR codes to join groups, communities, or matches.",
           "microphonePermission": "$(PRODUCT_NAME) uses your microphone to capture audio when recording video proof of your playing level, for example recording the sound during a rally video."
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "../../node_modules/@expo-google-fonts/poppins/400Regular/Poppins_400Regular.ttf",
+            "../../node_modules/@expo-google-fonts/poppins/500Medium/Poppins_500Medium.ttf",
+            "../../node_modules/@expo-google-fonts/poppins/600SemiBold/Poppins_600SemiBold.ttf",
+            "../../node_modules/@expo-google-fonts/poppins/700Bold/Poppins_700Bold.ttf",
+            "../../node_modules/@expo-google-fonts/poppins/800ExtraBold/Poppins_800ExtraBold.ttf",
+            "../../node_modules/@expo-google-fonts/barlow-semi-condensed/600SemiBold/BarlowSemiCondensed_600SemiBold.ttf",
+            "../../node_modules/@expo-google-fonts/barlow-semi-condensed/700Bold/BarlowSemiCondensed_700Bold.ttf",
+            "../../node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf",
+            "../../node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf",
+            "../../node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf",
+            "../../node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf"
+          ]
         }
       ],
       [

@@ -733,6 +733,7 @@ export const MatchDetailSheet: React.FC = () => {
     handleSheetDismiss,
     onMatchRemovedRef,
     discoverySourceRef,
+    autoActionRef,
   } = useMatchDetailSheet();
   const { openSheetForEdit, openSheet: openActionsSheet } = useActionsSheet();
   const { openSheet: openInviteSheet } = usePlayerInviteSheet();
@@ -1347,6 +1348,20 @@ export const MatchDetailSheet: React.FC = () => {
         : undefined
     );
   }, [selectedMatch, playerId, openFeedbackSheet]);
+
+  // A notification-email CTA can point at a sub-destination inside the game
+  // (rallia://match/:id/feedback or /requests). Both need the match and the
+  // player loaded first, so run it here rather than at the deep-link site.
+  useEffect(() => {
+    const action = autoActionRef.current;
+    if (!action || !selectedMatch || !playerId) return;
+    autoActionRef.current = null;
+    if (action === 'feedback') {
+      handleOpenFeedback();
+    } else {
+      setShowAllRequests(true);
+    }
+  }, [selectedMatch, playerId, handleOpenFeedback, autoActionRef]);
 
   // Handle opening the match chat conversation
   const handleOpenChat = useCallback(async () => {

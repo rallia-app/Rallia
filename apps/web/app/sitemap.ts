@@ -7,6 +7,10 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 
 type ChangeFreq = NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>;
 
+const FACILITY_PAGE_SIZE = 1000;
+// Each facility emits one URL per locale, and a sitemap tops out at 50k URLs.
+const MAX_FACILITY_PAGES = Math.floor(50_000 / locales.length / FACILITY_PAGE_SIZE);
+
 const PUBLIC_PATHS: ReadonlyArray<{
   path: string;
   changeFrequency: ChangeFreq;
@@ -37,15 +41,27 @@ function alternatesFor(path: string) {
 async function getFacilityEntries(): Promise<MetadataRoute.Sitemap> {
   try {
     const supabase = createServiceRoleClient();
-    const { data, error } = await supabase
-      .from('facility')
-      .select('slug, updated_at')
-      .eq('is_active', true)
-      .is('archived_at', null);
-    if (error || !data) return [];
+
+    // Paged: an unbounded select silently stops at PostgREST's max-rows (1000
+    // by default), which would drop facilities off the sitemap with no error.
+    // Advancing by rows actually returned keeps this correct whatever the cap.
+    const facilities: { slug: string; updated_at: string }[] = [];
+    for (let page = 0; page < MAX_FACILITY_PAGES; page++) {
+      const { data, error } = await supabase
+        .from('facility')
+        .select('slug, updated_at')
+        .eq('is_active', true)
+        .is('archived_at', null)
+        .order('slug')
+        .range(facilities.length, facilities.length + FACILITY_PAGE_SIZE - 1);
+      if (error || !data) break;
+      facilities.push(...data);
+      if (data.length === 0) break;
+    }
+    if (facilities.length === 0) return [];
 
     const entries: MetadataRoute.Sitemap = [];
-    for (const facility of data) {
+    for (const facility of facilities) {
       const path = `/play/courts/${facility.slug}`;
       for (const locale of locales) {
         entries.push({

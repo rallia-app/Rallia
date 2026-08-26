@@ -146,6 +146,7 @@ function EventCard({ event, locale, t }: { event: PublicEvent; locale: Locale; t
   return (
     <UtmForwardingLink
       href={`/invite/${event.referralCode}?type=tournament&id=${event.id}`}
+      rel="nofollow"
       className="group relative flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full"
     >
       <div className="relative h-44 w-full overflow-hidden">
@@ -256,7 +257,7 @@ export default async function EventsPage({ params }: { params: Promise<{ locale:
           <Trophy className="size-4" />
           {t('eyebrow')}
         </span>
-        <h1 className="text-4xl sm:text-5xl">{t('title')}</h1>
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{t('title')}</h1>
         <p className="text-lg text-muted-foreground">{t('subtitle')}</p>
       </div>
 

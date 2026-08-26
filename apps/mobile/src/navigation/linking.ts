@@ -13,7 +13,11 @@ import { type LinkingOptions, getStateFromPath } from '@react-navigation/native'
 import * as Linking from 'expo-linking';
 
 import type { RootStackParamList } from './types';
-import { setPendingDeepLink, type DeepLinkPayload } from './deepLinkStore';
+import {
+  setPendingDeepLink,
+  type DeepLinkPayload,
+  type MatchDeepLinkAction,
+} from './deepLinkStore';
 
 /** Known locale prefixes used by the web app (next-intl) */
 const LOCALE_PATTERN = /^\/(en|en-US|fr|fr-CA|fr-FR)\//;
@@ -53,10 +57,14 @@ function extractDeepLinkPayload(path: string): DeepLinkPayload | null {
     return { type: 'group', inviteCode: groupJoin[1] };
   }
 
-  // /match/:matchId
-  const matchLink = path.match(/^\/match\/([A-Za-z0-9-]+)/);
+  // /match/:matchId, optionally with a sub-destination: /feedback opens the
+  // score wizard, /requests the pending join requests. The suffix has to be
+  // captured here rather than left to the screen config, because returning a
+  // payload short-circuits getStateFromPath entirely.
+  const matchLink = path.match(/^\/match\/([A-Za-z0-9-]+)(?:\/(feedback|requests))?/);
   if (matchLink) {
-    return { type: 'match', matchId: matchLink[1] };
+    const action = matchLink[2] as MatchDeepLinkAction | undefined;
+    return { type: 'match', matchId: matchLink[1], ...(action ? { action } : {}) };
   }
 
   // /games — browse public matches
@@ -186,6 +194,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
       Settings: 'settings',
       Notifications: 'notifications',
       NotificationPreferences: 'notifications/preferences',
+      // Target of the reference-request notification email CTA.
+      IncomingReferenceRequests: 'reference-requests',
       Map: 'map',
       ChatConversation: 'conversation/:conversationId',
       GroupDetail: 'group/:groupId',

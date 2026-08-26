@@ -31,6 +31,7 @@ import { useAuth, useProfile } from '@rallia/shared-hooks';
 
 import { useActionsSheet, useOverlay, useSport } from '#/context';
 import { navigationRef } from '#/navigation';
+import { isLaunchPromptActive } from '#/features/launch-prompts/registry';
 import { IS_E2E } from '#/utils/e2e';
 
 import { useCheckInContext } from './api';
@@ -143,6 +144,12 @@ export const WeeklyCheckInAutoOpener: React.FC<WeeklyCheckInAutoOpenerProps> = (
         // fixed for the exit alert. Every other auto-opener guards on this;
         // this one has to guard against re-entering its own route.
         if (isWeeklyCheckInActive()) return;
+        // A registry launch prompt (e.g. the milestone takeover) is up. It's
+        // a navigator modal, so the hideAll() below can't clear it, and
+        // navigating would stack a modal mid-transition — the exact freeze
+        // this guard chain exists to prevent. Yield; nothing is marked, so
+        // the pending check-in re-fires on a later evaluation.
+        if (isLaunchPromptActive()) return;
         autoOpenedSportsRef.current.add(sportKey);
         // Stamp before navigating so a crash mid-wizard still counts as shown.
         AsyncStorage.setItem(WEEKLY_CHECKIN_AUTO_OPEN_AT_KEY, Date.now().toString()).catch(err =>

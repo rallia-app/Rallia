@@ -1,26 +1,22 @@
 {
-  "serie1Announcement": {
-    "badge": "Série 1",
-    "title": "Our first tournaments are here",
-    "subtitle": "Free singles brackets, open across Greater Montréal. Three categories, and every player who shows up earns Rallia points.",
-    "catBeginner": "Beginner 1.5+",
-    "catIntermediate": "Intermediate 3.0+",
-    "catAdvanced": "Advanced 4.0+",
-    "dates": "Register by July 25 · Play starts July 26",
-    "cta": "See the tournaments",
-    "later": "Later"
-  },
-  "serie2Announcement": {
-    "badge": "Série 2",
-    "title": "Série 1 has its champions",
-    "titleChampion": "You won Série 1",
-    "subtitleChampion": "The {label} draw is yours. Hats off! Série 2 is up next, with real prize money on the line. Defend your title.",
-    "subtitlePlayed": "In your {label} draw, {name} takes the title. Thanks for playing! Série 2 is up next: time for your rematch.",
-    "subtitleGeneric": "The first série is in the books. Série 2 is up next: draws by region and level, with real prize money on the line.",
-    "featuredTitle": "Your Série 2 draw",
-    "deadline": "Registration closes {date}. Spots are limited.",
-    "cta": "Register now",
-    "seeAll": "See all the draws"
+  "milestone1000": {
+    "badge": "1,000 players",
+    "title": "1,000 players. One community.",
+    "body1": "A few months ago, Rallia was just an idea between two players tired of never finding anyone to hit with.",
+    "body2": "Today, 1,000 of you have joined in. Playing, organizing your games, and keeping recreational tennis and pickleball alive in Montreal.",
+    "body2b": "And you're one of them.",
+    "body3": "Thank you for believing in it. Thank you for playing. Thank you for being here.",
+    "signature": "Jean & Mathis",
+    "continueCta": "Continue",
+    "ctaTitle": "What if we were 2,000?",
+    "ctaSubtitle": "Share Rallia with someone you would like to play with. Your next game might already be in your contacts.",
+    "prize": "Up for grabs: {prize}",
+    "yourCode": "Your code",
+    "shareCta": "Share Rallia",
+    "copyLink": "Copy my link",
+    "copyCode": "Copy my code",
+    "shareTitle": "Join me on Rallia",
+    "shareMessage": "There are already 1,000 of us playing on Rallia in Montreal. Find yourself a game, it takes two minutes: {link}"
   },
   "suggestionCard": {
     "courtsAvailable": "{count} courts available"
@@ -1856,7 +1852,10 @@
       "verificationCodeSent": "Verification code sent!",
       "cityRequired": "Please enter your city",
       "postalCodeRequired": "Postal code is required. Please go back and complete the location setup.",
-      "failedToSaveLocation": "Failed to save your location. Please try again."
+      "failedToSaveLocation": "Failed to save your location. Please try again.",
+      "verifyPostalCode": "Enter a postal code we can locate to continue.",
+      "missingDetailsTitle": "Almost there",
+      "missingDetails": "A few details are still missing before we can finish setting you up. Let's fill them in."
     },
     "successMessages": {
       "personalInfoUpdated": "Successfully updated Personal Information",
@@ -1931,6 +1930,8 @@
     "locationStep": {
       "title": "Confirm your location",
       "subtitle": "Add your address for more precise match finding, or continue with your postal code",
+      "postalCodeTitle": "Where do you play?",
+      "postalCodeSubtitle": "Enter your postal code so we can find games and players near you.",
       "savedPostalCode": "Your saved location",
       "editPostalCode": "Edit",
       "postalCodeUpdated": "Postal code updated",
@@ -2674,7 +2675,6 @@
     "deleteGroup": "Delete Group",
     "leaveGroup": "Leave Group",
     "joinGroup": "Join Group",
-    "groupOptions": "Group Options",
     "groupName": "Group Name",
     "groupNamePlaceholder": "Enter group name",
     "enterGroupName": "Enter group name...",
@@ -2934,11 +2934,9 @@
     },
     "recentGames": {
       "title": "Recent Games",
-      "noGames": "No games played in the last 180 days",
       "competitive": "Competitive",
       "practice": "Practice",
       "player": "Player",
-      "daysAgo": "{count} days ago",
       "viewAll": "View all"
     },
     "detail": {
@@ -3913,7 +3911,7 @@
     "shareTitle": "Join me on Rallia!",
     "shareMessage": "Hey! Found this app called Rallia to find players and organize {sport} games. Thought of you!\n\n{link}",
     "yourStats": "Your Referral Stats",
-    "clicked": "Clicked",
+    "clicked": "Clicks",
     "signedUp": "Signed Up",
     "haveReferralCode": "Have a referral code?",
     "enterCode": "Enter referral code",
@@ -5081,6 +5079,7 @@
     "create": "Create an event",
     "createSubtitle": "Run a tournament or a league",
     "myEvents": "My events",
+    "viewAllMine": "View all",
     "searchPlaceholder": "Search events...",
     "empty": "No events yet",
     "emptyDescription": "Nothing open near you right now. Check back soon, or create your own.",
@@ -5315,7 +5314,30 @@
   },
   "bracketSetup": {
     "title": "Set up bracket",
-    "intro": "Seeding is optional. The order below sets the first-round pairings, so move your strongest players to the top. Seed numbers are visible to everyone.",
+    "intro": "Pick how the draw gets seeded, then reorder anyone by hand. The order sets the first-round pairings, and seed numbers are visible to everyone.",
+    "modeLabel": "Seeding method",
+    "modeError": "Couldn't change the seeding. Please try again.",
+    "modes": {
+      "circuit": {
+        "title": "Circuit Rallia",
+        "description": "Top of the Circuit ranking is seeded first. Rating breaks ties."
+      },
+      "rating": {
+        "title": "Rating",
+        "description": "Highest rating is seeded first. Circuit points break ties."
+      },
+      "signup": {
+        "title": "Sign-up order",
+        "description": "First to register is seed 1. Nothing else counts."
+      },
+      "manual": {
+        "title": "Manual",
+        "description": "You set the order yourself."
+      }
+    },
+    "circuitPoints": "Circuit Rallia · {points} pts",
+    "noCircuitPoints": "No Circuit points yet",
+    "ratingValue": "Rating {rating}",
     "seedsLabel": "Seeds",
     "previewLabel": "First round",
     "previewSummary": "{players} players · {rounds} rounds · {byes} byes",
@@ -6089,6 +6111,8 @@
     "viewAll": "View All",
     "myMatches": "My games",
     "myMatchesSubtitle": "Your upcoming games",
+    "myEvents": "My events",
+    "myEventsSubtitle": "Tournaments and leagues you're in",
     "myMatchesStatus": {
       "confirmed": "Confirmed",
       "needsPlayers": "Needs players",
@@ -6385,7 +6409,8 @@
         "headline": "Your next game starts here.",
         "subheadline": "Download the app, connect with players at your level, and start playing today.",
         "downloadButton": "Download the App",
-        "learnMore": "Learn more"
+        "learnMore": "Learn more",
+        "createAccount": "Create your account"
       },
       "leadAnswer": {
         "headline": "What is Rallia?",
@@ -6920,7 +6945,31 @@
     "roleHint": "Select the role that best describes your position in this organization.",
     "createButton": "Create Organization",
     "creating": "Creating...",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "funnel": {
+      "pageTitle": "Create your Rallia account",
+      "pageDescription": "Create your player account in a few steps, then install the app and play.",
+      "heading": "Create your account",
+      "subheading": "A few quick steps, then install the app and play.",
+      "auth": {
+        "title": "Sign in to get started",
+        "description": "Use Google or your email. You will sign in the same way in the app."
+      },
+      "finish": "Create my account",
+      "handoff": {
+        "title": "Your account is ready",
+        "body": "Games happen in the Rallia app. Install it and sign in to find players and games near you.",
+        "signIn": {
+          "google": "Sign in with Google in the app, same as here.",
+          "apple": "Sign in with Apple in the app, same as here.",
+          "facebook": "Sign in with Facebook in the app, same as here.",
+          "email": "Sign in with your email ({email}) in the app, same as here.",
+          "generic": "Sign in with the same account in the app."
+        },
+        "qrHint": "Scan with your phone to install Rallia.",
+        "installHint": "Install the app, then sign in. Your profile is already set up."
+      }
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -11725,7 +11774,10 @@
       "profile": "Profile",
       "level": "Level",
       "location": "Location",
-      "preferences": "Preferences"
+      "preferences": "Preferences",
+      "favorites": "Favorites",
+      "sport": "Sport",
+      "availability": "Availability"
     },
     "auth": {
       "title": "Sign in to join",
@@ -11836,7 +11888,11 @@
       "alreadyHost": "You're the host of this game, so you're already in it.",
       "eligibilityUnverified": "We couldn't verify your eligibility for this game. Please try again.",
       "matchStarted": "This game has already started, so you can't leave it from here.",
-      "consentRequired": "Please accept the Privacy Policy and the Terms of Use to continue."
+      "consentRequired": "Please accept the Privacy Policy and the Terms of Use to continue.",
+      "selectFavorites": "Pick at least {min} favorite courts to continue.",
+      "onboardingIncomplete": "Your profile is missing something. Go back a step and check your answers.",
+      "selectSport": "Pick a sport to continue.",
+      "selectAvailability": "Pick at least {min} time slots to continue."
     },
     "chat": {
       "title": "Game chat",
@@ -11855,6 +11911,17 @@
         "body": "Be respectful, keep messages relevant to the game, and hold off on sharing personal contact details until you're comfortable. Messages may be moderated.",
         "accept": "Got it, let's chat"
       }
+    },
+    "favorites": {
+      "title": "Your favorite courts",
+      "description": "Pick at least {min} places you like to play. We use them to suggest games near you.",
+      "counter": "{count} / {min} selected",
+      "searchLabel": "Search for a court",
+      "searchPlaceholder": "Search by name or city...",
+      "noLocation": "Add your postal code first so we can show courts near you.",
+      "noResults": "No courts match your search.",
+      "noFacilitiesNearby": "No courts found near you. Try searching by name.",
+      "hint": "You can change your favorite courts anytime in your profile."
     }
   },
   "webBook": {
@@ -11885,7 +11952,8 @@
       "consent": "Consent",
       "profile": "Profile",
       "level": "Level",
-      "location": "Location"
+      "location": "Location",
+      "favorites": "Favorites"
     },
     "auth": {
       "title": "Sign in to book",
@@ -11953,7 +12021,20 @@
       "invalidPostalCode": "Enter a valid postal code.",
       "ratingsLoadFailed": "Could not load skill levels. Please refresh and try again.",
       "submitFailed": "Something went wrong. Please try again.",
-      "facilityUnavailable": "This court is no longer available."
+      "facilityUnavailable": "This court is no longer available.",
+      "selectFavorites": "Pick at least {min} favorite courts to continue.",
+      "onboardingIncomplete": "Your profile is missing something. Go back a step and check your answers."
+    },
+    "favorites": {
+      "title": "Your favorite courts",
+      "description": "Pick at least {min} places you like to play. We use them to suggest games near you.",
+      "counter": "{count} / {min} selected",
+      "searchLabel": "Search for a court",
+      "searchPlaceholder": "Search by name or city...",
+      "noLocation": "Add your postal code first so we can show courts near you.",
+      "noResults": "No courts match your search.",
+      "noFacilitiesNearby": "No courts found near you. Try searching by name.",
+      "hint": "You can change your favorite courts anytime in your profile."
     }
   },
   "playPage": {
@@ -12538,6 +12619,15 @@
       "phone": "Add your phone number",
       "displayName": "Choose a display name",
       "playStyle": "Set your play style"
+    },
+    "required": "Required",
+    "gapBannerDescription": "A few essentials are missing, so players nearby can't find you for games yet. It takes a minute to fix.",
+    "gapBannerCta": "Fix it",
+    "gaps": {
+      "sport": "Choose your sport",
+      "rating": "Choose your level in {sport}",
+      "favorites": "Pick at least {count} favorite courts for {sport}",
+      "postalCode": "Add your postal code"
     }
   },
   "donate": {

@@ -27,6 +27,9 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { AvailabilityStep } from './availability-step';
+import { FavoriteFacilitiesStep, type PinnedFacility } from './favorite-facilities-step';
+import { SportStep } from './sport-step';
 import {
   ConsentCheckboxRow,
   GoogleIcon,
@@ -34,9 +37,11 @@ import {
   StepHeader,
   Stepper,
 } from './wizard-primitives';
-import { type WebOnboardingController } from './use-web-onboarding';
+import type { WebOnboardingController } from './use-web-onboarding';
 
 import { AddressAutocomplete } from '@/components/app/inputs/address-autocomplete';
+import { QueryProvider } from '@/components/query-provider';
+import { SharedSupabaseSync } from '@/components/shared-supabase-sync';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -544,6 +549,64 @@ export function LocationStep({
 }
 
 /**
+ * Favourite courts for the chosen sport, searched around the geocoded location step.
+ *
+ * Carries its own QueryProvider and SharedSupabaseSync because the join and booking
+ * gates live under the marketing layout, which has neither, and useFacilitySearch
+ * needs both. Surfaces that already provide them simply nest a second, harmless pair.
+ */
+export function FavoritesStep({
+  controller,
+  t,
+  pinned,
+}: {
+  controller: WebOnboardingController;
+  t: Translator;
+  pinned?: PinnedFacility[];
+}) {
+  if (!controller.sportId) return null;
+
+  return (
+    <QueryProvider>
+      <SharedSupabaseSync />
+      <FavoriteFacilitiesStep
+        sportId={controller.sportId}
+        latitude={controller.location.latitude}
+        longitude={controller.location.longitude}
+        selectedIds={controller.favorites.selectedIds}
+        onToggle={controller.favorites.toggle}
+        pinned={pinned}
+        t={t}
+      />
+    </QueryProvider>
+  );
+}
+
+/**
+ * Sport picker for surfaces that opted into the controller's sport step. Carries its
+ * own SharedSupabaseSync for the same reason FavoritesStep does: useSports reads
+ * through the shared singleton, which the marketing layout never wires up.
+ */
+export function SportSelectStep({ controller }: { controller: WebOnboardingController }) {
+  return (
+    <>
+      <SharedSupabaseSync />
+      <SportStep selectedSportId={controller.sport.selectedId} onSelect={controller.sport.select} />
+    </>
+  );
+}
+
+/** Weekly grid for surfaces that opted into the controller's availability step. */
+export function AvailabilitySelectStep({ controller }: { controller: WebOnboardingController }) {
+  return (
+    <AvailabilityStep
+      value={controller.availability.grid}
+      onChange={controller.availability.setGrid}
+    />
+  );
+}
+
+/**
  * Back/continue footer for the profile steps. `finishLabel` is what the last
  * step's button reads, so each surface can name its own outcome.
  */
@@ -558,7 +621,7 @@ export function OnboardingNav({
 }) {
   if (!controller.isProfileStep) return null;
 
-  const isLastStep = controller.step === 'location';
+  const isLastStep = controller.isFinalProfileStep;
 
   return (
     <div className="flex gap-3">
@@ -581,7 +644,10 @@ export function OnboardingNav({
         onClick={controller.goNext}
         disabled={
           controller.isSubmitting ||
-          (controller.step === 'consent' && !controller.consent.isComplete)
+          (controller.step === 'consent' && !controller.consent.isComplete) ||
+          (controller.step === 'sport' && !controller.sport.isComplete) ||
+          (controller.step === 'favorites' && !controller.favorites.isComplete) ||
+          (controller.step === 'availability' && !controller.availability.isComplete)
         }
       >
         {controller.isSubmitting && <Loader2 className="size-4 animate-spin" />}

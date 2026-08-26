@@ -1,12 +1,15 @@
 import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
-import { meetsMinimumAge } from '@rallia/shared-utils';
+import { MIN_FAVORITE_FACILITIES, meetsMinimumAge } from '@rallia/shared-utils';
 
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import {
   DEFAULT_WEB_ONBOARDING_PREFERENCES,
+  OnboardingIncompleteError,
+  completeOnboarding,
   writeWebOnboardingProfile,
 } from '@/lib/web-onboarding/profile';
+import { writeFavoriteFacilities } from '@/lib/web-onboarding/player-extras';
 
 /** Accepts seed/test IDs (e.g. b1000000-0000-0000-0000-000000000001) that fail z.uuid(). */
 const uuidLike = z
@@ -34,6 +37,7 @@ const CompleteSchema = z.object({
     latitude: z.number(),
     longitude: z.number(),
   }),
+  favoriteFacilityIds: z.array(uuidLike).min(MIN_FAVORITE_FACILITIES),
 });
 
 /**
@@ -89,6 +93,8 @@ export async function POST(request: NextRequest) {
       },
       { acquisitionChannel: 'web_book' }
     );
+    await writeFavoriteFacilities(admin, user.id, body.sportId, body.favoriteFacilityIds);
+    await completeOnboarding(admin, user.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -100,6 +106,10 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid request', details: error.issues },
         { status: 400 }
       );
+    }
+
+    if (error instanceof OnboardingIncompleteError) {
+      return NextResponse.json({ error: error.code, missing: error.missing }, { status: 422 });
     }
 
     const message = error instanceof Error ? error.message : 'An error occurred';

@@ -28,6 +28,8 @@ export interface PlayerSport {
   sport_id: string;
   is_primary: boolean;
   is_active: boolean;
+  /** True when this row was synthesized from guest storage, not a player_sport row. */
+  is_guest_fallback?: boolean;
   /** The player_rating_score the player has marked active for this sport (null = none chosen). */
   active_rating_score_id?: string | null;
   preferred_match_duration?: string;
@@ -121,6 +123,7 @@ async function loadGuestSportsAsFallback(currentPlayerId: string): Promise<Playe
       sport_id: guestSport.id,
       is_primary: index === 0, // First selected sport is primary
       is_active: true,
+      is_guest_fallback: true,
       sport: {
         id: guestSport.id,
         name: guestSport.name,

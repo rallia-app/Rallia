@@ -114,6 +114,9 @@ import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 
 // Theme v2 faces — the names here are what shared-components' Text resolves
 // (Poppins = display, Barlow Semi Condensed = stat numerals, Inter = body).
+// The same 11 files are embedded natively via the expo-font plugin (app.json);
+// on Android the keys MUST equal the .ttf basenames so useFonts short-circuits
+// instead of hitting the OTA asset path (Sentry REACT-NATIVE-E6).
 const APP_FONTS = {
   Poppins_400Regular,
   Poppins_500Medium,
@@ -206,8 +209,7 @@ import { TourCompleteModal } from './src/components/TourCompleteModal';
 import { WelcomeTourModal } from './src/components/WelcomeTourModal';
 import { WeeklyCheckInAutoOpener } from './src/features/weekly-checkin/WeeklyCheckInAutoOpener';
 import { WEEKLY_CHECKIN_ENABLED } from './src/features/weekly-checkin/featureFlag';
-import { Serie1AnnouncementAutoOpener } from './src/features/tournaments/announcement/Serie1AnnouncementAutoOpener';
-import { Serie2AnnouncementAutoOpener } from './src/features/tournaments/announcement/Serie2AnnouncementAutoOpener';
+import { LaunchPromptCoordinator } from './src/features/launch-prompts/LaunchPromptCoordinator';
 import { isWeeklyCheckInActive } from './src/features/weekly-checkin/isWizardActive';
 import { linking } from './src/navigation/linking';
 import { navigationRef } from './src/navigation';
@@ -1051,8 +1053,7 @@ function AppContent() {
       <AccountSuspendedHandler />
       <WelcomeTourModal splashComplete={isSplashComplete} permissionsHandled={permissionsHandled} />
       {WEEKLY_CHECKIN_ENABLED && <WeeklyCheckInAutoOpener isSplashComplete={isSplashComplete} />}
-      <Serie1AnnouncementAutoOpener isSplashComplete={isSplashComplete} />
-      <Serie2AnnouncementAutoOpener isSplashComplete={isSplashComplete} />
+      <LaunchPromptCoordinator isSplashComplete={isSplashComplete} />
       <TourCompleteModal
         visible={showCompletionModal}
         onDismiss={dismissCompletionModal}
