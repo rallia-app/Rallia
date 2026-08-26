@@ -768,6 +768,8 @@ export interface TournamentFeeQuote {
   refundPolicyKind: Enums<'refund_policy_kind_enum'>;
   refundPartialBps: number | null;
   refundCutoffAt: string | null;
+  /** Referral credit usable on THIS event (Rallia-run only; 0 elsewhere). */
+  creditApplicableCents: number;
 }
 
 /**
@@ -792,6 +794,7 @@ export async function getTournamentFeeQuote(
     organizerReceivesCents: row.organizer_receives_cents,
     feePayer: row.fee_payer,
     currency: row.currency,
+    creditApplicableCents: row.credit_applicable_cents ?? 0,
     refundPolicyKind: row.refund_policy_kind,
     refundPartialBps: row.refund_partial_bps,
     refundCutoffAt: row.refund_cutoff_at,
@@ -901,12 +904,16 @@ export class TournamentPaymentError extends Error {
 }
 
 export interface RegistrationPaymentIntent {
-  clientSecret: string;
+  /** Null when the charge was fully covered by account credit (no Stripe leg). */
+  clientSecret: string | null;
   paymentId: string;
   entryCents: number;
   serviceFeeCents: number;
   feeTaxCents: number;
   amountChargedCents: number;
+  creditAppliedCents: number;
+  /** True = nothing to charge; the registration is already finalized. */
+  fullyCovered: boolean;
   currency: string;
 }
 
@@ -948,15 +955,19 @@ export async function createTournamentRegistrationPayment(
     }
   }
   if (code) throw new TournamentPaymentError(code);
-  if (error || !data?.clientSecret) throw new Error(error?.message ?? 'no_client_secret');
+  if (error || (!data?.clientSecret && !data?.fullyCovered)) {
+    throw new Error(error?.message ?? 'no_client_secret');
+  }
 
   return {
-    clientSecret: data.clientSecret,
+    clientSecret: data.clientSecret ?? null,
     paymentId: data.paymentId,
     entryCents: data.entryCents,
     serviceFeeCents: data.serviceFeeCents,
     feeTaxCents: data.feeTaxCents,
     amountChargedCents: data.amountChargedCents,
+    creditAppliedCents: data.creditAppliedCents ?? 0,
+    fullyCovered: data.fullyCovered === true,
     currency: data.currency,
   };
 }

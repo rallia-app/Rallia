@@ -331,6 +331,8 @@ export interface SeasonFeeQuote {
   refundPolicyKind: Enums<'refund_policy_kind_enum'>;
   refundPartialBps: number | null;
   refundCutoffAt: string | null;
+  /** Referral credit usable on THIS season (Rallia-run only; 0 elsewhere). */
+  creditApplicableCents: number;
 }
 
 /** Returns null for a free season. */
@@ -347,6 +349,7 @@ export async function getSeasonFeeQuote(seasonId: string): Promise<SeasonFeeQuot
     organizerReceivesCents: row.organizer_receives_cents,
     feePayer: row.fee_payer,
     currency: row.currency,
+    creditApplicableCents: row.credit_applicable_cents ?? 0,
     refundPolicyKind: row.refund_policy_kind,
     refundPartialBps: row.refund_partial_bps,
     refundCutoffAt: row.refund_cutoff_at,
@@ -379,15 +382,19 @@ export async function createSeasonEnrollmentPayment(
     }
   }
   if (code) throw new TournamentPaymentError(code);
-  if (error || !data?.clientSecret) throw new Error(error?.message ?? 'no_client_secret');
+  if (error || (!data?.clientSecret && !data?.fullyCovered)) {
+    throw new Error(error?.message ?? 'no_client_secret');
+  }
 
   return {
-    clientSecret: data.clientSecret,
+    clientSecret: data.clientSecret ?? null,
     paymentId: data.paymentId,
     entryCents: data.entryCents,
     serviceFeeCents: data.serviceFeeCents,
     feeTaxCents: data.feeTaxCents,
     amountChargedCents: data.amountChargedCents,
+    creditAppliedCents: data.creditAppliedCents ?? 0,
+    fullyCovered: data.fullyCovered === true,
     currency: data.currency,
   };
 }

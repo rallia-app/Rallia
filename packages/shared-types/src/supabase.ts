@@ -2741,6 +2741,7 @@ export type Database = {
         Row: {
           amount_charged_cents: number
           created_at: string
+          credit_applied_cents: number
           currency: string
           entry_cents: number
           expires_at: string | null
@@ -2771,6 +2772,7 @@ export type Database = {
         Insert: {
           amount_charged_cents: number
           created_at?: string
+          credit_applied_cents?: number
           currency?: string
           entry_cents: number
           expires_at?: string | null
@@ -2801,6 +2803,7 @@ export type Database = {
         Update: {
           amount_charged_cents?: number
           created_at?: string
+          credit_applied_cents?: number
           currency?: string
           entry_cents?: number
           expires_at?: string | null
@@ -5540,6 +5543,51 @@ export type Database = {
           },
         ]
       }
+      player_credit_redemption: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          credit_id: string
+          id: string
+          payment_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          credit_id: string
+          id?: string
+          payment_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          credit_id?: string
+          id?: string
+          payment_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_credit_redemption_credit_id_fkey"
+            columns: ["credit_id"]
+            isOneToOne: false
+            referencedRelation: "player_credit"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_credit_redemption_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "lt_registration_payment"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_favorite: {
         Row: {
           created_at: string | null
@@ -6619,6 +6667,7 @@ export type Database = {
           first_name: string | null
           id: string
           is_active: boolean | null
+          is_house_organizer: boolean
           last_active_at: string | null
           last_availability_refresh_sent_at: string | null
           last_morning_digest_sent_at: string | null
@@ -6652,6 +6701,7 @@ export type Database = {
           first_name?: string | null
           id: string
           is_active?: boolean | null
+          is_house_organizer?: boolean
           last_active_at?: string | null
           last_availability_refresh_sent_at?: string | null
           last_morning_digest_sent_at?: string | null
@@ -6685,6 +6735,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           is_active?: boolean | null
+          is_house_organizer?: boolean
           last_active_at?: string | null
           last_availability_refresh_sent_at?: string | null
           last_morning_digest_sent_at?: string | null
@@ -13170,6 +13221,10 @@ export type Database = {
         }[]
       }
       player_activity_score: { Args: { p_player_id: string }; Returns: number }
+      player_credit_available_cents: {
+        Args: { p_player: string }
+        Returns: number
+      }
       player_current_week_start: {
         Args: { p_player_id: string }
         Returns: string
@@ -13315,6 +13370,10 @@ export type Database = {
       request_to_join_community: {
         Args: { p_community_id: string; p_player_id?: string }
         Returns: string
+      }
+      reserve_player_credit: {
+        Args: { p_cap: number; p_payment_id: string; p_player: string }
+        Returns: number
       }
       reset_group_invite_code: {
         Args: { p_group_id: string; p_moderator_id: string }
@@ -13575,6 +13634,7 @@ export type Database = {
         Args: { p_season_id: string; p_terms_version?: number }
         Returns: {
           amount_charged_cents: number
+          credit_applied_cents: number
           currency: string
           entry_cents: number
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
@@ -13737,6 +13797,7 @@ export type Database = {
       season_fee_quote: {
         Args: { p_season_id: string }
         Returns: {
+          credit_applicable_cents: number
           currency: string
           entry_cents: number
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
@@ -14698,6 +14759,7 @@ export type Database = {
         }
         Returns: {
           amount_charged_cents: number
+          credit_applied_cents: number
           currency: string
           entry_cents: number
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
@@ -15019,6 +15081,7 @@ export type Database = {
       tournament_fee_quote: {
         Args: { p_tournament_id: string }
         Returns: {
+          credit_applicable_cents: number
           currency: string
           entry_cents: number
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]

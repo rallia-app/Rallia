@@ -768,6 +768,12 @@ export const LeagueDetail: React.FC = () => {
     // A fee-waived season (0% override) still bills player_pays, so the fee
     // lines have to key off the amount, not the mode.
     const chargesServiceFee = playerPaysFee && seasonFeeQuote.serviceFeeCents > 0;
+    const seasonCreditCents = seasonFeeQuote.creditApplicableCents ?? 0;
+    const seasonPayableCents = Math.max(seasonFeeQuote.totalCents - seasonCreditCents, 0);
+    const seasonCreditLine =
+      seasonCreditCents > 0
+        ? t('leagueDetail.paid.breakdownCredit').replace('{amount}', money(seasonCreditCents))
+        : null;
     const breakdown = playerPaysFee
       ? ([
           t('leagueDetail.paid.breakdownEntry').replace(
@@ -786,10 +792,8 @@ export const LeagueDetail: React.FC = () => {
                 money(seasonFeeQuote.feeTaxCents)
               )
             : null,
-          t('leagueDetail.paid.breakdownTotal').replace(
-            '{amount}',
-            money(seasonFeeQuote.totalCents)
-          ),
+          seasonCreditLine,
+          t('leagueDetail.paid.breakdownTotal').replace('{amount}', money(seasonPayableCents)),
         ]
           .filter(Boolean)
           .join('\n') as string)
@@ -799,11 +803,14 @@ export const LeagueDetail: React.FC = () => {
             money(seasonFeeQuote.entryCents)
           ),
           t('leagueDetail.paid.feeCoveredByOrganizer'),
+          seasonCreditLine,
           t('leagueDetail.paid.breakdownTotalTaxesIncluded').replace(
             '{amount}',
-            money(seasonFeeQuote.totalCents)
+            money(seasonPayableCents)
           ),
-        ].join('\n');
+        ]
+          .filter(Boolean)
+          .join('\n');
     const lines = [
       breakdown,
       seasonRefundPolicyLine(seasonFeeQuote, t, locale),
@@ -821,19 +828,22 @@ export const LeagueDetail: React.FC = () => {
 
     try {
       const intent = await createSeasonPayment({ seasonId: openSeasonId });
-      const { error: initError } = await initPaymentSheet({
-        paymentIntentClientSecret: intent.clientSecret,
-        merchantDisplayName: 'Rallia',
-        applePay: { merchantCountryCode: 'CA' },
-        googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
-      });
-      if (initError) throw new Error(initError.message);
+      // Fully covered by referral credit: already finalized server-side.
+      if (!intent.fullyCovered) {
+        const { error: initError } = await initPaymentSheet({
+          paymentIntentClientSecret: intent.clientSecret as string,
+          merchantDisplayName: 'Rallia',
+          applePay: { merchantCountryCode: 'CA' },
+          googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
+        });
+        if (initError) throw new Error(initError.message);
 
-      const { error: payError } = await presentPaymentSheet();
-      if (payError) {
-        // Cancelling is not a failure: the 15-min reaper frees the slot.
-        if (payError.code === 'Canceled') return;
-        throw new Error(payError.message);
+        const { error: payError } = await presentPaymentSheet();
+        if (payError) {
+          // Cancelling is not a failure: the 15-min reaper frees the slot.
+          if (payError.code === 'Canceled') return;
+          throw new Error(payError.message);
+        }
       }
 
       successHaptic();

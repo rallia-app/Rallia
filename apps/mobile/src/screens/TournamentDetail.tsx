@@ -609,17 +609,21 @@ export const TournamentDetail: React.FC = () => {
             partnerId,
             termsVersion,
           });
-          const { error: initError } = await initPaymentSheet({
-            paymentIntentClientSecret: intent.clientSecret,
-            merchantDisplayName: 'Rallia',
-            applePay: { merchantCountryCode: 'CA' },
-            googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
-          });
-          if (initError) throw new Error(initError.message);
-          const { error: paymentError } = await presentPaymentSheet();
-          if (paymentError) {
-            if (paymentError.code === 'Canceled') return; // user backed out — slot reaper frees it
-            throw new Error(paymentError.message);
+          // Fully covered by referral credit: the edge function already
+          // finalized the registration — no Stripe sheet to present.
+          if (!intent.fullyCovered) {
+            const { error: initError } = await initPaymentSheet({
+              paymentIntentClientSecret: intent.clientSecret as string,
+              merchantDisplayName: 'Rallia',
+              applePay: { merchantCountryCode: 'CA' },
+              googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
+            });
+            if (initError) throw new Error(initError.message);
+            const { error: paymentError } = await presentPaymentSheet();
+            if (paymentError) {
+              if (paymentError.code === 'Canceled') return; // user backed out — slot reaper frees it
+              throw new Error(paymentError.message);
+            }
           }
           successHaptic();
           toast.success(t('tournamentDetail.payments.successToast'), inviteNudgeAction());
@@ -666,6 +670,12 @@ export const TournamentDetail: React.FC = () => {
       // A fee-waived event (0% override) still bills player_pays, so the fee
       // lines have to key off the amount, not the mode.
       const chargesServiceFee = !!feeQuote && playerPaysFee && feeQuote.serviceFeeCents > 0;
+      const creditCents = feeQuote?.creditApplicableCents ?? 0;
+      const payableCents = feeQuote ? Math.max(feeQuote.totalCents - creditCents, 0) : 0;
+      const creditLine =
+        creditCents > 0
+          ? t('tournamentDetail.payments.breakdownCredit').replace('{amount}', money(creditCents))
+          : null;
       const breakdown = !feeQuote
         ? null
         : playerPaysFee
@@ -686,9 +696,10 @@ export const TournamentDetail: React.FC = () => {
                     money(feeQuote.feeTaxCents)
                   )
                 : null,
+              creditLine,
               t('tournamentDetail.payments.breakdownTotal').replace(
                 '{amount}',
-                money(feeQuote.totalCents)
+                money(payableCents)
               ),
             ]
               .filter(Boolean)
@@ -699,12 +710,15 @@ export const TournamentDetail: React.FC = () => {
                 money(feeQuote.entryCents)
               ),
               t('tournamentDetail.payments.feeCoveredByOrganizer'),
+              creditLine,
               t('tournamentDetail.payments.breakdownTotalTaxesIncluded').replace(
                 '{amount}',
-                money(feeQuote.totalCents)
+                money(payableCents)
               ),
-            ].join('\n');
-      const totalLabel = feeQuote ? money(feeQuote.totalCents) : null;
+            ]
+              .filter(Boolean)
+              .join('\n');
+      const totalLabel = feeQuote ? money(payableCents) : null;
       const disclosureLines = [
         breakdown,
         refundPolicyLine(feeQuote, t, locale),
@@ -1796,12 +1810,19 @@ export const TournamentDetail: React.FC = () => {
     // after registration closes, the organizer can still admit late entrants by
     // link (draft/open already reach the link through the "Invite players" sheet).
     const canShareLink = s === 'registration_closed' && !tournament?.bracket_locked_at;
+    // Mirrors the RPC's own status gate, and only once there is something to
+    // set: a pool phase (known from the format, before the draw) or generated
+    // knockout rounds. Otherwise the entry opens on an empty sheet.
+    const canSetDeadlines =
+      (s === 'registration_open' || s === 'registration_closed' || s === 'in_progress') &&
+      (isPoolTournament || knockoutMatches.length > 0);
     const enabled =
       isOrganizer &&
       (canEdit ||
         canInvite ||
         canReopen ||
         canShareLink ||
+        canSetDeadlines ||
         canCancel ||
         canArchive ||
         canUnarchive);
@@ -1810,12 +1831,19 @@ export const TournamentDetail: React.FC = () => {
       canInvite,
       canReopen,
       canShareLink,
+      canSetDeadlines,
       canCancel,
       canArchive,
       canUnarchive,
       enabled,
     };
-  }, [isOrganizer, tournament?.status, tournament?.bracket_locked_at]);
+  }, [
+    isOrganizer,
+    tournament?.status,
+    tournament?.bracket_locked_at,
+    isPoolTournament,
+    knockoutMatches.length,
+  ]);
 
   // Creation-success handoff: land here with openInviteSheet=true and the
   // invite sheet opens once, after the screen settles. The param is cleared
@@ -1899,6 +1927,24 @@ export const TournamentDetail: React.FC = () => {
       },
     });
   }, [tournament, registrations, userId]);
+
+  // Every automated resolution keys on a deadline; with none set, nothing
+  // resolves and the organizer is back to chasing players by hand.
+  const handleSetDeadlines = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    const knockoutRounds = Array.from(new Set(knockoutMatches.map(m => m.round_number))).sort(
+      (a, b) => a - b
+    );
+    void SheetManager.show('tournament-deadlines', {
+      payload: {
+        tournamentId: tournament.id,
+        hasPoolPhase: isPoolTournament,
+        knockoutRounds,
+        totalRounds,
+      },
+    });
+  }, [tournament, knockoutMatches, isPoolTournament, totalRounds]);
 
   const handleManageCoOrganizers = useCallback(() => {
     if (!tournament) return;
@@ -2818,6 +2864,21 @@ export const TournamentDetail: React.FC = () => {
                 onPress={() => {
                   setShowActionsMenu(false);
                   handleShareInviteLink();
+                }}
+                colors={colors}
+              />
+            )}
+            {adminActions.canSetDeadlines && (
+              <MenuItem
+                icon="hourglass-outline"
+                label={t('tournamentDetail.actions.setDeadlines')}
+                testID="menu-set-deadlines"
+                showDivider={
+                  adminActions.canEdit || adminActions.canInvite || adminActions.canShareLink
+                }
+                onPress={() => {
+                  setShowActionsMenu(false);
+                  handleSetDeadlines();
                 }}
                 colors={colors}
               />
