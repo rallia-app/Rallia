@@ -168,17 +168,17 @@ async function handleSucceeded(
     return;
   }
 
+  // Stripe traceability columns are the webhook's own concern; the shared
+  // finalize RPC owns the status flips.
   if (decision === 'promote') {
     const { error } = await admin
       .from('lt_registration_payment')
       .update({
-        status: 'succeeded',
         stripe_charge_id: chargeId,
         stripe_receipt_url: receiptUrl,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', row.id)
-      .eq('status', 'pending');
+      .eq('id', row.id);
     if (error) throw error;
   } else if (receiptUrl) {
     // finalize (re-delivery): backfill the receipt if the first delivery's
@@ -190,42 +190,28 @@ async function handleSucceeded(
       .is('stripe_receipt_url', null);
   }
 
-  // Both 'promote' and 'finalize' attempt the slot flip, including on a
+  // Both 'promote' and 'finalize' run the shared finalize, including on a
   // re-delivery: an earlier delivery may have marked the ledger succeeded and
-  // died before getting here, and returning early on 'succeeded' would leave the
-  // player payment_pending forever, charged and unregistered. The status filter
-  // keeps it a no-op once finalized, and stops it clobbering a withdrawn state.
-  //
-  // Order matters: the ledger is marked succeeded first, so the paid-gate
-  // trigger on tournament_registrations sees a succeeded payment for this row.
+  // died before flipping the slot, and returning early on 'succeeded' would
+  // leave the player payment_pending forever, charged and unregistered. The
+  // RPC promotes the ledger FIRST (the paid-gate and credit triggers key off
+  // it), then flips the slot with a status filter, atomically — shared with
+  // the fully-covered branch of lt-create-registration-payment.
   if (!shouldFinalize(decision)) return;
-  let seated: unknown[] | null = null;
-  if (row.tournament_registration_id) {
-    const { data, error } = await admin
-      .from('tournament_registrations')
-      .update({ status: 'registered', approved_at: new Date().toISOString() })
-      .eq('id', row.tournament_registration_id)
-      .eq('status', 'payment_pending')
-      .select('id');
-    if (error) throw error;
-    seated = data;
-  } else if (row.season_user_id) {
-    // 'enrolled' also fires the trigger that seeds this payer's ranking row.
-    const { data, error } = await admin
-      .from('season_members')
-      .update({ status: 'enrolled', enrolled_at: new Date().toISOString() })
-      .eq('id', row.season_user_id)
-      .eq('status', 'payment_pending')
-      .select('id');
-    if (error) throw error;
-    seated = data;
-  }
+  const { data: fin, error: finErr } = await admin.rpc('lt_finalize_paid_registration', {
+    p_payment_id: row.id,
+  });
+  if (finErr) throw finErr;
+  const f = (Array.isArray(fin) ? fin[0] : fin) as
+    | { seated: boolean; already_seated: boolean }
+    | undefined;
 
-  // The filter matching nothing means the slot was no longer payment_pending:
-  // the player paid and was NOT seated. This was silent, which is why four
-  // Serie 2 payers went unnoticed until they complained. Never let it be quiet
-  // again — the money is real whether or not the flip landed.
-  if (seated !== null && seated.length === 0) {
+  // seated=false with already_seated=false means the slot was no longer
+  // payment_pending: the player paid and was NOT seated. This was silent,
+  // which is why four Serie 2 payers went unnoticed until they complained.
+  // Never let it be quiet again — the money is real whether or not the flip
+  // landed. (already_seated distinguishes a harmless webhook re-delivery.)
+  if (f && !f.seated && !f.already_seated) {
     console.error(
       '[lt-payment-webhook] PAID BUT NOT SEATED: slot was not payment_pending at finalize. ' +
         'Player charged, not registered. payment_id=%s pi=%s',

@@ -254,33 +254,15 @@ Deno.serve(async req => {
     // in the webhook's exact order: ledger first (the paid-gate and credit
     // triggers key off it), then the slot flip with a status filter.
     if (reg.amount_charged_cents === 0 && reg.credit_applied_cents > 0) {
-      const { error: ledgerErr } = await admin
-        .from('lt_registration_payment')
-        .update({ status: 'succeeded', updated_at: new Date().toISOString() })
-        .eq('id', reg.payment_id)
-        .eq('status', 'pending');
-      if (ledgerErr) return err('internal_error', 500);
-      let seated: unknown[] | null = null;
-      if (tournamentId) {
-        const { data, error } = await admin
-          .from('tournament_registrations')
-          .update({ status: 'registered', approved_at: new Date().toISOString() })
-          .eq('id', reg.registration_id)
-          .eq('status', 'payment_pending')
-          .select('id');
-        if (error) return err('internal_error', 500);
-        seated = data;
-      } else {
-        const { data, error } = await admin
-          .from('season_members')
-          .update({ status: 'enrolled', enrolled_at: new Date().toISOString() })
-          .eq('id', reg.season_user_id)
-          .eq('status', 'payment_pending')
-          .select('id');
-        if (error) return err('internal_error', 500);
-        seated = data;
-      }
-      if (seated !== null && seated.length === 0) {
+      // Shared with the webhook: ledger first, then the slot, atomically.
+      const { data: fin, error: finErr } = await admin.rpc('lt_finalize_paid_registration', {
+        p_payment_id: reg.payment_id,
+      });
+      if (finErr) return err('internal_error', 500);
+      const f = (Array.isArray(fin) ? fin[0] : fin) as
+        | { seated: boolean; already_seated: boolean }
+        | undefined;
+      if (f && !f.seated && !f.already_seated) {
         console.error(
           '[lt-create-registration-payment] CREDIT SPENT BUT NOT SEATED: slot was not ' +
             'payment_pending at finalize. payment_id=%s',
