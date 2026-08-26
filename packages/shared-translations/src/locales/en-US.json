@@ -5943,6 +5943,7 @@
       "saved": "Deadlines updated. The players have been notified.",
       "errorInPast": "A deadline has to be in the future.",
       "errorTooSoon": "You cannot pull a deadline in to less than 48 hours from now. Players were counting on the date they were given.",
+      "errorPassed": "That deadline has passed, so it is settled and cannot be moved. Correct a result instead.",
       "errorNotIncreasing": "Each round has to end after the one before it.",
       "errorNotIncreasingRound": "{round} has to end after the round before it.",
       "errorNotReady": "Deadlines can only be set while the tournament is open or in progress.",

@@ -5943,6 +5943,7 @@
       "saved": "Échéances mises à jour. Les joueurs ont été avertis.",
       "errorInPast": "Une échéance doit être dans le futur.",
       "errorTooSoon": "Tu ne peux pas ramener une échéance à moins de 48 heures d'ici. Les joueurs comptaient sur la date qu'on leur a donnée.",
+      "errorPassed": "Cette échéance est passée, donc elle est réglée et ne peut plus bouger. Corrige plutôt un résultat.",
       "errorNotIncreasing": "Chaque tour doit se terminer après le précédent.",
       "errorNotIncreasingRound": "{round} doit se terminer après le tour précédent.",
       "errorNotReady": "Les échéances se fixent seulement quand le tournoi est ouvert ou en cours.",
