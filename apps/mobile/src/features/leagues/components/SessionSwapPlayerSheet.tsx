@@ -1,16 +1,17 @@
 /**
  * Session Swap Player Sheet
  *
- * Organizer substitution on a published match sheet. Opened with the player
- * leaving a pairing; lists every other confirmed player, paired or on a bye,
- * and swaps on tap. Someone already paired trades places; someone on a bye
- * simply takes the slot.
+ * Organizer substitution on a published match sheet. Opened with the players
+ * it may take out (one side, or the whole pairing from the row's icon): the
+ * organizer picks who leaves when there is a choice, then taps who comes in
+ * from every other confirmed player, paired or on a bye. Someone already
+ * paired trades places; someone on a bye simply takes the slot.
  *
  * The server refuses once either pairing carries a result, which is the rule
  * the review asked for: the sheet stays adjustable until the scores are in.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,8 +36,7 @@ export function SessionSwapPlayerActionSheet({ payload }: SheetProps<'session-sw
   const sessionId = payload?.sessionId ?? '';
   const matchId = payload?.matchId ?? '';
   const round = payload?.round ?? 1;
-  const userOut = payload?.userOut ?? '';
-  const userOutName = payload?.userOutName ?? '';
+  const userOutOptions = payload?.userOutOptions ?? [];
   const sessionVersion = payload?.sessionVersion ?? 0;
 
   const { colors } = useThemeStyles();
@@ -46,9 +46,23 @@ export function SessionSwapPlayerActionSheet({ payload }: SheetProps<'session-sw
   const { data: presence = [] } = useSessionPresence(sessionId);
   const { data: matches = [] } = useSessionMatches(sessionId);
 
-  // Everyone confirmed but the player leaving. "Paired" is per round, matching
-  // what the swap actually does: a trade only happens with someone booked in
-  // this round, and anyone else is on a bye here whatever they play elsewhere.
+  // Preselect the first, which is the only one on a singles side and the one
+  // the icon used to assume. The picker below only appears when there is a
+  // real choice to make.
+  const [userOut, setUserOut] = useState(userOutOptions[0] ?? '');
+
+  const nameOf = useCallback(
+    (id: string): string =>
+      getHumanName(presence.find(p => p.user_id === id)?.profile, t('leagueDetail.unknownMember')),
+    [presence, t]
+  );
+
+  // Everyone confirmed but this pairing's own players. "Paired" is per round,
+  // matching what the swap actually does: a trade only happens with someone
+  // booked in this round, and anyone else is on a bye here whatever they play
+  // elsewhere. The row's own players are excluded rather than offered: the
+  // server refuses that trade (SAME_MATCH) because two players swapping sides
+  // of the same pairing changes nothing.
   const candidates = useMemo(() => {
     const pairedThisRound = new Set<string>();
     for (const m of matches) {
@@ -57,10 +71,16 @@ export function SessionSwapPlayerActionSheet({ payload }: SheetProps<'session-sw
         pairedThisRound.add(id);
       }
     }
+    const thisRow = matches.find(m => m.id === matchId);
+    const onThisRow = new Set<string>([
+      ...(thisRow?.team_a_user_ids ?? []),
+      ...(thisRow?.team_b_user_ids ?? []),
+      userOut,
+    ]);
     return presence
-      .filter(p => p.status === 'confirmed' && p.user_id !== userOut)
+      .filter(p => p.status === 'confirmed' && !onThisRow.has(p.user_id))
       .map(p => ({ ...p, isPaired: pairedThisRound.has(p.user_id) }));
-  }, [presence, matches, userOut, round]);
+  }, [presence, matches, matchId, userOut, round]);
 
   const { mutate: swap, isPending } = useSwapSessionPlayer(sessionId, {
     onSuccess: () => {
@@ -101,10 +121,38 @@ export function SessionSwapPlayerActionSheet({ payload }: SheetProps<'session-sw
 
   return (
     <BaseActionSheet
-      title={t('sessionDetail.swap.title', { name: userOutName })}
+      title={t('sessionDetail.swap.title', { name: nameOf(userOut) })}
       onClose={handleClose}
       scrollable={false}
     >
+      {userOutOptions.length > 1 ? (
+        <View style={styles.leavingRow}>
+          {userOutOptions.map(id => (
+            <TouchableOpacity
+              key={id}
+              onPress={() => {
+                void lightHaptic();
+                setUserOut(id);
+              }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: id === userOut }}
+              testID={`swap-leaving-${id}`}
+              style={[
+                styles.leavingChip,
+                { borderColor: id === userOut ? colors.primary : colors.border },
+              ]}
+            >
+              <Text
+                size="sm"
+                weight="semibold"
+                color={id === userOut ? colors.primary : colors.text}
+              >
+                {nameOf(id)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
       <Text size="sm" color={colors.textMuted} style={styles.hint}>
         {t('sessionDetail.swap.hint')}
       </Text>
@@ -150,8 +198,24 @@ export function SessionSwapPlayerActionSheet({ payload }: SheetProps<'session-sw
 }
 
 const styles = StyleSheet.create({
+  leavingRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
+  },
+  leavingChip: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.full,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[1],
+  },
+  // One rhythm down the sheet: each block owns the space above it, so the first
+  // one clears the header instead of sitting on its divider.
   hint: {
     paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[3],
   },
   row: {

@@ -529,6 +529,13 @@ export const SessionDetail: React.FC = () => {
     [sessionScoreable, isOrganizer, isScored]
   );
 
+  // Same rule the row's swap icon uses, named once so the tappable sides and
+  // the icon cannot drift apart.
+  const canSwapOn = useCallback(
+    (m: SessionMatch) => canOverride(m) && !isScored(m) && !m.match_id,
+    [canOverride, isScored]
+  );
+
   // A participant with an open pairing can organize the game with their
   // opponent in the pairing chat, before or after a game has been agreed on.
   const canOrganize = useCallback(
@@ -568,26 +575,27 @@ export const SessionDetail: React.FC = () => {
     [league, sessionId, seasonId, invalidate]
   );
 
-  // Substitution: the first player of team A is the one offered up, since a
-  // singles row has one player per side and the picker names who leaves.
+  // Substitution. The server takes any player sitting on the named row, so the
+  // organizer picks who leaves: tapping a side offers that side, the row's icon
+  // offers everyone on it. Offering team A's first player and nothing else was
+  // what made a hand-built pairing impossible to reach.
   const openSwapPlayer = useCallback(
-    (m: SessionMatch) => {
+    (m: SessionMatch, sideIds?: string[]) => {
       if (!sess) return;
-      const userOut = m.team_a_user_ids[0];
-      if (!userOut) return;
+      const userOutOptions = sideIds ?? [...m.team_a_user_ids, ...m.team_b_user_ids];
+      if (userOutOptions.length === 0) return;
       lightHaptic();
       void SheetManager.show('session-swap-player', {
         payload: {
           sessionId,
           matchId: m.id,
           round: m.round_number,
-          userOut,
-          userOutName: nameOf(userOut),
+          userOutOptions,
           sessionVersion: sess.version,
         },
       });
     },
-    [sess, sessionId, nameOf]
+    [sess, sessionId]
   );
 
   // Open (get-or-create) the per-pairing chat and drop the caller in, so they
@@ -1048,64 +1056,82 @@ export const SessionDetail: React.FC = () => {
                         </Text>
                       ) : null}
                       <View style={styles.vsRow}>
-                        <Text
-                          size="base"
-                          weight={
-                            m.winner_team === 'a'
-                              ? 'bold'
-                              : !isScored(m) && userId && m.team_a_user_ids.includes(userId)
-                                ? 'semibold'
-                                : 'regular'
-                          }
-                          color={
-                            isScored(m)
-                              ? m.winner_team !== 'a'
-                                ? colors.textMuted
-                                : colors.text
-                              : userId && m.team_a_user_ids.includes(userId)
-                                ? colors.primary
-                                : colors.text
-                          }
-                          numberOfLines={1}
+                        {/* Each side is its own tap target for the organizer:
+                            it is the shortcut to replacing THAT player, which
+                            the row-level icon cannot express. Disabled for
+                            everyone else, so it reads as plain text. */}
+                        <TouchableOpacity
+                          disabled={!canSwapOn(m)}
+                          onPress={() => openSwapPlayer(m, m.team_a_user_ids)}
                           style={styles.vsName}
+                          accessibilityLabel={t('sessionDetail.swap.action')}
+                          testID={`cta-swap-side-a-${m.id}`}
                         >
-                          {teamLabel(m.team_a_user_ids)}
-                        </Text>
+                          <Text
+                            size="base"
+                            weight={
+                              m.winner_team === 'a'
+                                ? 'bold'
+                                : !isScored(m) && userId && m.team_a_user_ids.includes(userId)
+                                  ? 'semibold'
+                                  : 'regular'
+                            }
+                            color={
+                              isScored(m)
+                                ? m.winner_team !== 'a'
+                                  ? colors.textMuted
+                                  : colors.text
+                                : userId && m.team_a_user_ids.includes(userId)
+                                  ? colors.primary
+                                  : colors.text
+                            }
+                            numberOfLines={1}
+                          >
+                            {teamLabel(m.team_a_user_ids)}
+                          </Text>
+                        </TouchableOpacity>
                         <Text size="sm" color={colors.textMuted}>
                           {isScored(m)
                             ? m.score || t('sessionDetail.score.played')
                             : t('sessionDetail.sheet.vs')}
                         </Text>
-                        <Text
-                          size="base"
-                          weight={
-                            m.winner_team === 'b'
-                              ? 'bold'
-                              : !isScored(m) && userId && m.team_b_user_ids.includes(userId)
-                                ? 'semibold'
-                                : 'regular'
-                          }
-                          color={
-                            isScored(m)
-                              ? m.winner_team !== 'b'
-                                ? colors.textMuted
-                                : colors.text
-                              : userId && m.team_b_user_ids.includes(userId)
-                                ? colors.primary
-                                : colors.text
-                          }
-                          numberOfLines={1}
+                        <TouchableOpacity
+                          disabled={!canSwapOn(m)}
+                          onPress={() => openSwapPlayer(m, m.team_b_user_ids)}
                           style={styles.vsName}
+                          accessibilityLabel={t('sessionDetail.swap.action')}
+                          testID={`cta-swap-side-b-${m.id}`}
                         >
-                          {teamLabel(m.team_b_user_ids)}
-                        </Text>
+                          <Text
+                            size="base"
+                            weight={
+                              m.winner_team === 'b'
+                                ? 'bold'
+                                : !isScored(m) && userId && m.team_b_user_ids.includes(userId)
+                                  ? 'semibold'
+                                  : 'regular'
+                            }
+                            color={
+                              isScored(m)
+                                ? m.winner_team !== 'b'
+                                  ? colors.textMuted
+                                  : colors.text
+                                : userId && m.team_b_user_ids.includes(userId)
+                                  ? colors.primary
+                                  : colors.text
+                            }
+                            numberOfLines={1}
+                          >
+                            {teamLabel(m.team_b_user_ids)}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
                     {canOverride(m) ? (
                       <View style={styles.matchActions}>
                         {/* Substitute before anyone plays: the late cancellation
                             the review asked about, without re-pairing the night. */}
-                        {!isScored(m) && !m.match_id ? (
+                        {canSwapOn(m) ? (
                           <TouchableOpacity
                             onPress={() => openSwapPlayer(m)}
                             style={styles.lockButton}

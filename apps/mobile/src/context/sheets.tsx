@@ -389,9 +389,13 @@ declare module 'react-native-actions-sheet' {
         matchId: string;
         /** That row's round: a trade only happens inside the same round. */
         round: number;
-        /** The player leaving their pairing. */
-        userOut: string;
-        userOutName: string;
+        /**
+         * Who the organizer may take out, in row order. Opening from a side's
+         * name narrows it to that side; opening from the row's swap icon
+         * offers everyone on the pairing. The sheet preselects the first and
+         * only shows a picker when there is more than one.
+         */
+        userOutOptions: string[];
         /** Guards the swap against a stale copy of the sheet. */
         sessionVersion: number;
       };
