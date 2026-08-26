@@ -1958,10 +1958,15 @@ export const LeagueDetail: React.FC = () => {
           : isPaidSeason && seasonFeeQuote
             ? t('leagueDetail.paid.enrollFor').replace(
                 '{amount}',
-                formatPrice(seasonFeeQuote.totalCents, seasonFeeQuote.currency, {
-                  locale,
-                  trimZeroCents: true,
-                })
+                // Post-credit, matching the confirmation dialog.
+                formatPrice(
+                  Math.max(
+                    seasonFeeQuote.totalCents - (seasonFeeQuote.creditApplicableCents ?? 0),
+                    0
+                  ),
+                  seasonFeeQuote.currency,
+                  { locale, trimZeroCents: true }
+                )
               )
             : t('leagueDetail.roster.enroll'),
         icon: 'person-add-outline',

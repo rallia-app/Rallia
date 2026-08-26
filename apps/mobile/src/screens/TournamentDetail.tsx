@@ -2141,9 +2141,15 @@ export const TournamentDetail: React.FC = () => {
     : null;
 
   // Paid-registration display: total to charge + a one-line refund summary.
+  // Post-credit, matching the confirmation sheet: the CTA and the sheet must
+  // never disagree one tap apart.
   const feeTotalLabel =
     isPaidTournament && feeQuote
-      ? formatPrice(feeQuote.totalCents, feeQuote.currency, { locale })
+      ? formatPrice(
+          Math.max(feeQuote.totalCents - (feeQuote.creditApplicableCents ?? 0), 0),
+          feeQuote.currency,
+          { locale }
+        )
       : null;
   const refundSummary = isPaidTournament ? refundPolicyLine(feeQuote, t, locale) : null;
   const registerBusy = registerPending || createRegistrationPayment.isPending;
