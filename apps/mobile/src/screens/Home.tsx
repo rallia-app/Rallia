@@ -48,6 +48,7 @@ import {
   useMyTournamentRanking,
   useMyUnscheduledTournamentMatches,
   useMyUnscheduledSessionMatches,
+  useMyLiveEvents,
 } from '@rallia/shared-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { MatchScoringPreferences } from '@rallia/shared-hooks';
@@ -59,7 +60,7 @@ import {
   joinGroupByInviteCode,
   requestToJoinCommunityByInviteCode,
 } from '@rallia/shared-services';
-import type { JustForYouItem } from '@rallia/shared-services';
+import type { EventSummary, JustForYouItem } from '@rallia/shared-services';
 import {
   spacingPixels,
   radiusPixels,
@@ -107,6 +108,7 @@ import {
   breakTileLabel,
 } from '#/components/GradientNavTile';
 import { FavoriteAvailabilityCard, FavoriteAvailabilityCardSkeleton } from '#/features/facilities';
+import { MyEventsSection } from '#/features/events/components/MyEventsSection';
 import { useHomeNavigation, useAppNavigation } from '#/navigation/hooks';
 import { useTabPreload } from '#/navigation/useTabPreload';
 import ProfileCompletionBanner, {
@@ -1046,6 +1048,15 @@ const Home = () => {
   const { data: sessionActionMatches = [], refetch: refetchLeagueActions } =
     useMyUnscheduledSessionMatches(isAdmin ? session?.user?.id : undefined, selectedSport?.id);
 
+  // The events the player is committed to right now. Their bracket and matchup
+  // games already reach Home through My Games, but between registering and
+  // being drawn there is nothing to show them, which read as "the app forgot
+  // I entered". Same query the event list and My Events run, so it is warm.
+  const { data: myLiveEvents, refetch: refetchMyLiveEvents } = useMyLiveEvents(
+    session?.user?.id,
+    selectedSport?.id
+  );
+
   const scrollRef = useRef<ScrollView>(null);
   const isManualRefresh = useRef(false);
   useScrollToTop(scrollRef);
@@ -1382,6 +1393,38 @@ const Home = () => {
     player,
     selectedSport?.name,
   ]);
+
+  const openEvent = useCallback(
+    (event: EventSummary) => {
+      if (event.engine === 'league') {
+        appNavigation.navigate('LeagueDetail', { leagueId: event.id, leagueName: event.name });
+      } else {
+        appNavigation.navigate('TournamentDetail', {
+          tournamentId: event.id,
+          tournamentName: event.name,
+        });
+      }
+    },
+    [appNavigation]
+  );
+
+  // My Events, right under My Games. Deliberately no loading placeholder: most
+  // players are in no event, and a skeleton every launch would reserve a slot
+  // Home usually has nothing to put in. It appears once it has cards.
+  const renderMyEventsSection = useCallback(
+    () => (
+      <MyEventsSection
+        events={myLiveEvents}
+        currentUserId={session?.user?.id}
+        title={t('home.myEvents')}
+        subtitle={t('home.myEventsSubtitle')}
+        viewAllLabel={t('home.viewAll')}
+        onViewAll={() => appNavigation.navigate('MyEvents')}
+        onPressEvent={openEvent}
+      />
+    ),
+    [myLiveEvents, session?.user?.id, t, appNavigation, openEvent]
+  );
 
   // Render the personalized availability section: a horizontal carousel of the
   // player's favorite facilities with an open slot, or — when none qualify
@@ -1918,6 +1961,7 @@ const Home = () => {
       );
     } else {
       // Add "My Games" for fully onboarded users
+      headerComponents.push(<View key="my-events">{renderMyEventsSection()}</View>);
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
     }
 
@@ -1946,6 +1990,7 @@ const Home = () => {
     openSheet,
     selectedSport,
     renderMyMatchesSection,
+    renderMyEventsSection,
     renderSectionHeader,
     otherSportsUnreadCount,
     dismissedBannerSports,
@@ -2066,6 +2111,7 @@ const Home = () => {
                 refetchMyMatches();
                 refetchTournamentActions();
                 refetchLeagueActions();
+                void refetchMyLiveEvents();
               }
             }}
             tintColor={colors.primary}

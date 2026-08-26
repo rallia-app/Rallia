@@ -33,7 +33,7 @@ import {
   useMyTournaments,
   useMyActiveRegistrations,
 } from '@rallia/shared-hooks';
-import { tournamentToEventSummary, type EventSummary } from '@rallia/shared-services';
+import { eventTimeKey, tournamentToEventSummary, type EventSummary } from '@rallia/shared-services';
 
 import { EventSummaryCard } from '../features/events/components/EventSummaryCard';
 import SignInPrompt from '../components/SignInPrompt';
@@ -70,13 +70,6 @@ function isUpcoming(event: EventSummary): boolean {
     status === 'registration_closed' ||
     status === 'in_progress'
   );
-}
-
-/** Sort key: upcoming events lead with the soonest, past with the most recent. */
-function timeKey(event: EventSummary): number {
-  if (event.engine === 'league') return new Date(event.league.created_at).getTime();
-  const t = event.tournament;
-  return new Date(t.cancelled_at ?? t.start_date).getTime();
 }
 
 const FilterChip: React.FC<{
@@ -207,8 +200,11 @@ export const MyEvents: React.FC = () => {
       }
     });
 
+    // Upcoming leads with the soonest, past with the most recent.
     return visible.sort((a, b) =>
-      activeTab === 'upcoming' ? timeKey(a) - timeKey(b) : timeKey(b) - timeKey(a)
+      activeTab === 'upcoming'
+        ? eventTimeKey(a) - eventTimeKey(b)
+        : eventTimeKey(b) - eventTimeKey(a)
     );
   }, [events, activeTab, currentFilter, registeredIds, userId, showArchived]);
 

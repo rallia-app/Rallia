@@ -8,6 +8,7 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   Text,
@@ -78,7 +79,8 @@ export const TournamentCard: React.FC<{
   t: (k: TranslationKey) => string;
   onPress: () => void;
   isOrganizer?: boolean;
-}> = ({ tournament, colors, locale, t, onPress, isOrganizer }) => {
+  style?: StyleProp<ViewStyle>;
+}> = ({ tournament, colors, locale, t, onPress, isOrganizer, style }) => {
   const fmtDate = useCallback(
     (iso: string) => new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
     [locale]
@@ -141,15 +143,28 @@ export const TournamentCard: React.FC<{
     <EventCardShell
       colors={colors}
       onPress={onPress}
+      style={style}
       testID={`tournament-card-${tournament.id}`}
       banner={<TournamentBanner logoUrl={tournament.logo_url} />}
       bannerTopLeft={
-        <EventStatusPill
-          tone={STATUS_TONE[tournament.status]}
-          label={t(`tournamentDetail.status.${tournament.status}`)}
-          colors={colors}
-          onImage
-        />
+        <>
+          <EventStatusPill
+            tone={STATUS_TONE[tournament.status]}
+            label={t(`tournamentDetail.status.${tournament.status}`)}
+            colors={colors}
+            onImage
+          />
+          {/* Role rides the banner with the status: in the meta row's trailing
+              slot it wrapped the fact line to two rows on narrow cards. */}
+          {isOrganizer && (
+            <EventStatusPill
+              tone="active"
+              label={t('tournamentList.roleOrganizer')}
+              colors={colors}
+              onImage
+            />
+          )}
+        </>
       }
       /* What the event is worth, both currencies together: cash in the solid
          gold pill, Circuit Rallia points in the lighter one. */
@@ -188,14 +203,6 @@ export const TournamentCard: React.FC<{
                   icon="pricetag-outline"
                   colors={colors}
                   tone="primary"
-                />
-              )}
-              {isOrganizer && (
-                <EventMetaChip
-                  label={t('tournamentList.roleOrganizer')}
-                  icon="person-outline"
-                  colors={colors}
-                  tone="accent"
                 />
               )}
             </>

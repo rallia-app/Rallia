@@ -26,7 +26,7 @@ import {
 } from '@rallia/shared-hooks';
 import {
   hasOpenSpots,
-  isDiscoverable,
+  isLiveEvent,
   matchesRatingBand,
   type EventSummary,
 } from '@rallia/shared-services';
@@ -100,7 +100,7 @@ export const Events: React.FC = () => {
   const sections = useMemo<EventListSection<EventSummary>[]>(() => {
     const query = debouncedSearchQuery.trim().toLowerCase();
     const visible = events.filter(event => {
-      if (!isDiscoverable(event)) return false;
+      if (!isLiveEvent(event)) return false;
       // Already yours: it belongs on My Events, not on discovery.
       if (userId && event.organizerId === userId) return false;
       if (event.engine === 'tournament' && registeredIds.has(event.id)) return false;

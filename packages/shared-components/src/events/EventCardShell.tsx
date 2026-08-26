@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { spacingPixels, radiusPixels, primary } from '@rallia/design-system';
@@ -33,6 +34,8 @@ export interface EventCardShellProps {
   meta?: React.ReactNode;
   footerLeft?: React.ReactNode;
   footerRight?: React.ReactNode;
+  /** Layout overrides for hosts that size the card (e.g. a horizontal rail). */
+  style?: StyleProp<ViewStyle>;
 }
 
 export const EventCardShell: React.FC<EventCardShellProps> = ({
@@ -47,6 +50,7 @@ export const EventCardShell: React.FC<EventCardShellProps> = ({
   meta,
   footerLeft,
   footerRight,
+  style,
 }) => (
   <TouchableOpacity
     onPress={onPress}
@@ -55,13 +59,14 @@ export const EventCardShell: React.FC<EventCardShellProps> = ({
     style={[
       styles.card,
       { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+      style,
     ]}
   >
     <View style={styles.bannerWrap}>
       {banner}
       {(bannerTopLeft || bannerTopRight) && (
         <View style={styles.bannerTopRow}>
-          {bannerTopLeft}
+          {bannerTopLeft && <View style={styles.bannerPills}>{bannerTopLeft}</View>}
           {bannerTopRight && <View style={styles.bannerBadges}>{bannerTopRight}</View>}
         </View>
       )}
@@ -180,16 +185,21 @@ const styles = StyleSheet.create({
     left: spacingPixels[2.5],
     right: spacingPixels[2.5],
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacingPixels[2],
   },
+  // Each corner stacks its pills vertically: the banner has vertical room to
+  // spare, and a narrow card would otherwise squeeze one row of four pills.
+  bannerPills: {
+    alignItems: 'flex-start',
+    gap: spacingPixels[1],
+    flexShrink: 1,
+  },
   bannerBadges: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: spacingPixels[1],
     marginLeft: 'auto',
-    flexShrink: 1,
   },
   bannerScrim: {
     position: 'absolute',
@@ -211,6 +221,9 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[2.5],
     paddingBottom: spacingPixels[3],
     gap: spacingPixels[2.5],
+    // In a stretched host (a rail equalizing card heights) the slack lands
+    // here, between meta and footer; natural-height lists are unaffected.
+    flexGrow: 1,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -225,6 +238,7 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: spacingPixels[2.5],
+    marginTop: 'auto',
   },
   footerLink: {
     flexDirection: 'row',

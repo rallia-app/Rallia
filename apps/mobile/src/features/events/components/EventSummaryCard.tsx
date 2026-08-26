@@ -9,6 +9,7 @@
  */
 
 import React from 'react';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { useEventListColors } from '@rallia/shared-components';
 import type { EventSummary } from '@rallia/shared-services';
 
@@ -21,12 +22,15 @@ interface EventSummaryCardProps {
   /** Marks cards the caller organizes with an accent chip. */
   currentUserId?: string;
   onPress: () => void;
+  /** Layout overrides for hosts that size the card (e.g. a horizontal rail). */
+  style?: StyleProp<ViewStyle>;
 }
 
 export const EventSummaryCard: React.FC<EventSummaryCardProps> = ({
   event,
   currentUserId,
   onPress,
+  style,
 }) => {
   const { t, locale } = useTranslation();
   const colors = useEventListColors();
@@ -40,6 +44,7 @@ export const EventSummaryCard: React.FC<EventSummaryCardProps> = ({
         t={t}
         isOrganizer={isOrganizer}
         onPress={onPress}
+        style={style}
       />
     );
   }
@@ -52,6 +57,7 @@ export const EventSummaryCard: React.FC<EventSummaryCardProps> = ({
       t={t}
       isOrganizer={isOrganizer}
       onPress={onPress}
+      style={style}
     />
   );
 };

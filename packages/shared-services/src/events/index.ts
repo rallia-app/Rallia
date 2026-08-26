@@ -4,7 +4,8 @@ export {
   bracketTypeToEventFormat,
   hasOpenSpots,
   matchesRatingBand,
-  isDiscoverable,
+  isLiveEvent,
+  eventTimeKey,
 } from './eventSummary';
 
 export type { EventSummary, EventEngine, EventFormat, EventPhase } from './eventSummary';
