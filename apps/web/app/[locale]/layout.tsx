@@ -169,7 +169,7 @@ export default async function LocaleLayout({
   const messages = getTranslations(locale as SharedLocale);
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         <JsonLd data={[organizationJsonLd, websiteJsonLd, ...mobileApplicationJsonLd]} />
       </head>
