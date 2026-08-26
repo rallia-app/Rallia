@@ -105,6 +105,21 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
   );
   const formatTime = useCallback((d: Date): string => formatTimeOfDay(d, locale), [locale]);
 
+  // On a flex session the date field is the START of the window, not the night
+  // it is played, which is not obvious next to a field simply labelled Date.
+  // Spelling the range out is the shortest way to say it.
+  const windowRange = ((): string => {
+    if (!isFlex) return '';
+    const end = new Date(scheduledAt);
+    end.setDate(end.getDate() + effectiveWindowDays);
+    const day = (d: Date): string =>
+      d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+    return t('leagueDetail.sessions.window.range', {
+      from: day(scheduledAt),
+      to: day(end),
+    });
+  })();
+
   const { mutate: createSession, isPending } = useCreateSession(seasonId, {
     onSuccess: created => {
       void SheetManager.hide(SHEET_ID).then(() => {
@@ -265,7 +280,7 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
         />
         <View style={styles.dateTimeRow}>
           <SheetDateField
-            label={t('leagueDetail.sessions.date')}
+            label={t(isFlex ? 'leagueDetail.sessions.windowStart' : 'leagueDetail.sessions.date')}
             value={scheduledAt}
             displayValue={formatDate(scheduledAt)}
             mode="date"
@@ -407,6 +422,9 @@ export function CreateSessionActionSheet({ payload }: SheetProps<'create-session
                 </TouchableOpacity>
               ))}
             </View>
+            <Text size="sm" weight="medium" color={colors.text}>
+              {windowRange}
+            </Text>
             <Text size="xs" color={colors.textMuted}>
               {t('leagueDetail.sessions.window.hint')}
             </Text>

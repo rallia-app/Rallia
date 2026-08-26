@@ -4678,6 +4678,7 @@
       "empty": "No sessions scheduled yet",
       "namePlaceholder": "e.g., Tuesday night",
       "date": "Date",
+      "windowStart": "Start",
       "time": "Time",
       "capacityPlaceholder": "Capacity (optional)",
       "submit": "Create session",
@@ -4989,7 +4990,9 @@
       "draftBanner": "Draft. Only you can see these pairings. Adjust them, then publish.",
       "draftHint": "Regenerating reshuffles the unlocked pairings. Nothing reaches your members until you publish.",
       "publish": "Publish the sheet",
-      "published": "Sheet published"
+      "published": "Sheet published",
+      "stateDraft": "Draft",
+      "statePublished": "Published"
     },
     "score": {
       "title": "Enter score",
@@ -5213,7 +5216,7 @@
       "schedulingTitle": "How sessions run",
       "scheduling": {
         "fixed": {
-          "title": "Fixed evenings",
+          "title": "Fixed dates",
           "description": "Every session is one date at one time. Everyone plays together."
         },
         "flex": {

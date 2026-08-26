@@ -979,9 +979,41 @@ export const SessionDetail: React.FC = () => {
         {/* Match sheet */}
         {(hasSheet || (isOrganizer && sess.status === 'published')) && (
           <View style={styles.section}>
-            <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.sectionTitle}>
-              {t('sessionDetail.sheet.title').toUpperCase()}
-            </Text>
+            {/* The hero chip states the SESSION's status, which stays
+                "published" while the sheet swings between draft and released.
+                Testers read it as the sheet's own state, so the sheet says its
+                state here, next to its title. Organizer-only: a member never
+                sees a draft. */}
+            <View style={styles.sectionTitleRow}>
+              <Text
+                size="xs"
+                weight="semibold"
+                color={colors.textMuted}
+                style={styles.sectionTitle}
+              >
+                {t('sessionDetail.sheet.title').toUpperCase()}
+              </Text>
+              {hasSheet && isOrganizer && (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: isDraftSheet ? colors.neutralBg : colors.positiveBg },
+                  ]}
+                >
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    color={isDraftSheet ? colors.neutralText : colors.positiveText}
+                  >
+                    {t(
+                      isDraftSheet
+                        ? 'sessionDetail.sheet.stateDraft'
+                        : 'sessionDetail.sheet.statePublished'
+                    )}
+                  </Text>
+                </View>
+              )}
+            </View>
             <View
               style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
             >

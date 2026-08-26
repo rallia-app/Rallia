@@ -4678,6 +4678,7 @@
       "empty": "Aucune séance planifiée",
       "namePlaceholder": "p. ex., Mardi soir",
       "date": "Date",
+      "windowStart": "Début",
       "time": "Heure",
       "capacityPlaceholder": "Capacité (optionnel)",
       "submit": "Créer la séance",
@@ -4989,7 +4990,9 @@
       "draftBanner": "Brouillon. Toi seul vois ces pairages. Ajuste-les, puis publie.",
       "draftHint": "Régénérer rebrasse les pairages non verrouillés. Rien ne se rend à tes membres tant que tu n'as pas publié.",
       "publish": "Publier la feuille",
-      "published": "Feuille publiée"
+      "published": "Feuille publiée",
+      "stateDraft": "Brouillon",
+      "statePublished": "Publiée"
     },
     "score": {
       "title": "Entrer le pointage",
@@ -5211,7 +5214,7 @@
       "schedulingTitle": "Comment se jouent les séances",
       "scheduling": {
         "fixed": {
-          "title": "Soirs fixes",
+          "title": "Date fixe",
           "description": "Chaque séance est une date à une heure précise. Tout le monde joue en même temps."
         },
         "flex": {
