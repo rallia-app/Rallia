@@ -1581,20 +1581,32 @@ export async function attachMatchToTournamentSlot(
 }
 
 /**
- * Organizer/admin authoritative result for a stalled or disputed bracket
- * match. Sets the winner (and optional score string), completes the match,
- * and advances the bracket. Used when an opponent never confirms a score or
- * a result is disputed. Does not modify any linked casual match row.
+ * What the organizer is recording. A real score is 'completed'; the other
+ * three say a game did not happen, which the app had no way to express before
+ * (Série 1 was settled by typing a generic 8-6 on 39% of its pairings).
+ * 'cancelled' takes no winner and is refused on a knockout row, where a slot
+ * still has to send somebody forward.
+ */
+export type TournamentMatchOutcome = 'completed' | 'walkover' | 'retired' | 'cancelled';
+
+/**
+ * Organizer/admin authoritative OUTCOME for a stalled or disputed bracket
+ * match. Sets the winner (and optional score string), settles the match in the
+ * shape the outcome names, and advances the bracket when there is a winner.
+ * A walkover with no score is stamped 'W/O', the same string the automated
+ * resolver writes. Does not modify any linked casual match row.
  */
 export async function overrideTournamentMatchScore(
   tournamentMatchId: string,
-  winnerRegistrationId: string,
-  score?: string
+  winnerRegistrationId: string | null,
+  score?: string,
+  outcome: TournamentMatchOutcome = 'completed'
 ): Promise<TournamentMatch> {
   const { data, error } = await supabase.rpc('tournament_override_score', {
     p_tournament_match_id: tournamentMatchId,
-    p_winner_registration_id: winnerRegistrationId,
+    p_winner_registration_id: winnerRegistrationId ?? undefined,
     p_score: score,
+    p_outcome: outcome,
   });
   if (error) throw new Error(error.message);
   return data as TournamentMatch;

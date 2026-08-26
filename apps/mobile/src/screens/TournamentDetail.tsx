@@ -1728,6 +1728,8 @@ export const TournamentDetail: React.FC = () => {
           pointsPerGame: tournament.points_per_game,
           isFinal:
             !!totalRounds && match?.bracket_side === 'main' && match?.round_number === totalRounds,
+          // A pool row can be cancelled outright; a bracket slot cannot.
+          isPoolMatch: match?.pool_number != null,
           onSuccess: () => {
             successHaptic();
           },

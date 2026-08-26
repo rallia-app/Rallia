@@ -5608,6 +5608,7 @@
       "closeRegistration": "Fermer les inscriptions",
       "reopenRegistration": "Rouvrir les inscriptions",
       "shareInviteLink": "Partager le lien d'invitation",
+      "setDeadlines": "Échéances des tours",
       "register": "S'inscrire",
       "addMyself": "M'ajouter",
       "withdraw": "Se retirer",
@@ -5824,6 +5825,15 @@
         "message": "{champion} gagne {score} et devient le champion. Les points de classement sont attribués tout de suite. Tu peux encore corriger pendant 24 heures.",
         "cta": "Confirmer le champion"
       },
+      "outcome": {
+        "completed": "Pointage",
+        "walkover": "Forfait",
+        "retired": "Abandon",
+        "cancelled": "Annulée",
+        "walkoverHint": "Personne n'a joué. Qui passe?",
+        "retiredHint": "La partie a commencé puis a été abandonnée. Qui l'emporte?",
+        "cancelledHint": "La partie ne sera pas jouée. Elle ne compte pour personne au classement de la poule."
+      },
       "errors": {
         "notOverridable": "Cette partie ne peut plus être modifiée.",
         "nextMatchPlayed": "Tu ne peux plus modifier ce score. La prochaine partie a déjà été jouée.",
@@ -5831,7 +5841,9 @@
         "notInProgress": "Le tournoi n'est pas en cours.",
         "slotsIncomplete": "Les deux joueurs ne sont pas encore définis pour cette partie.",
         "correctionWindowClosed": "La période de 24 heures pour corriger ce résultat est terminée. Demande l'aide d'un admin.",
-        "generic": "Impossible d'enregistrer le résultat. Réessaie."
+        "generic": "Impossible d'enregistrer le résultat. Réessaie.",
+        "cancelNeedsBracketOutcome": "Une partie du tableau ne peut pas être annulée: quelqu'un doit passer au tour suivant. Déclare plutôt un forfait.",
+        "winnerRequired": "Choisis qui passe."
       }
     },
     "generateBracketErrors": {
@@ -5917,6 +5929,23 @@
       "playBy": "à jouer avant le {date}",
       "hoursLeft": "{hours} h pour jouer",
       "phaseDeadline": "Phase en cours : {when}"
+    },
+    "deadlinesEditor": {
+      "title": "Échéances des tours",
+      "hint": "Les joueurs ont jusqu'à l'échéance pour jouer. Passé ce moment, les règles tranchent ce qui reste et la date ne peut plus bouger. Fixe-la maintenant, et repousse-la d'avance si tu en as besoin.",
+      "poolPhase": "Phase de poules",
+      "notSet": "Aucune échéance",
+      "passed": "Déjà passée, ne peut plus être modifiée",
+      "noRounds": "Les tours apparaissent une fois les poules ou le tableau publiés.",
+      "save": "Enregistrer les échéances",
+      "saved": "Échéances mises à jour. Les joueurs ont été avertis.",
+      "errorInPast": "Une échéance doit être dans le futur.",
+      "errorTooSoon": "Tu ne peux pas ramener une échéance à moins de 48 heures d'ici. Les joueurs comptaient sur la date qu'on leur a donnée.",
+      "errorNotIncreasing": "Chaque tour doit se terminer après le précédent.",
+      "errorNotIncreasingRound": "{round} doit se terminer après le tour précédent.",
+      "errorNotReady": "Les échéances se fixent seulement quand le tournoi est ouvert ou en cours.",
+      "errorInvalid": "Ces dates n'ont pas pu être enregistrées.",
+      "errorGeneric": "Les échéances n'ont pas pu être enregistrées."
     },
     "goodToKnow": {
       "title": "Bon à savoir",

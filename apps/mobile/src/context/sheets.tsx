@@ -366,6 +366,9 @@ declare module 'react-native-actions-sheet' {
         // The final decides the champion and releases ranking points, so the
         // sheet asks for confirmation before submitting.
         isFinal?: boolean;
+        // A pool row can be cancelled outright; a bracket slot cannot, since
+        // somebody still has to advance. Drives which outcomes are offered.
+        isPoolMatch?: boolean;
         onSuccess?: () => void;
         onDismiss?: () => void;
       };

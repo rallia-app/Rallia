@@ -8,6 +8,12 @@
  * derived from the sets, and submit serializes to a "p1-p2" string (player1
  * always on the left, so the bracket renderer orients it) before calling the
  * override RPC.
+ *
+ * Since 20260825120000 the sheet records an OUTCOME rather than always a
+ * score: forfait, abandon and annulée say a game did not happen, which is what
+ * Série 1 lacked when 39% of its pairings were advanced by typing a generic
+ * 8-6. Only 'completed' needs the set grid; the two walkover-shaped outcomes
+ * need a winner and nothing else, and a cancellation needs neither.
  */
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
@@ -42,6 +48,7 @@ import {
   type SetScore,
 } from '@rallia/shared-utils';
 import { useOverrideTournamentMatchScore } from '@rallia/shared-hooks';
+import type { TournamentMatchOutcome } from '@rallia/shared-services';
 
 import { ScoreEntrySets } from '#/components/ScoreEntrySets';
 import { useTranslation, useThemeStyles, type TranslationKey } from '#/hooks';
@@ -60,8 +67,23 @@ interface ThemeColors {
   buttonTextActive: string;
 }
 
+/**
+ * Offered in the order an organizer reaches for them: a real score first, then
+ * the three ways a game did not happen. 'cancelled' is filtered out on a
+ * knockout row, where the server refuses it anyway.
+ */
+const OUTCOMES = [
+  'completed',
+  'walkover',
+  'retired',
+  'cancelled',
+] as const satisfies readonly TournamentMatchOutcome[];
+
 /** Map an override RPC error message to a user-facing translation key. */
 function overrideErrorKey(message: string): TranslationKey {
+  if (message.includes('CANCEL_NEEDS_BRACKET_OUTCOME'))
+    return 'tournamentDetail.override.errors.cancelNeedsBracketOutcome';
+  if (message.includes('WINNER_REQUIRED')) return 'tournamentDetail.override.errors.winnerRequired';
   if (message.includes('NEXT_MATCH_ALREADY_PLAYED'))
     return 'tournamentDetail.override.errors.nextMatchPlayed';
   if (message.includes('MATCH_NOT_OVERRIDABLE'))
@@ -94,6 +116,7 @@ export function TournamentRecordScoreActionSheet({
   const matchFormat = payload?.matchFormat;
   const pointsPerGame = payload?.pointsPerGame ?? null;
   const isFinal = payload?.isFinal ?? false;
+  const isPoolMatch = payload?.isPoolMatch ?? false;
   const onSuccess = payload?.onSuccess;
   const onDismiss = payload?.onDismiss;
 
@@ -118,6 +141,10 @@ export function TournamentRecordScoreActionSheet({
 
   const [sets, setSets] = useState<SetScore[]>([{ player1Score: null, player2Score: null }]);
   const [error, setError] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<TournamentMatchOutcome>('completed');
+  // Only meaningful for the outcomes that have a winner but no score to derive
+  // it from. 1 = player 1, 2 = player 2, mirroring winningSide.
+  const [declaredSide, setDeclaredSide] = useState<1 | 2 | null>(null);
 
   const validSets = useMemo(() => validSetsOf(sets), [sets]);
   const winningSide = useMemo(() => deriveWinningSideFromSets(validSets), [validSets]);
@@ -138,7 +165,16 @@ export function TournamentRecordScoreActionSheet({
     },
   });
 
-  const canSubmit = validSets.length > 0 && winningSide !== null && !override.isPending;
+  // What each outcome needs before it can be written: a score for a real
+  // result, a named winner for the two walkover-shaped ones, nothing at all
+  // for a cancellation.
+  const canSubmit =
+    !override.isPending &&
+    (outcome === 'cancelled'
+      ? true
+      : outcome === 'completed'
+        ? validSets.length > 0 && winningSide !== null
+        : declaredSide !== null);
 
   const handleSheetClose = useCallback(() => {
     if (!didSubmitRef.current) {
@@ -154,6 +190,29 @@ export function TournamentRecordScoreActionSheet({
   }, []);
 
   const handleSubmit = useCallback(() => {
+    // The three outcomes that say no game happened skip the score rules
+    // entirely: there is nothing to validate about a match nobody played.
+    if (outcome !== 'completed') {
+      if (outcome !== 'cancelled' && declaredSide === null) {
+        setError(t('registerMatchScore.error.noWinner'));
+        return;
+      }
+      Keyboard.dismiss();
+      lightHaptic();
+      setError(null);
+      override.mutate({
+        tournamentMatchId,
+        winnerRegistrationId:
+          outcome === 'cancelled' ? null : declaredSide === 1 ? player1RegId : player2RegId,
+        // A retirement keeps whatever was played up to the abandon; a walkover
+        // has no score at all and the server stamps its own W/O.
+        score: outcome === 'retired' && validSets.length > 0 ? serializeSets(validSets) : undefined,
+        outcome,
+        tournamentId,
+      });
+      return;
+    }
+
     if (validSets.length === 0) {
       setError(
         t(
@@ -213,6 +272,8 @@ export function TournamentRecordScoreActionSheet({
   }, [
     validSets,
     winningSide,
+    outcome,
+    declaredSide,
     isPickleballSport,
     isFinal,
     matchFormat,
@@ -269,16 +330,102 @@ export function TournamentRecordScoreActionSheet({
             {t('tournamentDetail.override.subtitle')}
           </Text>
 
-          <ScoreEntrySets
-            sets={sets}
-            onSetsChange={setSets}
-            player1Name={player1Name}
-            player2Name={player2Name}
-            isPickleball={isPickleballSport}
-            matchFormat={matchFormat}
-            colors={colors}
-            onDirty={() => setError(null)}
-          />
+          {/* What happened. Naming it is the whole point: without these the
+              only way to settle an unplayed pairing was to invent a score. */}
+          <View style={styles.outcomeRow}>
+            {OUTCOMES.filter(o => o !== 'cancelled' || isPoolMatch).map(o => (
+              <TouchableOpacity
+                key={o}
+                onPress={() => {
+                  lightHaptic();
+                  setOutcome(o);
+                  setError(null);
+                }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: outcome === o }}
+                testID={`override-outcome-${o}`}
+                style={[
+                  styles.outcomeChip,
+                  { borderColor: outcome === o ? colors.buttonActive : colors.border },
+                ]}
+              >
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={outcome === o ? colors.buttonActive : colors.text}
+                >
+                  {t(`tournamentDetail.override.outcome.${o}` as TranslationKey)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {outcome === 'completed' ? (
+            <ScoreEntrySets
+              sets={sets}
+              onSetsChange={setSets}
+              player1Name={player1Name}
+              player2Name={player2Name}
+              isPickleball={isPickleballSport}
+              matchFormat={matchFormat}
+              colors={colors}
+              onDirty={() => setError(null)}
+            />
+          ) : outcome === 'cancelled' ? (
+            <Text size="sm" color={colors.textMuted} style={styles.outcomeHint}>
+              {t('tournamentDetail.override.outcome.cancelledHint')}
+            </Text>
+          ) : (
+            <>
+              <Text size="sm" color={colors.textMuted} style={styles.outcomeHint}>
+                {t(
+                  outcome === 'walkover'
+                    ? 'tournamentDetail.override.outcome.walkoverHint'
+                    : 'tournamentDetail.override.outcome.retiredHint'
+                )}
+              </Text>
+              <View style={styles.outcomeRow}>
+                {([1, 2] as const).map(side => (
+                  <TouchableOpacity
+                    key={side}
+                    onPress={() => {
+                      lightHaptic();
+                      setDeclaredSide(side);
+                      setError(null);
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: declaredSide === side }}
+                    testID={`override-winner-${side}`}
+                    style={[
+                      styles.outcomeChip,
+                      { borderColor: declaredSide === side ? colors.buttonActive : colors.border },
+                    ]}
+                  >
+                    <Text
+                      size="sm"
+                      weight="semibold"
+                      color={declaredSide === side ? colors.buttonActive : colors.text}
+                    >
+                      {side === 1 ? player1Name : player2Name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {/* A retirement still has the score played up to the abandon. */}
+              {outcome === 'retired' ? (
+                <ScoreEntrySets
+                  sets={sets}
+                  onSetsChange={setSets}
+                  player1Name={player1Name}
+                  player2Name={player2Name}
+                  isPickleball={isPickleballSport}
+                  matchFormat={matchFormat}
+                  colors={colors}
+                  onDirty={() => setError(null)}
+                />
+              ) : null}
+            </>
+          )}
 
           {error ? (
             <View style={styles.errorRow}>
@@ -378,6 +525,21 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[8],
   },
   subtitle: {
+    marginTop: spacingPixels[3],
+  },
+  outcomeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacingPixels[2],
+    marginTop: spacingPixels[3],
+  },
+  outcomeChip: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.full,
+    paddingHorizontal: spacingPixels[3],
+    paddingVertical: spacingPixels[2],
+  },
+  outcomeHint: {
     marginTop: spacingPixels[3],
   },
   errorRow: {

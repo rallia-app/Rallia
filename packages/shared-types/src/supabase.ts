@@ -15369,9 +15369,10 @@ export type Database = {
       }
       tournament_override_score: {
         Args: {
+          p_outcome?: Database["public"]["Enums"]["tournament_match_status"]
           p_score?: string
           p_tournament_match_id: string
-          p_winner_registration_id: string
+          p_winner_registration_id?: string
         }
         Returns: {
           bracket_side: string

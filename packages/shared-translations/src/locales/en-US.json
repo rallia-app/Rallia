@@ -5608,6 +5608,7 @@
       "closeRegistration": "Close registration",
       "reopenRegistration": "Reopen registration",
       "shareInviteLink": "Share invite link",
+      "setDeadlines": "Round deadlines",
       "register": "Register",
       "addMyself": "Add myself",
       "withdraw": "Withdraw",
@@ -5824,6 +5825,15 @@
         "message": "{champion} wins {score} and is crowned champion. Ranking points go out right away. You can still fix this for 24 hours.",
         "cta": "Confirm the champion"
       },
+      "outcome": {
+        "completed": "Score",
+        "walkover": "Walkover",
+        "retired": "Retirement",
+        "cancelled": "Cancelled",
+        "walkoverHint": "Nobody played. Who goes through?",
+        "retiredHint": "The game started and was abandoned. Who takes it?",
+        "cancelledHint": "This game will not be played. It counts for neither player in the pool standings."
+      },
       "errors": {
         "notOverridable": "This match can't be edited anymore.",
         "nextMatchPlayed": "You can't change this score now. The next game has already been played.",
@@ -5831,7 +5841,9 @@
         "notInProgress": "The tournament isn't in progress.",
         "slotsIncomplete": "Both players aren't set yet for this match.",
         "correctionWindowClosed": "The 24-hour window to correct this result has closed. Ask an admin for help.",
-        "generic": "Couldn't save the result. Please try again."
+        "generic": "Couldn't save the result. Please try again.",
+        "cancelNeedsBracketOutcome": "A bracket game cannot be cancelled: somebody has to go through. Declare a walkover instead.",
+        "winnerRequired": "Pick who goes through."
       }
     },
     "generateBracketErrors": {
@@ -5917,6 +5929,23 @@
       "playBy": "play by {date}",
       "hoursLeft": "{hours}h left to play",
       "phaseDeadline": "Current phase: {when}"
+    },
+    "deadlinesEditor": {
+      "title": "Round deadlines",
+      "hint": "Players play up to the deadline. Once it passes, the rules settle whatever is left and the date can no longer be moved, so set it now and push it back early if you need to.",
+      "poolPhase": "Pool phase",
+      "notSet": "No deadline",
+      "passed": "Already passed, can no longer be moved",
+      "noRounds": "The rounds appear once the pools or the draw are published.",
+      "save": "Save deadlines",
+      "saved": "Deadlines updated. The players have been notified.",
+      "errorInPast": "A deadline has to be in the future.",
+      "errorTooSoon": "You cannot pull a deadline in to less than 48 hours from now. Players were counting on the date they were given.",
+      "errorNotIncreasing": "Each round has to end after the one before it.",
+      "errorNotIncreasingRound": "{round} has to end after the round before it.",
+      "errorNotReady": "Deadlines can only be set while the tournament is open or in progress.",
+      "errorInvalid": "Those dates could not be saved.",
+      "errorGeneric": "The deadlines could not be saved."
     },
     "goodToKnow": {
       "title": "Good to know",

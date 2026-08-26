@@ -56,6 +56,7 @@ import {
   listLinkableMatchesForSlot,
   attachMatchToTournamentSlot,
   overrideTournamentMatchScore,
+  type TournamentMatchOutcome,
   cancelTournament,
   archiveTournament,
   unarchiveTournament,
@@ -510,13 +511,14 @@ export function useOverrideTournamentMatchScore(options: MutationOptions<Tournam
     Error,
     {
       tournamentMatchId: string;
-      winnerRegistrationId: string;
+      winnerRegistrationId: string | null;
       score?: string;
+      outcome?: TournamentMatchOutcome;
       tournamentId: string;
     }
   >({
-    mutationFn: ({ tournamentMatchId, winnerRegistrationId, score }) =>
-      overrideTournamentMatchScore(tournamentMatchId, winnerRegistrationId, score),
+    mutationFn: ({ tournamentMatchId, winnerRegistrationId, score, outcome }) =>
+      overrideTournamentMatchScore(tournamentMatchId, winnerRegistrationId, score, outcome),
     onSuccess: (tm, vars) => {
       invalidate(vars.tournamentId);
       options.onSuccess?.(tm);
