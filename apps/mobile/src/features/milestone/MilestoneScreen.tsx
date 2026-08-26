@@ -31,7 +31,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, Button, Card, WizardProgressDots } from '@rallia/shared-components';
-import { Logger } from '@rallia/shared-services';
+import { generateWebSignupLink, Logger } from '@rallia/shared-services';
 import { useAuth, useReferral } from '@rallia/shared-hooks';
 import { spacingPixels, radiusPixels, base, neutral, primary, accent } from '@rallia/design-system';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
@@ -52,10 +52,14 @@ const TOTAL_STEPS = 2;
 export function MilestoneScreen() {
   const { colors, isDark } = useThemeStyles();
   const insets = useSafeAreaInsets();
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const navigation = useAppNavigation();
   const { session } = useAuth();
-  const { code, referralLink, contest, stats } = useReferral(session?.user?.id, locale);
+  const { code, stats } = useReferral(session?.user?.id);
+  // Web-first: /get-started?ref= attributes at account creation, which the
+  // store-install path can't guarantee (iOS especially). The $10 credit rides
+  // on accurate attribution, so this flow shares the web link.
+  const referralLink = code ? generateWebSignupLink(code) : undefined;
 
   const [step, setStep] = useState(1);
   // In-place confirmation: this screen is a native modal, so the root toast
@@ -316,13 +320,16 @@ export function MilestoneScreen() {
             </View>
 
             <View style={styles.stepGroup}>
-              {contest?.prizeDescription && (
-                <View style={[styles.prizePill, { backgroundColor: `${accent[500]}1F` }]}>
-                  <Text size="sm" weight="semibold" color={isDark ? accent[300] : accent[700]}>
-                    {t('milestone1000.prize').replace('{prize}', contest.prizeDescription)}
-                  </Text>
-                </View>
-              )}
+              <View style={[styles.prizePill, { backgroundColor: `${accent[500]}1F` }]}>
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  align="center"
+                  color={isDark ? accent[300] : accent[700]}
+                >
+                  {t('milestone1000.creditPledge')}
+                </Text>
+              </View>
 
               {code && (
                 <Card

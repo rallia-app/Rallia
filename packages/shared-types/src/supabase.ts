@@ -5502,6 +5502,44 @@ export type Database = {
           },
         ]
       }
+      player_credit: {
+        Row: {
+          amount_cents: number
+          currency: string
+          expires_at: string | null
+          granted_at: string
+          id: string
+          player_id: string
+          source: string
+        }
+        Insert: {
+          amount_cents: number
+          currency?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          player_id: string
+          source: string
+        }
+        Update: {
+          amount_cents?: number
+          currency?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          player_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_credit_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_favorite: {
         Row: {
           created_at: string | null
@@ -12015,6 +12053,10 @@ export type Database = {
           previous_signups: number
           previous_total_signups: number
         }[]
+      }
+      grant_referral_credit_if_eligible: {
+        Args: { p_referrer: string }
+        Returns: undefined
       }
       insert_notification:
         | {
