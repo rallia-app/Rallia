@@ -33,21 +33,28 @@ that still wait for a button.
 
 ## The measurement that constrains the design
 
-Série 1, prod, measured 2026-08-19 over all 70 playable pairings:
+Série 1, prod, all 70 playable pairings. Measured 2026-08-19, corrected
+2026-08-21 after Mathis confirmed that the organizer typed a generic 8-6 (and
+a few 1-0 / 8-0) to advance pairings that were never played, having no way to
+record a forfeit:
 
-| Fact                                                            | Consequence                                                                                                |
-| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| 100% of pairings played a real game; zero walkovers             | Delay was pacing, not abandonment                                                                          |
-| 40% of pairings had **zero** in-app scheduling or chat activity | In-app silence is not evidence of disengagement; scheduling happens by text, phone, in person              |
-| True ghosting (one side spoke, no reply) was 10%                | The problem the ladder targets is real but small                                                           |
-| ~4 days median from pairing-known to played, all contact states | Any deadline shorter than ~5 days per round manufactures arbitration                                       |
-| 53% of results were organizer-keyed with no linked game         | The scarce input is the **result**, not the schedule; recording friction is the largest organizer workload |
-| Both 26-player draws overran a 13-day window by 5 and 8 days    | The calendar was under-budgeted; the players were not slow                                                 |
+| Fact                                                                                                                                          | Consequence                                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 43 of 70 pairings (61%) were played: 33 with a linked verified game, 10 with a real score keyed by the organizer on the players' behalf       | Real play is the majority even where the app saw nothing                                                                                                                     |
+| 27 (39%) were advanced without a game: 19 generic 8-6 / 6-8, 8 placeholders (1-0, 0-1, 8-0), all organizer-keyed                              | The unplayed third is real, and the record disguised it as scores. Arbitration and explicit outcomes (forfeit, walkover, cancellation) are both needed, not one or the other |
+| 28 pairings (40%) had **zero** in-app scheduling or chat activity: 10 played on a linked game, 7 played and keyed, 11 force-advanced          | In-app silence is ambiguous: ~60% of silent pairings played (by text, phone, in person), ~40% never did, and the app cannot tell them apart                                  |
+| Among the 35 pairings where both sides talked in the app, 12 were still force-advanced; of the 7 true ghostings (one spoke, no reply), 4 were | Chatting is no guarantee of play either; chat is inadmissible for a second reason                                                                                            |
+| ~4 days median from pairing-known to played (linked games), all contact states                                                                | Any deadline shorter than ~5 days per round manufactures arbitration                                                                                                         |
+| Both 26-player draws overran a 13-day window by 5 and 8 days                                                                                  | The calendar was under-budgeted for the played games; the unplayed ones were settled by typing a score                                                                       |
 
-Had the live ladder run against Série 1 with deadlines set, the
-neither-side-effort branch would have double-walked-over up to 40% of
-pairings that in reality played. That is the failure mode this spec exists to
-make impossible.
+Had the live ladder run against Série 1 with deadlines set, its
+neither-side-effort branch would have double-walked-over the 28 silent
+pairings: right 11 times, wrong 17 times, and unable to say which was which.
+The organizer's 8-6 hid the same ambiguity inside the record. Both halves
+are the failure this spec exists to make impossible: never penalize on a
+silence the machine cannot read, and always give players and organizer an
+explicit outcome (forfeit, walkover, cancellation) so that a result is never
+a disguise.
 
 ## Invariants
 
@@ -131,12 +138,23 @@ outcomes (cancellation or unpenalized advancement, below).
 
 ### Declared score is the score (decision 2026-08-19)
 
-For tournament- and league-linked games, the first declared score is
-**final on entry**. No opponent confirmation exists in the flow; the opponent
-can only **contest**. Product decision of 2026-08-19, replacing the
-confirm-or-auto-confirm model for L&T games (casual games keep mutual
-confirmation; their rating stakes have no deadline pressure and no organizer
-backstop).
+The first declared score is **final on entry**. No opponent confirmation
+exists in the flow; the opponent can only **contest**. Product decision of
+2026-08-19 for tournament- and league-linked games, **extended on 2026-08-21
+to every game, casual included**: one score-entry rule for the whole app, one
+server path (`submit_match_result_for_match`), one sheet, one contest
+mechanism. The confirm-or-auto-confirm model and its pending-confirmation
+state disappear everywhere.
+
+What differs for casual games is only what happens after the declaration:
+there is no bracket to advance and no organizer to appeal to, so the contest
+is settled between the two players (a rebuttal the declarer accepts replaces
+the score; one they refuse leaves the result disputed and a report can
+follow) and the **rating effect posts when the contest window closes** (or
+early, when the opponent accepts the score), not at declaration. The game is
+final for everyone the moment it is declared; only the rating waits out the
+48 h. For L&T-linked games the bracket and standings move at declaration,
+as below, and the rating follows the same window.
 
 - On submission, `match_result` verifies immediately; the existing sync
   trigger copies score and winner to the L&T row and advances the bracket or
@@ -157,9 +175,12 @@ backstop).
 - The T-48/T-12 nudge copy gains one line naming the rule: whoever played,
   enter the score; it stands unless contested.
 
-This deletes the pending-confirmation state for L&T games entirely, and with
-it the `auto_confirm_expired_scores` cron as a prerequisite of this spec (the
-uncronned function remains a casual-flow gap, out of scope here).
+This deletes the pending-confirmation state for every game, and with it the
+never-cronned `auto_confirm_expired_scores` function, the 24 h
+`confirmation_deadline`, and the "confirm this score" prompts; the rebuttal
+flow survives as the contest flow, bounded by the 48 h window. Rating and
+reputation events that fire on `is_verified` today move to "window closed or
+opponent accepted", with a reversal path for an upheld contest.
 
 ### Score-first entry (the missing safety valve)
 
@@ -269,15 +290,15 @@ from "split the window evenly" to measurement-derived floors:
 
 ## Amendments to existing specs
 
-| Spec                                                                                        | Amendment                                                                                                                                                                                                             |
-| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [round-deadlines.md](./round-deadlines.md) § Step 1                                         | Replaced by the resolution order above: conclusive-first, behavioral second, penalties gated on acked-or-acted, protocol-incomplete never penalizes.                                                                  |
-| [round-deadlines.md](./round-deadlines.md) § Double walkover                                | Pool-side double walkover becomes cancellation. Knockout unchanged.                                                                                                                                                   |
-| [scheduling-arbitration.md](./scheduling-arbitration.md)                                    | Decision function S stands but moves to row 3-5 of the order; it never fires against conclusive evidence. Phase availability, proposed slot, weather, lateness, venue all unchanged.                                  |
-| [poules...](./formats/poules-puis-eliminatoires.md) §6, §7                                  | "Réglée par l'organisateur" becomes "réglée par l'échéance" (organizer optional). §7's launch button gains the gate-2 timer.                                                                                          |
-| [08 live-suggestions](../08-communications/match-organizer-live-suggestions.md) § Auto-post | The card carries the ack chip. An ack is not effort (it scores nothing in S); it is knowledge.                                                                                                                        |
-| [score-entry.md](./score-entry.md) § Player submission flow                                 | For L&T-linked games: declared score verifies on entry; opponent confirmation replaced by a 48h contest (rebuttal) window. Upheld contests must correct `match_result`, not only the L&T row. Casual games unchanged. |
-| [poules...](./formats/poules-puis-eliminatoires.md) §6                                      | "un joueur l'entre, l'adversaire le confirme (validation automatique après 72 heures)" becomes "un joueur l'entre, il fait foi; l'adversaire peut le contester (48 h)".                                               |
+| Spec                                                                                        | Amendment                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [round-deadlines.md](./round-deadlines.md) § Step 1                                         | Replaced by the resolution order above: conclusive-first, behavioral second, penalties gated on acked-or-acted, protocol-incomplete never penalizes.                                                                                                                       |
+| [round-deadlines.md](./round-deadlines.md) § Double walkover                                | Pool-side double walkover becomes cancellation. Knockout unchanged.                                                                                                                                                                                                        |
+| [scheduling-arbitration.md](./scheduling-arbitration.md)                                    | Decision function S stands but moves to row 3-5 of the order; it never fires against conclusive evidence. Phase availability, proposed slot, weather, lateness, venue all unchanged.                                                                                       |
+| [poules...](./formats/poules-puis-eliminatoires.md) §6, §7                                  | "Réglée par l'organisateur" becomes "réglée par l'échéance" (organizer optional). §7's launch button gains the gate-2 timer.                                                                                                                                               |
+| [08 live-suggestions](../08-communications/match-organizer-live-suggestions.md) § Auto-post | The card carries the ack chip. An ack is not effort (it scores nothing in S); it is knowledge.                                                                                                                                                                             |
+| [score-entry.md](./score-entry.md) § Player submission flow                                 | For every game, L&T-linked and casual (2026-08-21): declared score verifies on entry; opponent confirmation replaced by a 48h contest (rebuttal) window; rating posts at window close or on acceptance. Upheld contests must correct `match_result`, not only the L&T row. |
+| [poules...](./formats/poules-puis-eliminatoires.md) §6                                      | "un joueur l'entre, l'adversaire le confirme (validation automatique après 72 heures)" becomes "un joueur l'entre, il fait foi; l'adversaire peut le contester (48 h)".                                                                                                    |
 
 ## Notifications
 

@@ -40,28 +40,30 @@ Pending schema deltas before league V6 (documented in [data-model.md § Schema d
 
 ## Document Structure
 
-| File                                                     | Purpose                                                                                                     |
-| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| [tournaments.md](./tournaments.md)                       | Tournament lifecycle, registration, cancellation, reschedule, archival                                      |
-| [tournament-bracket.md](./tournament-bracket.md)         | Bracket sizing, deterministic seed placement, BYEs, manual edits, double-elimination                        |
-| [leagues.md](./leagues.md)                               | League / season / session lifecycle, membership, suspension, mid-season impact                              |
-| [match-sheet.md](./match-sheet.md)                       | Pairing algorithms (BY_RANK, AVOID_REPEAT, SWISS, BALANCED_DOUBLES), round/court allocator                  |
-| [score-entry.md](./score-entry.md)                       | Score format regexes, sport-aware validator, retirement/walkover, dispute resolution                        |
-| [round-deadlines.md](./round-deadlines.md)               | Per-round deadlines, countdown + nudges, automated walkover resolution ladder                               |
-| [scheduling-arbitration.md](./scheduling-arbitration.md) | Phase availability record, proposed slot, graded decision function, weather/lateness/venue rules            |
-| [autonomous-advancement.md](./autonomous-advancement.md) | Evidence model v2 (ack, score-first), pool vs knockout strictness, time-triggered phase gates               |
-| [ranking.md](./ranking.md)                               | Points, bonuses/malus, tie-breakers, ranking calculation, stored vs derived                                 |
-| [result-share.md](./result-share.md)                     | Per-player result record, 9:16 result poster, public tournament page, share surfaces                        |
-| [notifications.md](./notifications.md)                   | Per-event notification payloads, channels, i18n keys, deep-links, batching                                  |
-| [permissions.md](./permissions.md)                       | Role × action matrix, RLS policy snippets                                                                   |
-| [data-model.md](./data-model.md)                         | Postgres DDL, enums, FKs, indexes, RLS, triggers, derived columns                                           |
-| [integrations.md](./integrations.md)                     | Cross-system contracts (sport modes, rating, reputation, communities, calendar, chat, facilities)           |
-| [mobile-ux.md](./mobile-ux.md)                           | Mobile screen inventory, navigation, wizards, bracket viz, score-entry, organizer dashboard                 |
-| [web-organizer-ux.md](./web-organizer-ux.md)             | Web admin views for organizers and clubs                                                                    |
-| [analytics.md](./analytics.md)                           | PostHog event taxonomy, funnels, properties                                                                 |
-| [edge-cases.md](./edge-cases.md)                         | Consolidated anomaly handling                                                                               |
-| [monetization.md](./monetization.md)                     | **Deferred from v1.** No paid flows, no reserved columns. Reintroduce when `specs/18-monetization/` exists. |
-| [rollout.md](./rollout.md)                               | Feature flag, beta cohort, backfill, performance budgets, observability                                     |
+| File                                                           | Purpose                                                                                                                         |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| [tournaments.md](./tournaments.md)                             | Tournament lifecycle, registration, cancellation, reschedule, archival                                                          |
+| [tournament-bracket.md](./tournament-bracket.md)               | Bracket sizing, deterministic seed placement, BYEs, manual edits, double-elimination                                            |
+| [leagues.md](./leagues.md)                                     | League / season / session lifecycle, membership, suspension, mid-season impact                                                  |
+| [match-sheet.md](./match-sheet.md)                             | Pairing algorithms (BY_RANK, AVOID_REPEAT, SWISS, BALANCED_DOUBLES), round/court allocator                                      |
+| [score-entry.md](./score-entry.md)                             | Score format regexes, sport-aware validator, retirement/walkover, dispute resolution                                            |
+| [round-deadlines.md](./round-deadlines.md)                     | Per-round deadlines, countdown + nudges, automated walkover resolution ladder                                                   |
+| [scheduling-arbitration.md](./scheduling-arbitration.md)       | Phase availability record, proposed slot, graded decision function, weather/lateness/venue rules                                |
+| [autonomous-advancement.md](./autonomous-advancement.md)       | Evidence model v2 (ack, score-first), pool vs knockout strictness, time-triggered phase gates                                   |
+| [unplayed-match-resolution.md](./unplayed-match-resolution.md) | What happens when time is up and a game was not played: evidence, total rule order, outcomes per format, restore                |
+| [scheduling-funnel.md](./scheduling-funnel.md)                 | Availability-gated funnel: pool room, gate as the ack, pairing room on both answers, thumbs = votes, stamps feed the resolution |
+| [ranking.md](./ranking.md)                                     | Points, bonuses/malus, tie-breakers, ranking calculation, stored vs derived                                                     |
+| [result-share.md](./result-share.md)                           | Per-player result record, 9:16 result poster, public tournament page, share surfaces                                            |
+| [notifications.md](./notifications.md)                         | Per-event notification payloads, channels, i18n keys, deep-links, batching                                                      |
+| [permissions.md](./permissions.md)                             | Role × action matrix, RLS policy snippets                                                                                       |
+| [data-model.md](./data-model.md)                               | Postgres DDL, enums, FKs, indexes, RLS, triggers, derived columns                                                               |
+| [integrations.md](./integrations.md)                           | Cross-system contracts (sport modes, rating, reputation, communities, calendar, chat, facilities)                               |
+| [mobile-ux.md](./mobile-ux.md)                                 | Mobile screen inventory, navigation, wizards, bracket viz, score-entry, organizer dashboard                                     |
+| [web-organizer-ux.md](./web-organizer-ux.md)                   | Web admin views for organizers and clubs                                                                                        |
+| [analytics.md](./analytics.md)                                 | PostHog event taxonomy, funnels, properties                                                                                     |
+| [edge-cases.md](./edge-cases.md)                               | Consolidated anomaly handling                                                                                                   |
+| [monetization.md](./monetization.md)                           | **Deferred from v1.** No paid flows, no reserved columns. Reintroduce when `specs/18-monetization/` exists.                     |
+| [rollout.md](./rollout.md)                                     | Feature flag, beta cohort, backfill, performance budgets, observability                                                         |
 
 ## Dependencies
 
