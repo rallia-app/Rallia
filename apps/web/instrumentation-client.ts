@@ -5,6 +5,13 @@
 import * as Sentry from '@sentry/nextjs';
 import { SentryTransport } from '@rallia/shared-services';
 
+// Crawlers run the page but not like a browser: they tear the DOM down
+// mid-hydration, which surfaces as React removeChild / missing-<body> errors
+// no real visitor ever hits. The signal is fixed for the page lifetime, so
+// gate init on it instead of dropping per event, and bot traces stay out too.
+const CRAWLER_USER_AGENT = /bot|crawler|spider|crawling|slurp|bingpreview|headlesschrome/i;
+const isCrawler = typeof navigator !== 'undefined' && CRAWLER_USER_AGENT.test(navigator.userAgent);
+
 // Quebec Law 25: tracking is off by default. Sentry error capture itself
 // runs from boot (operational necessity for prod stability) but with PII
 // disabled. Session replay and PostHog initialize only after the visitor
@@ -13,7 +20,7 @@ Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   // Only enable Sentry in production (not development or Vercel preview)
-  enabled: process.env.NODE_ENV === 'production',
+  enabled: process.env.NODE_ENV === 'production' && !isCrawler,
 
   // Third-party noise: in-app browsers (Instagram/Facebook) inject their own
   // scripts, Outlook SafeLinks probes the page, and Supabase auth steals its
