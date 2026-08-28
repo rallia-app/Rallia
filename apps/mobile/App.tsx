@@ -67,6 +67,11 @@ SentryTransport.configure(Sentry, {
   getAppState: () => RNAppState.currentState,
 });
 
+// Catch throws out of gesture dispatch (REACT-NATIVE-EV) once Logger can reach
+// Sentry, so the report carries the open sheet and gesture phase.
+import { installGestureCrashGuard } from './src/lib/gestureCrashGuard';
+installGestureCrashGuard();
+
 // Global handler for unhandled JS errors outside the React tree
 // (e.g. setTimeout callbacks, event listeners, native module errors)
 declare const ErrorUtils: {
