@@ -27,6 +27,17 @@ describe('SentryTransport error normalization', () => {
     SentryTransport.configure(sentry);
   });
 
+  it('suppresses an unusable-session error into a breadcrumb, not an issue', () => {
+    const err = new Error('No usable session for milestone_1000_reached');
+    err.name = 'AuthSessionUnavailableError';
+
+    new SentryTransport().log(makeEntry(err, 'Milestone crossing check failed'));
+
+    expect(sentry.captureException).not.toHaveBeenCalled();
+    const [crumb] = sentry.addBreadcrumb.mock.calls[0];
+    expect(crumb.message).toContain('[suppressed auth session error]');
+  });
+
   it('captures a real Error as-is, without an override fingerprint', () => {
     const err = new Error('boom');
     new SentryTransport().log(makeEntry(err));

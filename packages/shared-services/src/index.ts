@@ -3,6 +3,7 @@
  */
 
 export * from './supabase';
+export * from './auth';
 export * from './database';
 export * from './sports';
 // verification.ts is deprecated - use useAuth hook from @rallia/shared-hooks instead

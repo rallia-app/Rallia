@@ -129,6 +129,17 @@ function isNetworkNoise(entry: LogEntry): boolean {
   return false;
 }
 
+// A session that can't be refreshed (backgrounded past token expiry, offline)
+// is the same kind of transient state: it clears on the next foreground, and
+// the guards in shared-services/auth stop the call before it reaches the API.
+// Suppressed by name so a caller that logs it can't dress it up as a 42501
+// grants bug in the issue stream.
+function isAuthSessionNoise(entry: LogEntry): boolean {
+  const err = entry.error as unknown;
+  if (!err || typeof err !== 'object') return false;
+  return (err as { name?: unknown }).name === 'AuthSessionUnavailableError';
+}
+
 export class SentryTransport implements Transport {
   private static sentry: SentryLike | null = null;
   private static getAppState: (() => string) | null = null;
@@ -152,14 +163,15 @@ export class SentryTransport implements Transport {
 
     try {
       if (entry.level === LogLevel.ERROR) {
-        if (isNetworkNoise(entry)) {
+        const authNoise = isAuthSessionNoise(entry);
+        if (authNoise || isNetworkNoise(entry)) {
           // Don't surface as an issue — keep a breadcrumb so context survives
           // if a real error fires later in the same session.
           const appState = SentryTransport.getAppState?.();
           const err = entry.error as { name?: unknown; message?: unknown } | undefined;
           SentryTransport.sentry.addBreadcrumb({
             category: 'app',
-            message: `[suppressed network error] ${entry.message}`,
+            message: `[suppressed ${authNoise ? 'auth session' : 'network'} error] ${entry.message}`,
             level: 'warning',
             data: {
               ...entry.context,

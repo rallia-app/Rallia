@@ -10,7 +10,7 @@
  * past the end date the flag is persisted and it stops checking for good.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { isMilestone1000Reached, Logger } from '@rallia/shared-services';
+import { isAuthSessionUnavailable, isMilestone1000Reached, Logger } from '@rallia/shared-services';
 
 import type { LaunchPrompt } from '#/features/launch-prompts/types';
 import { navigationRef } from '#/navigation/navigationRef';
@@ -58,7 +58,10 @@ export const milestoneLaunchPrompt: LaunchPrompt = {
     try {
       return await isMilestone1000Reached();
     } catch (err) {
-      Logger.error('Milestone crossing check failed', err as Error);
+      // A session that can't refresh yet is a transient launch state, not a bug.
+      if (!isAuthSessionUnavailable(err)) {
+        Logger.error('Milestone crossing check failed', err as Error);
+      }
       return false;
     }
   },

@@ -18,6 +18,7 @@ import {
   OnboardingService,
   getCheckInMatchOpportunities,
   getCheckInMatchPlan,
+  getUsableSession,
   supabase,
   Logger,
   type CheckInMatchPlan,
@@ -229,12 +230,12 @@ async function fetchCheckInContext(sportId: string | null): Promise<CheckInConte
   // Guard: the RPC is SECURITY DEFINER with an `auth.uid() IS NULL` check.
   // If no session exists yet (splash race, signed-out user, expired token)
   // bail with safe defaults so TanStack doesn't retry 3× and spam the logs.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getSession, not getUser: it refreshes the very token the RPC below will
+  // use, and stays local while that token is valid.
+  const session = await getUsableSession();
   const deviceTimezone = getDeviceTimezone();
 
-  if (!user) {
+  if (!session) {
     return {
       currentStreak: 0,
       longestStreak: 0,
