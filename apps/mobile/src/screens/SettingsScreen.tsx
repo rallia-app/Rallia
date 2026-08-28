@@ -40,6 +40,8 @@ import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
 
 // Get app environment (EXPO_PUBLIC_ vars are inlined at build time by Metro)
 const appEnv = process.env.EXPO_PUBLIC_APP_ENV || 'development';
+// Not __DEV__: preview binaries are release builds, where __DEV__ is false.
+const isInternalBuild = appEnv !== 'production';
 
 function SettingsItem({
   icon,
@@ -573,6 +575,19 @@ const SettingsScreen: React.FC = () => {
                 {t('settings.deleteAccount')}
               </Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Internal builds only: the takeover fires once per install at the
+            real crossing, so testers need a way to reopen it. */}
+        {isInternalBuild && (
+          <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+            <SettingsItem
+              colors={colors}
+              icon="megaphone-outline"
+              title={t('settings.previewMilestone1000')}
+              onPress={() => navigation.navigate('Milestone1000')}
+            />
           </View>
         )}
 

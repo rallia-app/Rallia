@@ -726,6 +726,7 @@
     "deleteAccountBlockedTitle": "Account still linked to events",
     "deleteAccountBlockedMessage": "Your account is linked to tournament or league records (registrations, results or payments). Withdraw from any active events first, then write to contact@rallia.ca and we'll finish the deletion for you.",
     "contactSupport": "Contact Support",
+    "previewMilestone1000": "Open the 1000-player announcement",
     "appInfo": "App Info",
     "version": "Version",
     "environment": "Environment",
