@@ -500,6 +500,10 @@ export async function getTournamentChat(tournamentId: string): Promise<Conversat
     .from('conversation')
     .select('*')
     .eq('tournament_id', tournamentId)
+    // The pool rooms of the scheduling funnel carry the same tournament_id;
+    // only the event-wide room has no pool number, and .single() would error
+    // rather than pick once a pool room exists.
+    .is('tournament_pool_number', null)
     .single();
 
   if (error) {
