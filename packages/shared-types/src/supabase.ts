@@ -776,6 +776,7 @@ export type Database = {
           title: string | null
           tournament_id: string | null
           tournament_match_id: string | null
+          tournament_pool_number: number | null
           updated_at: string | null
         }
         Insert: {
@@ -790,6 +791,7 @@ export type Database = {
           title?: string | null
           tournament_id?: string | null
           tournament_match_id?: string | null
+          tournament_pool_number?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -804,6 +806,7 @@ export type Database = {
           title?: string | null
           tournament_id?: string | null
           tournament_match_id?: string | null
+          tournament_pool_number?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -9510,6 +9513,47 @@ export type Database = {
           },
         ]
       }
+      tournament_phase_availability: {
+        Row: {
+          bracket_side: string
+          grid_snapshot: Json
+          hours_in_window: number
+          outcome: string
+          player_id: string
+          responded_at: string
+          round_number: number
+          tournament_id: string
+        }
+        Insert: {
+          bracket_side: string
+          grid_snapshot: Json
+          hours_in_window: number
+          outcome: string
+          player_id: string
+          responded_at?: string
+          round_number: number
+          tournament_id: string
+        }
+        Update: {
+          bracket_side?: string
+          grid_snapshot?: Json
+          hours_in_window?: number
+          outcome?: string
+          player_id?: string
+          responded_at?: string
+          round_number?: number
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_phase_availability_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_ranking_points: {
         Row: {
           board: string
@@ -9823,6 +9867,7 @@ export type Database = {
           max_participants: number
           max_rating: number | null
           max_seeds: number
+          min_availability_hours: number | null
           min_rating: number | null
           min_reputation: number | null
           name: string
@@ -9846,6 +9891,7 @@ export type Database = {
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
           rules: string | null
+          scheduling_funnel_enabled: boolean
           seeding_enabled: boolean
           seeding_mode: string
           sport_id: string
@@ -9891,6 +9937,7 @@ export type Database = {
           max_participants: number
           max_rating?: number | null
           max_seeds?: number
+          min_availability_hours?: number | null
           min_rating?: number | null
           min_reputation?: number | null
           name: string
@@ -9914,6 +9961,7 @@ export type Database = {
           registration_mode?: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at?: string | null
           rules?: string | null
+          scheduling_funnel_enabled?: boolean
           seeding_enabled?: boolean
           seeding_mode?: string
           sport_id: string
@@ -9959,6 +10007,7 @@ export type Database = {
           max_participants?: number
           max_rating?: number | null
           max_seeds?: number
+          min_availability_hours?: number | null
           min_rating?: number | null
           min_reputation?: number | null
           name?: string
@@ -9982,6 +10031,7 @@ export type Database = {
           registration_mode?: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at?: string | null
           rules?: string | null
+          scheduling_funnel_enabled?: boolean
           seeding_enabled?: boolean
           seeding_mode?: string
           sport_id?: string
@@ -12891,6 +12941,10 @@ export type Database = {
         Returns: string
       }
       lt_enqueue_tournament_closing_soon: { Args: never; Returns: number }
+      lt_ensure_pool_room: {
+        Args: { p_pool_number: number; p_tournament_id: string }
+        Returns: string
+      }
       lt_ensure_ranking_season: { Args: { p_at: string }; Returns: string }
       lt_event_earnings: {
         Args: { p_season_id?: string; p_tournament_id?: string }
@@ -12921,6 +12975,15 @@ export type Database = {
       lt_get_or_create_tournament_round_chat_unchecked: {
         Args: { p_tournament_match_id: string }
         Returns: string
+      }
+      lt_hours_in_window: {
+        Args: {
+          p_from: string
+          p_grid: Json
+          p_timezone?: string
+          p_to: string
+        }
+        Returns: number
       }
       lt_league_default_rules: { Args: { p_sport_id: string }; Returns: Json }
       lt_league_promote_waitlist_head: {
@@ -12965,9 +13028,22 @@ export type Database = {
         Args: { p_pool: string[]; p_season_id: string }
         Returns: string[]
       }
+      lt_pairing_gate_ready: { Args: { p_tm_id: string }; Returns: boolean }
       lt_parse_score: {
         Args: { p_score: string }
         Returns: Record<string, unknown>
+      }
+      lt_phase_deadline: {
+        Args: {
+          p_bracket_side: string
+          p_round_number: number
+          p_tournament_id: string
+        }
+        Returns: string
+      }
+      lt_pool_room_composer_locked: {
+        Args: { p_conversation_id: string }
+        Returns: boolean
       }
       lt_post_system_match_organizer_card: {
         Args: { p_tournament_match_id: string }
@@ -14668,6 +14744,7 @@ export type Database = {
           max_participants: number
           max_rating: number | null
           max_seeds: number
+          min_availability_hours: number | null
           min_rating: number | null
           min_reputation: number | null
           name: string
@@ -14691,6 +14768,7 @@ export type Database = {
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
           rules: string | null
+          scheduling_funnel_enabled: boolean
           seeding_enabled: boolean
           seeding_mode: string
           sport_id: string
@@ -14813,6 +14891,7 @@ export type Database = {
           max_participants: number
           max_rating: number | null
           max_seeds: number
+          min_availability_hours: number | null
           min_rating: number | null
           min_reputation: number | null
           name: string
@@ -14836,6 +14915,7 @@ export type Database = {
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
           rules: string | null
+          scheduling_funnel_enabled: boolean
           seeding_enabled: boolean
           seeding_mode: string
           sport_id: string
@@ -14890,6 +14970,7 @@ export type Database = {
           max_participants: number
           max_rating: number | null
           max_seeds: number
+          min_availability_hours: number | null
           min_rating: number | null
           min_reputation: number | null
           name: string
@@ -14913,6 +14994,7 @@ export type Database = {
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
           rules: string | null
+          scheduling_funnel_enabled: boolean
           seeding_enabled: boolean
           seeding_mode: string
           sport_id: string
@@ -14995,6 +15077,7 @@ export type Database = {
           max_participants: number
           max_rating: number | null
           max_seeds: number
+          min_availability_hours: number | null
           min_rating: number | null
           min_reputation: number | null
           name: string
@@ -15018,6 +15101,7 @@ export type Database = {
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
           rules: string | null
+          scheduling_funnel_enabled: boolean
           seeding_enabled: boolean
           seeding_mode: string
           sport_id: string
@@ -15388,6 +15472,7 @@ export type Database = {
           max_participants: number
           max_rating: number | null
           max_seeds: number
+          min_availability_hours: number | null
           min_rating: number | null
           min_reputation: number | null
           name: string
@@ -15411,6 +15496,7 @@ export type Database = {
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
           rules: string | null
+          scheduling_funnel_enabled: boolean
           seeding_enabled: boolean
           seeding_mode: string
           sport_id: string
@@ -15644,6 +15730,7 @@ export type Database = {
           max_participants: number
           max_rating: number | null
           max_seeds: number
+          min_availability_hours: number | null
           min_rating: number | null
           min_reputation: number | null
           name: string
@@ -15667,6 +15754,7 @@ export type Database = {
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
           rules: string | null
+          scheduling_funnel_enabled: boolean
           seeding_enabled: boolean
           seeding_mode: string
           sport_id: string
@@ -15830,6 +15918,7 @@ export type Database = {
           max_participants: number
           max_rating: number | null
           max_seeds: number
+          min_availability_hours: number | null
           min_rating: number | null
           min_reputation: number | null
           name: string
@@ -15853,6 +15942,7 @@ export type Database = {
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
           rules: string | null
+          scheduling_funnel_enabled: boolean
           seeding_enabled: boolean
           seeding_mode: string
           sport_id: string
@@ -15908,6 +15998,32 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      tournament_submit_phase_availability: {
+        Args: {
+          p_bracket_side: string
+          p_grid?: Json
+          p_outcome: string
+          p_round_number: number
+          p_timezone?: string
+          p_tournament_id: string
+        }
+        Returns: {
+          bracket_side: string
+          grid_snapshot: Json
+          hours_in_window: number
+          outcome: string
+          player_id: string
+          responded_at: string
+          round_number: number
+          tournament_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournament_phase_availability"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       tournament_unarchive: {
         Args: { p_tournament_id: string; p_version_was: number }
         Returns: {
@@ -15943,6 +16059,7 @@ export type Database = {
           max_participants: number
           max_rating: number | null
           max_seeds: number
+          min_availability_hours: number | null
           min_rating: number | null
           min_reputation: number | null
           name: string
@@ -15966,6 +16083,7 @@ export type Database = {
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
           rules: string | null
+          scheduling_funnel_enabled: boolean
           seeding_enabled: boolean
           seeding_mode: string
           sport_id: string
@@ -16020,6 +16138,7 @@ export type Database = {
           max_participants: number
           max_rating: number | null
           max_seeds: number
+          min_availability_hours: number | null
           min_rating: number | null
           min_reputation: number | null
           name: string
@@ -16043,6 +16162,7 @@ export type Database = {
           registration_mode: Database["public"]["Enums"]["tournament_registration_mode"]
           registration_opens_at: string | null
           rules: string | null
+          scheduling_funnel_enabled: boolean
           seeding_enabled: boolean
           seeding_mode: string
           sport_id: string
