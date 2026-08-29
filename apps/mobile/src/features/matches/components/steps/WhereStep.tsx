@@ -20,7 +20,7 @@ import {
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView as SheetScrollView, SheetManager } from 'react-native-actions-sheet';
-import { Text, LocationSelector } from '@rallia/shared-components';
+import { Text, LocationSelector, Callout } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent, secondary, status } from '@rallia/design-system';
 import { formatDistance, lightHaptic, successHaptic } from '@rallia/shared-utils';
 import {
@@ -678,6 +678,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   const locationType = useWatch({ control, name: 'locationType' });
   const locationName = useWatch({ control, name: 'locationName' });
   const locationAddress = useWatch({ control, name: 'locationAddress' });
+  const courtStatus = useWatch({ control, name: 'courtStatus' });
 
   const { scrollProps, inputs } = useKeyboardAwareSheetScroll(['facilitySearch', 'placeSearch']);
 
@@ -1405,6 +1406,13 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           />
         </View>
       </View>
+
+      {/* Fill-rate nudge: booked courts fill about twice as often */}
+      {locationType === 'facility' && courtStatus !== 'booked' && (
+        <View style={styles.fieldGroup}>
+          <Callout tone="success" message={t('matchCreation.nudges.bookCourt')} />
+        </View>
+      )}
 
       {/* Facility selection (when locationType === 'facility') */}
       {locationType === 'facility' && (

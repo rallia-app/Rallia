@@ -4194,6 +4194,10 @@
       "selectTime": "Select start time",
       "selectTimezone": "Select timezone for game location"
     },
+    "nudges": {
+      "bookCourt": "Games with the court already booked fill about twice as often.",
+      "postEarly": "Posting a day ahead roughly doubles your chances of someone joining."
+    },
     "booking": {
       "openReservation": "Open Reservation",
       "confirmBooking": "Confirm Booking",

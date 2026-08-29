@@ -4194,6 +4194,10 @@
       "selectTime": "Sélectionner l'heure de début",
       "selectTimezone": "Sélectionner le fuseau horaire du lieu de la partie"
     },
+    "nudges": {
+      "bookCourt": "Les parties avec un terrain déjà réservé trouvent un joueur environ deux fois plus souvent.",
+      "postEarly": "Publier une journée d'avance double presque vos chances que quelqu'un embarque."
+    },
     "booking": {
       "openReservation": "Ouvrir la réservation",
       "confirmBooking": "Confirmer la réservation",

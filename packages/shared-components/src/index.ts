@@ -38,6 +38,7 @@ export { Spinner } from './feedback/Spinner';
 export { ErrorMessage } from './feedback/ErrorMessage';
 export { Badge } from './feedback/Badge';
 export { EmptyState } from './feedback/EmptyState';
+export { Callout } from './feedback/Callout';
 export { ErrorBoundary } from './ErrorBoundary';
 export type { ErrorBoundaryTranslations } from './ErrorBoundary';
 export {
@@ -66,6 +67,7 @@ export type { SpinnerProps } from './feedback/Spinner';
 export type { ErrorMessageProps } from './feedback/ErrorMessage';
 export type { BadgeProps } from './feedback/Badge';
 export type { EmptyStateProps } from './feedback/EmptyState';
+export type { CalloutProps, CalloutTone } from './feedback/Callout';
 export type {
   SkeletonProps,
   SkeletonTextProps,
