@@ -22,6 +22,7 @@ export * from './useNotificationRealtime';
 export * from './useNotificationPreferences';
 export * from './useOrgNotifications';
 export * from './useCreateMatch';
+export * from './useCoPlayerUpcomingGames';
 export * from './useTournaments';
 export * from './useLeagues';
 export * from './useEvents';

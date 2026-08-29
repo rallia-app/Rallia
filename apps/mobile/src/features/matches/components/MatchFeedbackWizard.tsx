@@ -21,7 +21,7 @@ import {
   neutral,
 } from '@rallia/design-system';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { useTheme, useMatchFeedback } from '@rallia/shared-hooks';
+import { useTheme, useMatchFeedback, useCoPlayerUpcomingGames } from '@rallia/shared-hooks';
 import type {
   FeedbackSheetData,
   OpponentFeedbackFormState,
@@ -30,15 +30,25 @@ import type {
   MatchReportReasonEnum,
 } from '@rallia/shared-types';
 
-import { supabase, Logger } from '@rallia/shared-services';
+import {
+  supabase,
+  Logger,
+  getMatchWithDetails,
+  type CoPlayerUpcomingGame,
+} from '@rallia/shared-services';
 
 import { useTranslation, type TranslationKey } from '#/hooks/useTranslation';
 import { useStoreReviewPrompt } from '#/hooks/useStoreReviewPrompt';
 import * as Analytics from '#/services/analytics';
-import { useActionsSheet, type MatchCreationPrefill } from '#/context';
+import {
+  useActionsSheet,
+  useMatchDetailSheet,
+  type MatchCreationPrefill,
+  type MatchDetailData,
+} from '#/context';
 import { navigateFromOutside } from '#/navigation/navigationRef';
 
-import { MatchOutcomeStep, OpponentFeedbackStep } from './feedback-steps';
+import { MatchOutcomeStep, OpponentFeedbackStep, CoPlayerGamesSection } from './feedback-steps';
 
 const BASE_WHITE = '#ffffff';
 
@@ -141,6 +151,7 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   const { t, locale } = useTranslation();
   const toast = useToast();
   const { openSheetForMatchCreation } = useActionsSheet();
+  const { openSheet: openMatchDetailSheet } = useMatchDetailSheet();
   const { maybePromptForReview } = useStoreReviewPrompt();
   const isDark = theme === 'dark';
   // State
@@ -148,6 +159,13 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
   const [matchPlayed, setMatchPlayed] = useState(false);
   // Post-completion "what's next" prompt (played outcome only)
   const [showNextPrompt, setShowNextPrompt] = useState(false);
+
+  // Upcoming open games from the people they just played with. Fetched only
+  // once the prompt is showing, so the wizard's main path pays nothing for it.
+  const { games: coPlayerGames } = useCoPlayerUpcomingGames({
+    matchId: feedbackData.matchId,
+    enabled: showNextPrompt,
+  });
   const closeCompleted = onDone ?? onClose;
 
   // Form state for outcome step
@@ -487,6 +505,36 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
     setTimeout(() => navigateFromOutside('PublicMatches'), 400);
   }, [feedbackData, closeCompleted]);
 
+  const handleCoPlayerGameSelect = useCallback(
+    (game: CoPlayerUpcomingGame) => {
+      lightHaptic();
+      Analytics.postFeedbackPromptAction({
+        action: 'co_player_game',
+        match_id: feedbackData.matchId,
+        sport_id: feedbackData.sportId ?? 'unknown',
+        target_match_id: game.matchId,
+        target_is_recurring: game.isRecurring,
+      });
+      closeCompleted();
+      // Let the feedback sheet finish dismissing before presenting the next one.
+      setTimeout(() => {
+        void getMatchWithDetails(game.matchId)
+          .then(match => {
+            if (match) {
+              openMatchDetailSheet(match as MatchDetailData, { source: 'post_feedback' });
+            }
+          })
+          .catch(error => {
+            Logger.error(
+              'MatchFeedbackWizard: co-player game open failed',
+              error instanceof Error ? error : undefined
+            );
+          });
+      }, 400);
+    },
+    [feedbackData, closeCompleted, openMatchDetailSheet]
+  );
+
   const handleNextPromptDismiss = useCallback(() => {
     Analytics.postFeedbackPromptAction({
       action: 'dismiss',
@@ -578,6 +626,14 @@ export const MatchFeedbackWizard: React.FC<MatchFeedbackWizardProps> = ({
           <Text size="base" color={colors.textMuted} style={styles.nextPromptSubtitle}>
             {t('matchFeedback.nextPrompt.subtitle')}
           </Text>
+
+          <CoPlayerGamesSection
+            games={coPlayerGames}
+            colors={colors}
+            locale={locale}
+            t={t}
+            onSelect={handleCoPlayerGameSelect}
+          />
 
           <TouchableOpacity
             style={[styles.nextPromptButton, { backgroundColor: colors.buttonActive }]}

@@ -342,6 +342,7 @@ const CTA_BY_TYPE: Record<string, CtaSpec> = {
   player_left: { buttonKey: 'match.button.viewGame', to: 'match', idFrom: 'matchId' },
   reminder: { buttonKey: 'match.button.viewGameDetails', to: 'match', idFrom: 'matchId' },
   court_booking_nudge: { buttonKey: 'match.button.bookCourt', to: 'match', idFrom: 'matchId' },
+  recurring_court_opened: { buttonKey: 'match.button.bookCourt', to: 'match', idFrom: 'matchId' },
   match_time_suggested: { buttonKey: 'match.button.reviewTime', to: 'match', idFrom: 'matchId' },
   match_time_suggestion_accepted: {
     buttonKey: 'match.button.viewGame',

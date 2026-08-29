@@ -16,6 +16,7 @@ import {
   Pressable,
   FlatList,
   TextInput,
+  Switch,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { UseFormReturn, useWatch } from 'react-hook-form';
@@ -178,6 +179,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
   const timezone = useWatch({ control, name: 'timezone' });
   const duration = useWatch({ control, name: 'duration' });
   const customDurationMinutes = useWatch({ control, name: 'customDurationMinutes' });
+  const isRecurring = useWatch({ control, name: 'isRecurring' });
 
   // Get display label for selected timezone
   const selectedTimezoneOption = useMemo(() => {
@@ -737,6 +739,32 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           </View>
         )}
       </View>
+
+      {/* Repeat weekly. The next game is created once this one ends, always
+          without a court, so the host gets alerted when booking opens. */}
+      <View style={styles.fieldGroup}>
+        <View style={[styles.toggleRow, { borderColor: colors.border }]}>
+          <View style={styles.toggleTextContainer}>
+            <Text size="base" weight="semibold" color={colors.text}>
+              {t('matchCreation.fields.isRecurring')}
+            </Text>
+            <Text size="xs" color={colors.textMuted}>
+              {isRecurring
+                ? t('matchCreation.fields.isRecurringOn')
+                : t('matchCreation.fields.isRecurringOff')}
+            </Text>
+          </View>
+          <Switch
+            value={isRecurring ?? false}
+            onValueChange={value => {
+              lightHaptic();
+              setValue('isRecurring', value, { shouldDirty: true });
+            }}
+            trackColor={{ false: colors.border, true: colors.buttonActive }}
+            thumbColor={colors.buttonTextActive}
+          />
+        </View>
+      </View>
     </SheetScrollView>
   );
 };
@@ -767,6 +795,19 @@ const styles = StyleSheet.create({
   },
   lockedBannerText: {
     flex: 1,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    gap: spacingPixels[3],
+  },
+  toggleTextContainer: {
+    flex: 1,
+    gap: spacingPixels[1],
   },
   fieldGroup: {
     marginBottom: spacingPixels[5],

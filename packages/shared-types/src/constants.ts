@@ -275,6 +275,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   match_new_available: 'add-circle-outline',
   match_spot_opened: 'enter-outline',
   court_booking_nudge: 'calendar-outline',
+  recurring_court_opened: 'repeat-outline',
   match_last_minute_spots: 'flash-outline',
   match_unfilled_recovery: 'refresh-outline',
   play_rhythm_nudge: 'repeat-outline',
@@ -396,6 +397,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   match_new_available: '#4DB8A8', // Teal
   match_spot_opened: '#4CAF50', // Green
   court_booking_nudge: '#FF9800', // Orange
+  recurring_court_opened: '#FF9800', // Orange (same urgency)
   match_last_minute_spots: '#F44336', // Red (urgency)
   match_unfilled_recovery: '#4DB8A8', // Teal (supportive)
   play_rhythm_nudge: '#9C27B0', // Purple (habit)
@@ -515,6 +517,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   match_new_available: 'New Game in Group',
   match_spot_opened: 'Spot Opened',
   court_booking_nudge: 'Book Your Court',
+  recurring_court_opened: 'Recurring Game Courts',
   match_last_minute_spots: 'Starting Soon',
   match_unfilled_recovery: 'Game Recovery',
   play_rhythm_nudge: 'Usual Slot Open',
@@ -633,6 +636,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   match_new_available: 'match',
   match_spot_opened: 'match',
   court_booking_nudge: 'match',
+  recurring_court_opened: 'match',
   match_last_minute_spots: 'match',
   match_unfilled_recovery: 'match',
   play_rhythm_nudge: 'match',
@@ -799,6 +803,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   match_new_available: { email: false, push: true, sms: false },
   match_spot_opened: { email: false, push: true, sms: false },
   court_booking_nudge: { email: false, push: true, sms: false },
+  recurring_court_opened: { email: false, push: true, sms: false },
   match_last_minute_spots: { email: false, push: true, sms: false },
   match_unfilled_recovery: { email: false, push: true, sms: false },
   play_rhythm_nudge: { email: false, push: true, sms: false },
@@ -932,6 +937,7 @@ export const MATCH_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] =
   'match_new_available',
   'match_spot_opened',
   'court_booking_nudge',
+  'recurring_court_opened',
   'match_last_minute_spots',
   'play_rhythm_nudge',
   'nearby_match_available',

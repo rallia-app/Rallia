@@ -245,6 +245,7 @@
       "match_new_available": "New game in group",
       "match_spot_opened": "Spot opened",
       "court_booking_nudge": "Book your court",
+      "recurring_court_opened": "Recurring game courts",
       "match_last_minute_spots": "Starting soon",
       "match_unfilled_recovery": "Game recovery",
       "play_rhythm_nudge": "Usual slot open",
@@ -468,6 +469,10 @@
       "court_booking_nudge": {
         "title": "Courts are open at {facilityName}",
         "body": "Games with a booked court fill faster. Grab yours while it's open."
+      },
+      "recurring_court_opened": {
+        "title": "Courts just opened at {facilityName}",
+        "body": "Booking just opened for your recurring game. Lock in your court before it goes."
       },
       "match_last_minute_spots": {
         "title": "Starting soon · {sportName} at {locationName}",
@@ -3419,6 +3424,15 @@
     }
   },
   "matchDetail": {
+    "recurring": {
+      "title": "Repeats weekly",
+      "subtitle": "Next week's game is created once this one ends.",
+      "stop": "Stop",
+      "stopConfirmTitle": "Stop repeating this game?",
+      "stopConfirmMessage": "Games already created stay on your schedule. No new ones will be created.",
+      "stopSuccess": "This game no longer repeats.",
+      "stopError": "Could not stop the repeat. Try again."
+    },
     "title": "Game details",
     "preferences": "Preferences",
     "chat": "Chat",
@@ -3642,6 +3656,7 @@
       "subtitle": "Keep the momentum going and line up your next one now.",
       "playAgain": "Play again next week",
       "joinAnother": "Join another game",
+      "coPlayerGamesTitle": "Coming up with players from this game",
       "done": "Done"
     },
     "matchContext": {
@@ -4093,6 +4108,9 @@
       "emailFacility": "Email",
       "visitWebsite": "Website",
       "isCourtFree": "Free Court",
+      "isRecurring": "Repeat weekly",
+      "isRecurringOn": "Next week's game is created as soon as this one ends, without a court. We tell you the moment courts open.",
+      "isRecurringOff": "This is a one-time game.",
       "isCourtFreeYes": "Yes, it's free",
       "isCourtFreeNo": "No, there's a cost",
       "costSplitType": "Cost Split",

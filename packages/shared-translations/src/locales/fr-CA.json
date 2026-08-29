@@ -245,6 +245,7 @@
       "match_new_available": "Nouvelle partie de groupe",
       "match_spot_opened": "Place libérée",
       "court_booking_nudge": "Réserver ton terrain",
+      "recurring_court_opened": "Terrains de ta partie récurrente",
       "match_last_minute_spots": "Ça commence bientôt",
       "match_unfilled_recovery": "Relance de partie",
       "play_rhythm_nudge": "Créneau habituel libre",
@@ -468,6 +469,10 @@
       "court_booking_nudge": {
         "title": "Des terrains sont libres à {facilityName}",
         "body": "Une partie avec terrain réservé attire les joueurs plus vite. Réserve le tien pendant qu'il est libre."
+      },
+      "recurring_court_opened": {
+        "title": "Les terrains viennent d'ouvrir à {facilityName}",
+        "body": "Les réservations viennent d'ouvrir pour ta partie récurrente. Réserve ton terrain avant qu'il parte."
       },
       "match_last_minute_spots": {
         "title": "Ça commence bientôt · {sportName} à {locationName}",
@@ -3419,6 +3424,15 @@
     }
   },
   "matchDetail": {
+    "recurring": {
+      "title": "Se répète chaque semaine",
+      "subtitle": "La partie de la semaine prochaine est créée dès que celle-ci se termine.",
+      "stop": "Arrêter",
+      "stopConfirmTitle": "Arrêter la répétition?",
+      "stopConfirmMessage": "Les parties déjà créées restent à ton horaire. Aucune nouvelle ne sera créée.",
+      "stopSuccess": "Cette partie ne se répète plus.",
+      "stopError": "Impossible d'arrêter la répétition. Réessaie."
+    },
     "title": "Détails de la partie",
     "preferences": "Préférences",
     "chat": "Chat",
@@ -3642,6 +3656,7 @@
       "subtitle": "Gardez le rythme et planifiez la prochaine dès maintenant.",
       "playAgain": "Rejouer la semaine prochaine",
       "joinAnother": "Rejoindre une autre partie",
+      "coPlayerGamesTitle": "À venir avec des joueurs de cette partie",
       "done": "Terminé"
     },
     "matchContext": {
@@ -4093,6 +4108,9 @@
       "emailFacility": "Courriel",
       "visitWebsite": "Site web",
       "isCourtFree": "Terrain gratuit",
+      "isRecurring": "Répéter chaque semaine",
+      "isRecurringOn": "La partie de la semaine prochaine est créée dès que celle-ci se termine, sans terrain. On t'avertit dès que les terrains ouvrent.",
+      "isRecurringOff": "C'est une partie unique.",
       "isCourtFreeYes": "Oui, c'est gratuit",
       "isCourtFreeNo": "Non, il y a un coût",
       "costSplitType": "Partage des coûts",

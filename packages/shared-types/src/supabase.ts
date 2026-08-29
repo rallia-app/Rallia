@@ -2883,6 +2883,7 @@ export type Database = {
             | Database["public"]["Enums"]["cost_split_type_enum"]
             | null
           court_id: string | null
+          court_open_alert_sent_at: string | null
           court_status: Database["public"]["Enums"]["court_status_enum"] | null
           created_at: string | null
           created_by: string
@@ -2894,6 +2895,7 @@ export type Database = {
           estimated_cost: number | null
           facility_id: string | null
           format: Database["public"]["Enums"]["match_format_enum"] | null
+          generated_at: string | null
           host_edited_at: string | null
           id: string
           is_auto_generated: boolean | null
@@ -2913,6 +2915,7 @@ export type Database = {
           preferred_opponent_gender:
             | Database["public"]["Enums"]["gender_enum"]
             | null
+          recurrence_id: string | null
           sport_id: string
           start_time: string
           timezone: string
@@ -2934,6 +2937,7 @@ export type Database = {
             | Database["public"]["Enums"]["cost_split_type_enum"]
             | null
           court_id?: string | null
+          court_open_alert_sent_at?: string | null
           court_status?: Database["public"]["Enums"]["court_status_enum"] | null
           created_at?: string | null
           created_by: string
@@ -2945,6 +2949,7 @@ export type Database = {
           estimated_cost?: number | null
           facility_id?: string | null
           format?: Database["public"]["Enums"]["match_format_enum"] | null
+          generated_at?: string | null
           host_edited_at?: string | null
           id?: string
           is_auto_generated?: boolean | null
@@ -2964,6 +2969,7 @@ export type Database = {
           preferred_opponent_gender?:
             | Database["public"]["Enums"]["gender_enum"]
             | null
+          recurrence_id?: string | null
           sport_id: string
           start_time: string
           timezone?: string
@@ -2985,6 +2991,7 @@ export type Database = {
             | Database["public"]["Enums"]["cost_split_type_enum"]
             | null
           court_id?: string | null
+          court_open_alert_sent_at?: string | null
           court_status?: Database["public"]["Enums"]["court_status_enum"] | null
           created_at?: string | null
           created_by?: string
@@ -2996,6 +3003,7 @@ export type Database = {
           estimated_cost?: number | null
           facility_id?: string | null
           format?: Database["public"]["Enums"]["match_format_enum"] | null
+          generated_at?: string | null
           host_edited_at?: string | null
           id?: string
           is_auto_generated?: boolean | null
@@ -3015,6 +3023,7 @@ export type Database = {
           preferred_opponent_gender?:
             | Database["public"]["Enums"]["gender_enum"]
             | null
+          recurrence_id?: string | null
           sport_id?: string
           start_time?: string
           timezone?: string
@@ -3067,6 +3076,13 @@ export type Database = {
             columns: ["min_rating_score_id"]
             isOneToOne: false
             referencedRelation: "rating_score"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_recurrence_id_fkey"
+            columns: ["recurrence_id"]
+            isOneToOne: false
+            referencedRelation: "match_recurrence"
             referencedColumns: ["id"]
           },
           {
@@ -3383,6 +3399,71 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "player"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_recurrence: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          interval_weeks: number
+          last_generated_at: string | null
+          stopped_at: string | null
+          stopped_by: string | null
+          template_match_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          interval_weeks?: number
+          last_generated_at?: string | null
+          stopped_at?: string | null
+          stopped_by?: string | null
+          template_match_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          interval_weeks?: number
+          last_generated_at?: string | null
+          stopped_at?: string | null
+          stopped_by?: string | null
+          template_match_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_recurrence_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_recurrence_stopped_by_fkey"
+            columns: ["stopped_by"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_recurrence_template_match_id_fkey"
+            columns: ["template_match_id"]
+            isOneToOne: false
+            referencedRelation: "match"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_recurrence_template_match_id_fkey"
+            columns: ["template_match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
           },
         ]
       }
@@ -10491,6 +10572,10 @@ export type Database = {
         }
         Returns: string
       }
+      credit_band_cap: {
+        Args: { p_avail: number; p_floor: number; p_total: number }
+        Returns: number
+      }
       derive_zone_from_location: {
         Args: { p_location: unknown }
         Returns: string
@@ -10525,6 +10610,7 @@ export type Database = {
         Returns: string
       }
       generate_daily_analytics_snapshot: { Args: never; Returns: undefined }
+      generate_recurring_matches: { Args: never; Returns: number }
       generate_unique_invite_code: { Args: never; Returns: string }
       generate_unique_referral_code: { Args: never; Returns: string }
       generate_weekly_matches_for_all_players: {
@@ -12089,6 +12175,29 @@ export type Database = {
         Args: { p_player_id: string }
         Returns: number
       }
+      get_upcoming_games_from_co_players: {
+        Args: { p_limit?: number; p_match_id: string }
+        Returns: {
+          court_status: Database["public"]["Enums"]["court_status_enum"]
+          end_time: string
+          facility_id: string
+          format: Database["public"]["Enums"]["match_format_enum"]
+          host_avatar_url: string
+          host_id: string
+          host_name: string
+          is_recurring: boolean
+          join_mode: Database["public"]["Enums"]["match_join_mode_enum"]
+          location_label: string
+          location_type: Database["public"]["Enums"]["location_type_enum"]
+          match_date: string
+          match_id: string
+          sport_id: string
+          sport_name: string
+          spots_open: number
+          start_time: string
+          timezone: string
+        }[]
+      }
       get_upcoming_matches_scored: {
         Args: {
           p_caller_id: string
@@ -12963,6 +13072,15 @@ export type Database = {
         }[]
       }
       lt_expire_stale_registration_payments: { Args: never; Returns: number }
+      lt_finalize_paid_registration: {
+        Args: { p_payment_id: string }
+        Returns: {
+          already_seated: boolean
+          ledger_promoted: boolean
+          leg: string
+          seated: boolean
+        }[]
+      }
       lt_format_date_fr: { Args: { p_ts: string }; Returns: string }
       lt_get_or_create_session_pairing_chat_unchecked: {
         Args: { p_session_match_id: string }
@@ -13410,6 +13528,10 @@ export type Database = {
           new_streak: number
         }[]
       }
+      recurring_watch_facility_ids: {
+        Args: { p_limit?: number }
+        Returns: string[]
+      }
       reevaluate_certification_for_player_rating: {
         Args: { p_player_rating_score_id: string }
         Returns: undefined
@@ -13448,7 +13570,12 @@ export type Database = {
         Returns: string
       }
       reserve_player_credit: {
-        Args: { p_cap: number; p_payment_id: string; p_player: string }
+        Args: {
+          p_cap: number
+          p_floor: number
+          p_payment_id: string
+          p_player: string
+        }
         Returns: number
       }
       reset_group_invite_code: {
@@ -14050,6 +14177,7 @@ export type Database = {
       send_court_booking_nudges: { Args: never; Returns: number }
       send_last_minute_spot_pushes: { Args: never; Returns: number }
       send_play_rhythm_nudges: { Args: never; Returns: number }
+      send_recurring_court_open_alerts: { Args: never; Returns: number }
       send_unfilled_host_recovery: { Args: never; Returns: number }
       session_attach_match: {
         Args: { p_match_id: string; p_session_match_id: string }
@@ -16578,6 +16706,7 @@ export type Database = {
         | "tournament_pool_eliminated"
         | "tournament_action_required"
         | "tournament_registration_closing_soon"
+        | "recurring_court_opened"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -17275,6 +17404,7 @@ export const Constants = {
         "tournament_pool_eliminated",
         "tournament_action_required",
         "tournament_registration_closing_soon",
+        "recurring_court_opened",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],

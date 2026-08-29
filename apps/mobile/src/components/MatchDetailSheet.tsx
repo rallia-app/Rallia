@@ -91,6 +91,9 @@ import {
   supabase,
   listTimeSuggestionsForMatch,
   respondToTimeSuggestion,
+  stopRecurrence,
+  getRecurrence,
+  Logger,
   type MatchTimeSuggestionWithSuggester,
   type DeclineReason,
 } from '@rallia/shared-services';
@@ -815,6 +818,11 @@ export const MatchDetailSheet: React.FC = () => {
   const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
   const [showKickModal, setShowKickModal] = useState(false);
   const [kickingParticipantId, setKickingParticipantId] = useState<string | null>(null);
+  const [showStopRecurrenceModal, setShowStopRecurrenceModal] = useState(false);
+  const [isStoppingRecurrence, setIsStoppingRecurrence] = useState(false);
+  // Whether this game's series is still live. Only the series owner can read
+  // the row, so a null result means "not the owner" or "no series".
+  const [isSeriesLive, setIsSeriesLive] = useState(false);
   const [showCancelInviteModal, setShowCancelInviteModal] = useState(false);
   const [cancellingInvitationId, setCancellingInvitationId] = useState<string | null>(null);
   const [showDeclineInviteModal, setShowDeclineInviteModal] = useState(false);
@@ -1363,6 +1371,23 @@ export const MatchDetailSheet: React.FC = () => {
     }
   }, [selectedMatch, playerId, handleOpenFeedback, autoActionRef]);
 
+  // Is this game part of a series that is still running? RLS scopes the row to
+  // the series owner, so a non-host simply reads nothing.
+  useEffect(() => {
+    const recurrenceId = selectedMatch?.recurrence_id;
+    if (!recurrenceId || playerId !== selectedMatch?.created_by) {
+      setIsSeriesLive(false);
+      return;
+    }
+    let cancelled = false;
+    void getRecurrence(recurrenceId).then(recurrence => {
+      if (!cancelled) setIsSeriesLive(Boolean(recurrence) && recurrence?.stopped_at == null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMatch?.recurrence_id, selectedMatch?.created_by, playerId]);
+
   // Handle opening the match chat conversation
   const handleOpenChat = useCallback(async () => {
     if (!matchConversationId || !selectedMatch) return;
@@ -1448,6 +1473,27 @@ export const MatchDetailSheet: React.FC = () => {
     if (!playerId) return;
     cancelMatch(playerId);
   }, [playerId, cancelMatch]);
+
+  // Stop a recurring series. Games already created stay; no new ones appear.
+  const handleConfirmStopRecurrence = useCallback(async () => {
+    const recurrenceId = selectedMatch?.recurrence_id;
+    if (!recurrenceId || !playerId) return;
+    setIsStoppingRecurrence(true);
+    try {
+      await stopRecurrence(recurrenceId, playerId);
+      setIsSeriesLive(false);
+      setShowStopRecurrenceModal(false);
+      toast.success(t('matchDetail.recurring.stopSuccess'));
+    } catch (error) {
+      Logger.error(
+        'MatchDetailSheet: stop recurrence failed',
+        error instanceof Error ? error : undefined
+      );
+      toast.error(t('matchDetail.recurring.stopError'));
+    } finally {
+      setIsStoppingRecurrence(false);
+    }
+  }, [selectedMatch, playerId, toast, t]);
 
   // Handle accept join request (host only)
   const handleAcceptRequest = useCallback(
@@ -2558,6 +2604,30 @@ export const MatchDetailSheet: React.FC = () => {
     if (isCreator) {
       return (
         <>
+          {isSeriesLive && (
+            <View style={[styles.recurringRow, { borderColor: colors.border }]}>
+              <Ionicons name="repeat-outline" size={18} color={colors.primary} />
+              <View style={styles.recurringTextContainer}>
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {t('matchDetail.recurring.title')}
+                </Text>
+                <Text size="xs" color={colors.textMuted}>
+                  {t('matchDetail.recurring.subtitle')}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  lightHaptic();
+                  setShowStopRecurrenceModal(true);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text size="sm" weight="semibold" color={colors.primary}>
+                  {t('matchDetail.recurring.stop')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <Button
             variant="primary"
             onPress={handleEditMatch}
@@ -5009,6 +5079,18 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
         isLoading={isCancelling}
       />
 
+      {/* Stop Recurring Series Confirmation Modal */}
+      <ConfirmationModal
+        visible={showStopRecurrenceModal}
+        onClose={() => setShowStopRecurrenceModal(false)}
+        onConfirm={handleConfirmStopRecurrence}
+        title={t('matchDetail.recurring.stopConfirmTitle')}
+        message={t('matchDetail.recurring.stopConfirmMessage')}
+        confirmLabel={t('matchDetail.recurring.stop')}
+        cancelLabel={t('common.goBack')}
+        isLoading={isStoppingRecurrence}
+      />
+
       {/* Reject Request Confirmation Modal */}
       <ConfirmationModal
         visible={showRejectModal}
@@ -5721,6 +5803,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacingPixels[1],
+  },
+  recurringRow: {
+    flexBasis: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[2],
+  },
+  recurringTextContainer: {
+    flex: 1,
     gap: spacingPixels[1],
   },
   // Footer buttons: same pattern as MatchCreationWizard nextButton – paddingVertical, no fixed height, so content is not clipped

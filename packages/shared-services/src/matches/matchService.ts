@@ -6,6 +6,7 @@
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 
 import { supabase } from '../supabase';
+import { startRecurrence } from './recurrenceService';
 import {
   attachAvailableCourtSlots,
   fetchAvailableCourtSlotsForMatches,
@@ -122,6 +123,9 @@ export interface CreateMatchInput {
   visibleInCommunities?: boolean;
   joinMode?: MatchJoinModeEnum;
 
+  /** Repeat this game weekly. The next occurrence is created once this one ends. */
+  isRecurring?: boolean;
+
   // Additional info
   notes?: string;
 }
@@ -192,7 +196,23 @@ export async function createMatch(input: CreateMatchInput): Promise<Match> {
     throw new Error(`Failed to create match: ${error.message}`);
   }
 
-  return data as Match;
+  const match = data as Match;
+
+  if (input.isRecurring) {
+    // Best-effort: the game is already created, so a failed series must not
+    // fail creation. The host can turn recurrence on again from the game.
+    try {
+      const recurrence = await startRecurrence(match.id, input.createdBy);
+      match.recurrence_id = recurrence.id;
+    } catch (recurrenceError) {
+      Logger.error(
+        'createMatch: failed to start recurrence',
+        recurrenceError instanceof Error ? recurrenceError : undefined
+      );
+    }
+  }
+
+  return match;
 }
 
 /**

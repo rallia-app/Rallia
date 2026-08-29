@@ -70,6 +70,7 @@ function getDefaultValues(sportId: string, timezone: string): MatchFormSchemaDat
     timezone, // IANA timezone (auto-detected)
     duration: '60',
     customDurationMinutes: undefined,
+    isRecurring: false,
     format: 'singles',
     playerExpectation: 'both',
 
@@ -195,6 +196,7 @@ export function matchToFormData(
     timezone: match.timezone || timezone,
     duration,
     customDurationMinutes: customMinutes,
+    isRecurring: match.recurrence_id != null,
     format: (match.format as MatchFormatEnum) || 'singles',
     playerExpectation: match.player_expectation
       ? playerExpectationMap[match.player_expectation] || 'both'
@@ -380,6 +382,7 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
             duration: values.duration,
             customDurationMinutes: values.customDurationMinutes,
             timezone: values.timezone,
+            isRecurring: values.isRecurring,
           };
         case 3:
           // Step 3: Preferences (includes format and player expectation)
@@ -434,7 +437,14 @@ function getStepFields(step: 1 | 2 | 3): (keyof MatchFormSchemaData)[] {
       ];
     case 2:
       // Step 2: When (date, time, duration, timezone only - format/expectation moved to step 3)
-      return ['matchDate', 'startTime', 'duration', 'customDurationMinutes', 'timezone'];
+      return [
+        'matchDate',
+        'startTime',
+        'duration',
+        'customDurationMinutes',
+        'timezone',
+        'isRecurring',
+      ];
     case 3:
       // Step 3: Preferences (includes format and player expectation)
       return [

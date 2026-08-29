@@ -55,6 +55,7 @@ export type NotificationType =
   // Match discovery notifications
   | 'match_spot_opened'
   | 'court_booking_nudge'
+  | 'recurring_court_opened'
   | 'match_last_minute_spots'
   | 'match_unfilled_recovery'
   | 'play_rhythm_nudge'
@@ -217,6 +218,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   match_new_available: { email: false, push: true, sms: false },
   match_spot_opened: { email: false, push: true, sms: false },
   court_booking_nudge: { email: false, push: true, sms: false },
+  recurring_court_opened: { email: false, push: true, sms: false },
   match_last_minute_spots: { email: false, push: true, sms: false },
   match_unfilled_recovery: { email: false, push: true, sms: false },
   play_rhythm_nudge: { email: false, push: true, sms: false },
