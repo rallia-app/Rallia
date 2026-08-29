@@ -12205,6 +12205,10 @@
     "ogTitle": "Rejoignez un match de {sport} sur Rallia",
     "ogSpotsLeft": "{count, plural, one {1 place restante} other {# places restantes}}",
     "ogMatchFull": "Match complet",
+    "ogChallengeSingles": "Viens me défier",
+    "ogChallengeDoubles": "Viens nous défier",
+    "ogFinalScore": "Score final",
+    "ogTeamFallback": "Équipe {number}",
     "format": {
       "singles": "Simple",
       "doubles": "Double"
