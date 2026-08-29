@@ -24,10 +24,9 @@
 --
 -- The single transaction is what keeps the pg_temp helpers alive, and
 -- session_replication_role = replica keeps the notification rows without
--- sending a real push wave to the fixture players.
+-- sending a real push wave to the fixture players. It is set AFTER the
+-- cleanup on purpose; see the note there.
 -- ============================================================================
-
-SET LOCAL session_replication_role = replica;
 
 -- ---------------------------------------------------------------------------
 -- Cleanup, scoped to the two names
@@ -43,6 +42,14 @@ DELETE FROM notification
                       WHERE l.name IN ('[JDL v3] Feuille brouillon', '[JDL v3] Complet'));
 
 DELETE FROM leagues WHERE name IN ('[JDL v3] Feuille brouillon', '[JDL v3] Complet');
+
+-- IMPORTANT: session_replication_role = replica also disables the SYSTEM
+-- triggers that implement foreign keys, so ON DELETE CASCADE silently does
+-- nothing while it is set. The DELETEs below therefore run in normal mode and
+-- replica is switched on only around the CREATION, which is the only part that
+-- would otherwise dispatch a push. Setting it earlier orphans every season,
+-- session, match, member and conversation under the rows being removed.
+SET LOCAL session_replication_role = replica;
 
 -- ---------------------------------------------------------------------------
 -- Helpers (identical to the full seed)
