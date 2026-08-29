@@ -133,6 +133,32 @@ export interface PublicMatchFilters {
 }
 
 /**
+ * Default filter values — the single source of truth, shared by the hook's
+ * reset path and by callers that restore individual filters to default.
+ */
+export const DEFAULT_PUBLIC_MATCH_FILTERS: PublicMatchFilters = {
+  searchQuery: '',
+  format: 'all',
+  matchType: 'all',
+  dateRange: 'all',
+  timeOfDay: 'all',
+  skillLevel: 'all',
+  gender: 'all',
+  cost: 'all',
+  joinMode: 'all',
+  distance: DEFAULT_DISTANCE,
+  duration: 'all',
+  courtStatus: 'all',
+  matchTier: 'all',
+  specificDate: null,
+  spotsAvailable: 'all',
+  favoritesOnly: false,
+  specificTime: null,
+  reputation: 'all',
+  rating: [],
+};
+
+/**
  * Options for the usePublicMatchFilters hook
  */
 export interface UsePublicMatchFiltersOptions {
@@ -192,6 +218,8 @@ export interface UsePublicMatchFiltersReturn {
   setFavoritesOnly: (favoritesOnly: boolean) => void;
   /** Set the specific time filter */
   setSpecificTime: (specificTime: SpecificTimeFilter) => void;
+  /** Apply several filters at once (e.g. a preset) in a single state update */
+  applyFilters: (partial: Partial<PublicMatchFilters>) => void;
   /** Reset all filters to defaults */
   resetFilters: () => void;
   /** Clear just the search query */
@@ -207,40 +235,11 @@ export function usePublicMatchFilters(
 ): UsePublicMatchFiltersReturn {
   const { debounceMs = 300, initialFilters } = options;
 
-  // Default is 'all' (no distance filter)
-  const initialDistance: DistanceFilter = DEFAULT_DISTANCE;
-
-  // Default filter values
-  const defaultFilters: PublicMatchFilters = {
-    searchQuery: '',
-    format: 'all',
-    matchType: 'all',
-    dateRange: 'all',
-    timeOfDay: 'all',
-    skillLevel: 'all',
-    gender: 'all',
-    cost: 'all',
-    joinMode: 'all',
-    distance: initialDistance,
-    duration: 'all',
-    courtStatus: 'all',
-    matchTier: 'all',
-    specificDate: null,
-    spotsAvailable: 'all',
-    favoritesOnly: false,
-    specificTime: null,
-    reputation: 'all',
-    rating: [],
-  };
-
   // Initialize filters with defaults merged with any initial values
   const [filters, setFilters] = useState<PublicMatchFilters>({
-    ...defaultFilters,
+    ...DEFAULT_PUBLIC_MATCH_FILTERS,
     ...initialFilters,
   });
-
-  // Store default distance for reset
-  const [defaultDistance] = useState(initialDistance);
 
   // Normalize whitespace before debouncing so "  park  " and "park" share the same cache key
   const normalizedSearchQuery = filters.searchQuery.trim().replace(/\s+/g, ' ');
@@ -368,30 +367,15 @@ export function usePublicMatchFilters(
     setFilters(prev => ({ ...prev, rating }));
   }, []);
 
-  // Reset all filters to defaults (uses player's initial distance preference)
+  // Apply several filters at once (presets, push-driven prefills)
+  const applyFilters = useCallback((partial: Partial<PublicMatchFilters>) => {
+    setFilters(prev => ({ ...prev, ...partial }));
+  }, []);
+
+  // Reset all filters to defaults
   const resetFilters = useCallback(() => {
-    setFilters({
-      searchQuery: '',
-      format: 'all',
-      matchType: 'all',
-      dateRange: 'all',
-      timeOfDay: 'all',
-      skillLevel: 'all',
-      gender: 'all',
-      cost: 'all',
-      joinMode: 'all',
-      distance: defaultDistance,
-      duration: 'all',
-      courtStatus: 'all',
-      matchTier: 'all',
-      specificDate: null,
-      spotsAvailable: 'all',
-      favoritesOnly: false,
-      specificTime: null,
-      reputation: 'all',
-      rating: [],
-    });
-  }, [defaultDistance]);
+    setFilters({ ...DEFAULT_PUBLIC_MATCH_FILTERS });
+  }, []);
 
   // Clear just search
   const clearSearch = useCallback(() => {
@@ -422,6 +406,7 @@ export function usePublicMatchFilters(
     setSpecificTime,
     setReputation,
     setRating,
+    applyFilters,
     resetFilters,
     clearSearch,
   };

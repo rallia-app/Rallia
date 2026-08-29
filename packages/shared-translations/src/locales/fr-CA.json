@@ -6727,6 +6727,9 @@
       "favorites": {
         "label": "Favoris"
       },
+      "forYou": {
+        "label": "Pour toi"
+      },
       "specificTime": {
         "label": "Choisir une heure",
         "pick": "Choisir une heure...",

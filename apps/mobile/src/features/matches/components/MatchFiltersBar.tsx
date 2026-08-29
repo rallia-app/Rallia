@@ -92,6 +92,10 @@ interface MatchFiltersBarProps {
   /** Available rating score options for the multi-select rating filter */
   ratingOptions?: RatingScoreOption[];
   isAuthenticated?: boolean;
+  /** Pinned "For you" preset chip — profile-derived filters in one tap. */
+  showForYou?: boolean;
+  forYouActive?: boolean;
+  onForYouPress?: () => void;
   onReset?: () => void;
   hasActiveFilters?: boolean;
   showDistanceFilter?: boolean;
@@ -599,6 +603,9 @@ export default function MatchFiltersBar({
   onRatingChange,
   ratingOptions = [],
   isAuthenticated = false,
+  showForYou = false,
+  forYouActive = false,
+  onForYouPress,
   onReset,
   hasActiveFilters = false,
   showDistanceFilter = true,
@@ -1241,6 +1248,18 @@ export default function MatchFiltersBar({
               t={t}
             />
           </View>
+        )}
+
+        {/* "For you" preset — pinned ahead of the sorted chips so it never moves */}
+        {showForYou && onForYouPress && (
+          <FilterChip
+            value={t('publicMatches.filters.forYou.label')}
+            isActive={forYouActive}
+            onPress={onForYouPress}
+            isDark={isDark}
+            icon={forYouActive ? 'sparkles' : 'sparkles-outline'}
+            hasDropdown={false}
+          />
         )}
 
         {/* Reset Button — shown after location selector, before filter chips */}

@@ -6727,6 +6727,9 @@
       "favorites": {
         "label": "Favorites"
       },
+      "forYou": {
+        "label": "For you"
+      },
       "specificTime": {
         "label": "Pick a time",
         "pick": "Pick a time...",
