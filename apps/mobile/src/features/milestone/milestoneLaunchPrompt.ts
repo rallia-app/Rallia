@@ -1,16 +1,13 @@
 /**
  * The 1000-player milestone takeover as a launch prompt.
  *
- * Once per install, fired at the ACTUAL crossing: eligibility polls the
- * milestone_1000_reached RPC, which counts PROFILE rows (every signup,
- * onboarding drop-offs included) — decided 2026-08-24 over a projected date.
- * The campaign still ships dark: runtimeVersion follows appVersion, so a
- * client-side trigger is what lets the moment fire without waiting on a
- * store release. Before the crossing it's a no-op that retries next launch;
- * past the end date the flag is persisted and it stops checking for good.
+ * Once per install, live immediately: the milestone_1000_reached RPC gate
+ * was dropped 2026-08-29 (ship-now call) — the coordinator's authed +
+ * onboarded gates and the end-date window are the only conditions left.
+ * Past the end date the flag is persisted and it stops checking for good.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { isAuthSessionUnavailable, isMilestone1000Reached, Logger } from '@rallia/shared-services';
+import { Logger } from '@rallia/shared-services';
 
 import type { LaunchPrompt } from '#/features/launch-prompts/types';
 import { navigationRef } from '#/navigation/navigationRef';
@@ -19,8 +16,7 @@ import { markSheetShown as markReferralPromptShown } from '#/utils/referralInvit
 const MILESTONE_SHOWN_KEY = '@rallia/milestone-1000-shown';
 
 // Hard campaign end, local Montréal time: past this the takeover never
-// fires, crossed or not, and the once-flag is persisted so launches stop
-// paying the RPC. Set generously — the crossing itself is data-driven.
+// fires and the once-flag is persisted so launches stop checking.
 const MILESTONE_END_ISO = '2026-10-31T00:00:00-04:00';
 
 // ⚠️ TEMPORARY (dev only): set to true to reopen the takeover on every
@@ -54,16 +50,7 @@ export const milestoneLaunchPrompt: LaunchPrompt = {
       return false;
     }
 
-    // The crossing itself. RPC failure → not eligible, retried next launch.
-    try {
-      return await isMilestone1000Reached();
-    } catch (err) {
-      // A session that can't refresh yet is a transient launch state, not a bug.
-      if (!isAuthSessionUnavailable(err)) {
-        Logger.error('Milestone crossing check failed', err as Error);
-      }
-      return false;
-    }
+    return true;
   },
 
   present: () => {
