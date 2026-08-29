@@ -854,6 +854,11 @@ export function milestoneDismissed(props: { step: number }): void {
   capture('milestone_1000_dismissed', props);
 }
 
+/** The player opened one of Rallia's social profiles from the final step. */
+export function milestoneSocialFollowed(props: { network: string }): void {
+  capture('milestone_1000_social_followed', props);
+}
+
 // ---- Subscription ----
 
 export function paywallViewed(): void {

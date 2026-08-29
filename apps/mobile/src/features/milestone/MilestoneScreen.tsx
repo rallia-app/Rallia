@@ -2,13 +2,12 @@
  * MilestoneScreen — the 1000-player takeover: a thank-you, then the ask.
  *
  * Full-screen campaign modal chassis (gradient canvas, close X, footer
- * CTA) but two steps instead of one, so it borrows the check-in pager: both
- * steps sit side by side in a row two screens wide and a single translateX
- * slides between them.
+ * CTA) with three steps on the check-in pager: the steps sit side by side in
+ * a row three screens wide and a single translateX slides between them.
  *
  * The split is deliberate. Step 1 carries no ask at all, so the thank-you
  * doesn't read as a set-up for the share button; step 2 does the asking once
- * the player has chosen to go there.
+ * the player has chosen to go there; step 3 invites a follow on the socials.
  *
  * The reward line comes from the active referral contest, so the prize wording
  * is admin-editable and the screen ships without knowing it.
@@ -18,6 +17,7 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Linking,
   Platform,
   ScrollView,
   Share,
@@ -43,11 +43,43 @@ import {
   milestoneStepViewed,
   milestoneShared,
   milestoneDismissed,
+  milestoneSocialFollowed,
   invitationLinkGenerated,
 } from '#/services/analytics';
 
+import { MilestoneConfetti } from './MilestoneConfetti';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TOTAL_STEPS = 2;
+const TOTAL_STEPS = 3;
+const STORY_BLOCKS = 7;
+
+// Same accounts as the web footer (apps/web/components/social-icons.tsx).
+const SOCIALS = [
+  {
+    network: 'instagram',
+    label: 'Instagram',
+    icon: 'logo-instagram',
+    url: 'https://www.instagram.com/rallia.app',
+  },
+  {
+    network: 'facebook',
+    label: 'Facebook',
+    icon: 'logo-facebook',
+    url: 'https://www.facebook.com/profile.php?id=61574248480253',
+  },
+  {
+    network: 'tiktok',
+    label: 'TikTok',
+    icon: 'logo-tiktok',
+    url: 'https://www.tiktok.com/@rallia.app',
+  },
+  {
+    network: 'linkedin',
+    label: 'LinkedIn',
+    icon: 'logo-linkedin',
+    url: 'https://www.linkedin.com/company/rallia',
+  },
+] as const;
 
 export function MilestoneScreen() {
   const { colors, isDark } = useThemeStyles();
@@ -66,6 +98,7 @@ export function MilestoneScreen() {
   // overlay renders behind it (same reason the check-in wizard never toasts).
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   // Tracks whether the player got as far as sharing, so the unmount cleanup
   // can tell a completed run apart from a drop-off. Every close path (X, swipe,
@@ -98,6 +131,40 @@ export function MilestoneScreen() {
     }).start();
   }, [step, slideAnim]);
 
+  // Step 1 reveals like a story: each block fades in and settles in turn,
+  // then a confetti burst caps the reveal (Jean's ask, 2026-08-29).
+  const storyAnims = useMemo(
+    () => Array.from({ length: STORY_BLOCKS }, () => new Animated.Value(0)),
+    []
+  );
+  useEffect(() => {
+    Animated.stagger(
+      380,
+      storyAnims.map(value =>
+        Animated.timing(value, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        })
+      )
+    ).start(({ finished }) => {
+      if (finished && stepRef.current === 1) {
+        setShowConfetti(true);
+        void mediumHaptic();
+      }
+    });
+  }, [storyAnims]);
+
+  const storyStyle = (index: number) => ({
+    opacity: storyAnims[index],
+    transform: [
+      {
+        translateY: storyAnims[index].interpolate({ inputRange: [0, 1], outputRange: [14, 0] }),
+      },
+    ],
+  });
+
   // Champion Gold ring at 18% fill / 45% border.
   const ringStyle = {
     backgroundColor: `${accent[400]}2E`,
@@ -127,9 +194,15 @@ export function MilestoneScreen() {
     setStep(2);
   }, []);
 
+  const handleContinueToSocial = useCallback(() => {
+    void lightHaptic();
+    milestoneStepViewed(3);
+    setStep(3);
+  }, []);
+
   const handleBack = useCallback(() => {
     void lightHaptic();
-    setStep(1);
+    setStep(current => Math.max(1, current - 1));
   }, []);
 
   const handleClose = useCallback(() => {
@@ -149,6 +222,8 @@ export function MilestoneScreen() {
         sharedRef.current = true;
         milestoneShared({ channel: 'share_sheet' });
         invitationLinkGenerated({ invitation_type: 'referral', channel: 'share_sheet' });
+        milestoneStepViewed(3);
+        setStep(3);
       }
     } catch (error) {
       if (error instanceof Error && error.message !== 'User did not share') {
@@ -185,6 +260,14 @@ export function MilestoneScreen() {
       // Clipboard failure: the label simply doesn't flip.
     }
   }, [referralLink]);
+
+  const handleFollow = useCallback((network: string, url: string) => {
+    void lightHaptic();
+    milestoneSocialFollowed({ network });
+    Linking.openURL(url).catch((error: unknown) => {
+      Logger.error('Milestone social link failed', error instanceof Error ? error : undefined);
+    });
+  }, []);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -237,47 +320,61 @@ export function MilestoneScreen() {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            <View style={[styles.heroIconRing, ringStyle]}>
-              <RNText style={styles.heroEmoji}>🙌</RNText>
-            </View>
-            <View style={[styles.heroBadge, { backgroundColor: `${primary[500]}26` }]}>
-              <RNText
-                style={[styles.heroBadgeText, { color: isDark ? primary[300] : primary[700] }]}
-              >
-                {`✨  ${t('milestone1000.badge').toUpperCase()}`}
-              </RNText>
-            </View>
+            <Animated.View style={[styles.storyBlock, storyStyle(0)]}>
+              <View style={[styles.heroIconRing, ringStyle]}>
+                <RNText style={styles.heroEmoji}>🙌</RNText>
+              </View>
+              <View style={[styles.heroBadge, { backgroundColor: `${primary[500]}26` }]}>
+                <RNText
+                  style={[styles.heroBadgeText, { color: isDark ? primary[300] : primary[700] }]}
+                >
+                  {`✨  ${t('milestone1000.badge').toUpperCase()}`}
+                </RNText>
+              </View>
+            </Animated.View>
 
-            <Text size={25} weight="bold" align="center" color={colors.text} style={styles.title}>
-              {t('milestone1000.title')}
-            </Text>
-            <Text size="base" align="center" color={colors.textMuted} style={styles.body}>
-              {t('milestone1000.body1')}
-            </Text>
-            <Text size="base" align="center" color={colors.textMuted} style={styles.body}>
-              {t('milestone1000.body2')}
-            </Text>
-            <Text
-              size="base"
-              weight="semibold"
-              align="center"
-              color={colors.text}
-              style={styles.body}
-            >
-              {t('milestone1000.body2b')}
-            </Text>
-            <Text size="base" align="center" color={colors.text} style={styles.body}>
-              {t('milestone1000.body3')}
-            </Text>
-            <Text
-              size="base"
-              weight="semibold"
-              align="center"
-              color={colors.textMuted}
-              style={styles.signature}
-            >
-              {t('milestone1000.signature')}
-            </Text>
+            <Animated.View style={[styles.storyBlock, storyStyle(1)]}>
+              <Text size={25} weight="bold" align="center" color={colors.text} style={styles.title}>
+                {t('milestone1000.title')}
+              </Text>
+            </Animated.View>
+            <Animated.View style={[styles.storyBlock, storyStyle(2)]}>
+              <Text size="base" align="center" color={colors.textMuted} style={styles.body}>
+                {t('milestone1000.body1')}
+              </Text>
+            </Animated.View>
+            <Animated.View style={[styles.storyBlock, storyStyle(3)]}>
+              <Text size="base" align="center" color={colors.textMuted} style={styles.body}>
+                {t('milestone1000.body2')}
+              </Text>
+            </Animated.View>
+            <Animated.View style={[styles.storyBlock, storyStyle(4)]}>
+              <Text
+                size="base"
+                weight="semibold"
+                align="center"
+                color={colors.text}
+                style={styles.body}
+              >
+                {t('milestone1000.body2b')}
+              </Text>
+            </Animated.View>
+            <Animated.View style={[styles.storyBlock, storyStyle(5)]}>
+              <Text size="base" align="center" color={colors.text} style={styles.body}>
+                {t('milestone1000.body3')}
+              </Text>
+            </Animated.View>
+            <Animated.View style={[styles.storyBlock, storyStyle(6)]}>
+              <Text
+                size="base"
+                weight="semibold"
+                align="center"
+                color={colors.textMuted}
+                style={styles.signature}
+              >
+                {t('milestone1000.signature')}
+              </Text>
+            </Animated.View>
           </ScrollView>
 
           {/* Step 2 — the ask. */}
@@ -365,6 +462,51 @@ export function MilestoneScreen() {
               )}
             </View>
           </ScrollView>
+
+          {/* Step 3 — follow the socials. */}
+          <ScrollView
+            style={{ width: SCREEN_WIDTH }}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={[styles.heroIconRing, ringStyle]}>
+              <RNText style={styles.heroEmoji}>🔥</RNText>
+            </View>
+
+            <Text size={25} weight="bold" align="center" color={colors.text} style={styles.title}>
+              {t('milestone1000.socialTitle')}
+            </Text>
+            <Text size="base" align="center" color={colors.textMuted} style={styles.body}>
+              {t('milestone1000.socialSubtitle')}
+            </Text>
+
+            <View style={styles.socialList}>
+              {SOCIALS.map(social => (
+                <Card
+                  key={social.network}
+                  variant="outlined"
+                  onPress={() => handleFollow(social.network, social.url)}
+                  backgroundColor={colors.cardBackground}
+                  borderRadius={radiusPixels.xl}
+                  padding={spacingPixels[4]}
+                  style={{ alignSelf: 'stretch', borderColor: colors.border }}
+                >
+                  <View style={styles.socialRow}>
+                    <Ionicons name={social.icon} size={22} color={colors.primary} />
+                    <Text
+                      size="base"
+                      weight="semibold"
+                      color={colors.text}
+                      style={styles.socialLabel}
+                    >
+                      {social.label}
+                    </Text>
+                    <Ionicons name="open-outline" size={18} color={colors.textMuted} />
+                  </View>
+                </Card>
+              ))}
+            </View>
+          </ScrollView>
         </Animated.View>
       </View>
 
@@ -381,7 +523,7 @@ export function MilestoneScreen() {
           >
             {t('milestone1000.continueCta')}
           </Button>
-        ) : (
+        ) : step === 2 ? (
           <>
             <Button
               variant="primary"
@@ -395,19 +537,49 @@ export function MilestoneScreen() {
             >
               {t('milestone1000.shareCta')}
             </Button>
-            <Button
-              variant="ghost"
-              size="md"
-              fullWidth
-              onPress={() => void handleCopyLink()}
-              isDark={isDark}
-              themeColors={buttonThemeColors}
-            >
-              {copiedLink ? t('common.copied') : t('milestone1000.copyLink')}
-            </Button>
+            <View style={styles.footerRow}>
+              <View style={styles.footerRowItem}>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  fullWidth
+                  onPress={() => void handleCopyLink()}
+                  isDark={isDark}
+                  themeColors={buttonThemeColors}
+                >
+                  {copiedLink ? t('common.copied') : t('milestone1000.copyLink')}
+                </Button>
+              </View>
+              <View style={styles.footerRowItem}>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  fullWidth
+                  onPress={handleContinueToSocial}
+                  isDark={isDark}
+                  themeColors={buttonThemeColors}
+                >
+                  {t('milestone1000.continueCta')}
+                </Button>
+              </View>
+            </View>
           </>
+        ) : (
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            rounded
+            onPress={handleClose}
+            isDark={isDark}
+            themeColors={buttonThemeColors}
+          >
+            {t('milestone1000.doneCta')}
+          </Button>
         )}
       </View>
+
+      {showConfetti && <MilestoneConfetti />}
     </View>
   );
 }
@@ -535,6 +707,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[5],
     paddingTop: spacingPixels[3],
     gap: spacingPixels[2],
+  },
+  footerRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+  },
+  footerRowItem: {
+    flex: 1,
+  },
+  storyBlock: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+  socialList: {
+    alignSelf: 'stretch',
+    gap: spacingPixels[3],
+    marginTop: spacingPixels[3],
+  },
+  socialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+  },
+  socialLabel: {
+    flex: 1,
   },
 });
 

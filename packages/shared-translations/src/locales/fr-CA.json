@@ -3,20 +3,23 @@
     "badge": "1000 joueurs",
     "title": "1000 joueurs. Une communauté.",
     "body1": "Il y a quelques mois, Rallia n'était qu'une idée entre deux passionnés tannés de chercher quelqu'un pour jouer.",
-    "body2": "Aujourd'hui, vous êtes 1000 à avoir embarqué. À jouer, à organiser vos parties, à faire vivre le tennis et le pickleball récréatif à Montréal.",
+    "body2": "Aujourd'hui, vous êtes 1000 à avoir embarqué. À jouer, à organiser vos parties, à faire vivre le tennis et le pickleball récréatif dans le Grand Montréal.",
     "body2b": "Et tu en fais partie.",
     "body3": "Merci d'y avoir cru. Merci d'avoir joué. Merci d'être là.",
     "signature": "Jean & Mathis",
     "continueCta": "Continuer",
     "ctaTitle": "Et si on était 2000?",
-    "ctaSubtitle": "Partage Rallia avec quelqu'un avec qui tu aimerais jouer. Ta prochaine partie se trouve peut-être déjà dans tes contacts.",
+    "ctaSubtitle": "Partage Rallia avec quelqu'un avec qui tu aimerais jouer. Tes contacts, tes réseaux sociaux, tes groupes de joueurs : ta prochaine partie se trouve peut-être déjà là.",
     "creditPledge": "Ramène 5 nouveaux joueurs et obtiens 10 $ de crédit sur les événements Rallia.",
     "yourCode": "Ton code",
     "shareCta": "Partager Rallia",
     "copyLink": "Copier mon lien",
     "copyCode": "Copier mon code",
     "shareTitle": "Rejoins-moi sur Rallia",
-    "shareMessage": "On est déjà 1000 à jouer sur Rallia à Montréal. Trouve-toi une partie, ça prend deux minutes : {link}"
+    "shareMessage": "On est déjà 1000 à jouer sur Rallia dans le Grand Montréal. Trouve-toi une partie, ça prend deux minutes : {link}",
+    "socialTitle": "Suis la suite de l'aventure",
+    "socialSubtitle": "Nouveautés, événements et moments forts de la communauté : tout se passe sur nos réseaux. Abonne-toi pour ne rien manquer.",
+    "doneCta": "Terminer"
   },
   "suggestionCard": {
     "courtsAvailable": "{count} terrains disponibles"
