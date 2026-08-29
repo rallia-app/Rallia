@@ -2604,30 +2604,6 @@ export const MatchDetailSheet: React.FC = () => {
     if (isCreator) {
       return (
         <>
-          {isSeriesLive && (
-            <View style={[styles.recurringRow, { borderColor: colors.border }]}>
-              <Ionicons name="repeat-outline" size={18} color={colors.primary} />
-              <View style={styles.recurringTextContainer}>
-                <Text size="sm" weight="semibold" color={colors.text}>
-                  {t('matchDetail.recurring.title')}
-                </Text>
-                <Text size="xs" color={colors.textMuted}>
-                  {t('matchDetail.recurring.subtitle')}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => {
-                  lightHaptic();
-                  setShowStopRecurrenceModal(true);
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text size="sm" weight="semibold" color={colors.primary}>
-                  {t('matchDetail.recurring.stop')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
           <Button
             variant="primary"
             onPress={handleEditMatch}
@@ -4982,6 +4958,30 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                 : t('matchActions.suggestDifferentTime')}
             </Button>
           )}
+          {isCreator && isSeriesLive && (
+            <View style={[styles.recurringRow, { borderColor: colors.border }]}>
+              <Ionicons name="repeat-outline" size={18} color={colors.primary} />
+              <View style={styles.recurringTextContainer}>
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {t('matchDetail.recurring.title')}
+                </Text>
+                <Text size="xs" color={colors.textMuted}>
+                  {t('matchDetail.recurring.subtitle')}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  lightHaptic();
+                  setShowStopRecurrenceModal(true);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text size="sm" weight="semibold" color={colors.primary}>
+                  {t('matchDetail.recurring.stop')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <View
             style={[
               styles.actionButtonsContainer,
@@ -5806,7 +5806,7 @@ const styles = StyleSheet.create({
     gap: spacingPixels[1],
   },
   recurringRow: {
-    flexBasis: '100%',
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacingPixels[3],

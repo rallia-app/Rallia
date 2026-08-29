@@ -758,7 +758,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
             value={isRecurring ?? false}
             onValueChange={value => {
               lightHaptic();
-              setValue('isRecurring', value, { shouldDirty: true });
+              setValue('isRecurring', value, { shouldValidate: true, shouldDirty: true });
             }}
             trackColor={{ false: colors.border, true: colors.buttonActive }}
             thumbColor={colors.buttonTextActive}
