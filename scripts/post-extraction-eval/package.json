@@ -1,0 +1,11 @@
+{
+  "name": "post-extraction-eval",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "eval": "node run-eval.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0"
+  }
+}

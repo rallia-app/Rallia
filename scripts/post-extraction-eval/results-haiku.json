@@ -1,0 +1,422 @@
+{
+  "summary": {
+    "model": "claude-haiku-4-5",
+    "date": "2026-08-30T00:29:38.740Z",
+    "total": 15,
+    "ok": 15,
+    "input_tokens": 32737,
+    "output_tokens": 1895,
+    "cost_usd": "0.0422",
+    "avg_latency_ms": 1768
+  },
+  "results": [
+    {
+      "id": "p01",
+      "text": "Salut! Je cherche quelqu'un pour jouer au tennis demain soir vers 18h au parc Jarry. Niveau 3.5 environ. Écrivez-moi en privé!",
+      "extraction": {
+        "is_game_request": true,
+        "sport": "tennis",
+        "place_raw": "parc Jarry",
+        "datetime_raw": "demain soir vers 18h",
+        "resolved_datetime_start": "2026-08-30T18:00",
+        "recurring": null,
+        "level_raw": "Niveau 3.5 environ",
+        "level_min": 3.5,
+        "level_max": null,
+        "format": null,
+        "spots_needed": 1,
+        "language": "fr",
+        "confidence": "high",
+        "needs_clarification": []
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2184,
+        "output_tokens": 112
+      },
+      "latency_ms": 2320
+    },
+    {
+      "id": "p02",
+      "text": "Looking for a 4th for doubles tomorrow morning at Stade IGA, 9am. We're all around 4.0. First come first served!",
+      "extraction": {
+        "is_game_request": true,
+        "sport": "tennis",
+        "place_raw": "Stade IGA",
+        "datetime_raw": "tomorrow morning at 9am",
+        "resolved_datetime_start": "2026-08-30T09:00",
+        "recurring": null,
+        "level_raw": "around 4.0",
+        "level_min": 4,
+        "level_max": null,
+        "format": "doubles",
+        "spots_needed": 1,
+        "language": "en",
+        "confidence": "high",
+        "needs_clarification": []
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2168,
+        "output_tokens": 130
+      },
+      "latency_ms": 2312
+    },
+    {
+      "id": "p03",
+      "text": "Cherche partenaire de pickleball ce soir, niveau intermédiaire, idéalement sur le Plateau ou pas trop loin. Dispo après 19h.",
+      "extraction": {
+        "is_game_request": true,
+        "sport": "pickleball",
+        "place_raw": "le Plateau",
+        "datetime_raw": "ce soir, après 19h",
+        "resolved_datetime_start": "2026-08-29T19:00",
+        "recurring": null,
+        "level_raw": "niveau intermédiaire",
+        "level_min": 3,
+        "level_max": null,
+        "format": "doubles",
+        "spots_needed": 1,
+        "language": "fr",
+        "confidence": "medium",
+        "needs_clarification": [
+          "resolved_datetime_start",
+          "format"
+        ]
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2175,
+        "output_tokens": 117
+      },
+      "latency_ms": 2643
+    },
+    {
+      "id": "p04",
+      "text": "Anyone up for tennis this weekend? Flexible on time and place, I'm 3.0-3.5, based in NDG.",
+      "extraction": {
+        "is_game_request": true,
+        "sport": "tennis",
+        "place_raw": "NDG",
+        "datetime_raw": "this weekend",
+        "resolved_datetime_start": "2026-08-30",
+        "recurring": null,
+        "level_raw": "3.0-3.5",
+        "level_min": 3,
+        "level_max": 3.5,
+        "format": null,
+        "spots_needed": 1,
+        "language": "en",
+        "confidence": "medium",
+        "needs_clarification": [
+          "resolved_datetime_start",
+          "format"
+        ]
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2163,
+        "output_tokens": 132
+      },
+      "latency_ms": 2372
+    },
+    {
+      "id": "p05",
+      "text": "Bonjour, on est un groupe qui joue tous les jeudis 20h au centre Claude-Robillard, badminton niveau avancé. Il nous manque 2 joueurs pour la session d'automne. DM si intéressé.",
+      "extraction": {
+        "is_game_request": true,
+        "sport": "badminton",
+        "place_raw": "centre Claude-Robillard",
+        "datetime_raw": "tous les jeudis 20h",
+        "resolved_datetime_start": "2026-09-03T20:00",
+        "recurring": "every Thursday 20:00",
+        "level_raw": "niveau avancé",
+        "level_min": 4.5,
+        "level_max": null,
+        "format": null,
+        "spots_needed": 2,
+        "language": "fr",
+        "confidence": "high",
+        "needs_clarification": []
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2195,
+        "output_tokens": 140
+      },
+      "latency_ms": 1718
+    },
+    {
+      "id": "p06",
+      "text": "cherche qqn pour frapper des balles jeudi prochain pm, jaime mieux terre battue, je suis 4.5+, court à réserver ensemble",
+      "extraction": {
+        "is_game_request": true,
+        "sport": "tennis",
+        "place_raw": null,
+        "datetime_raw": "jeudi prochain pm",
+        "resolved_datetime_start": "2026-09-10T14:00",
+        "recurring": null,
+        "level_raw": "4.5+",
+        "level_min": 4.5,
+        "level_max": null,
+        "format": null,
+        "spots_needed": 1,
+        "language": "fr",
+        "confidence": "medium",
+        "needs_clarification": [
+          "resolved_datetime_start",
+          "place_raw"
+        ]
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2172,
+        "output_tokens": 133
+      },
+      "latency_ms": 2156
+    },
+    {
+      "id": "p07",
+      "text": "Vends raquette Babolat Pure Drive quasi neuve, 150$. Cordée récemment. Pickup dans Rosemont.",
+      "extraction": {
+        "is_game_request": false,
+        "sport": null,
+        "place_raw": null,
+        "datetime_raw": null,
+        "resolved_datetime_start": null,
+        "recurring": null,
+        "level_raw": null,
+        "level_min": null,
+        "level_max": null,
+        "format": null,
+        "spots_needed": null,
+        "language": "fr",
+        "confidence": "high",
+        "needs_clarification": []
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2168,
+        "output_tokens": 98
+      },
+      "latency_ms": 1167
+    },
+    {
+      "id": "p08",
+      "text": "Hey guys! New to Montreal, coming from Toronto. Used to play competitive squash (played varsity). Where do people usually play around downtown? Also happy to hit with anyone anytime this week.",
+      "extraction": {
+        "is_game_request": true,
+        "sport": "squash",
+        "place_raw": null,
+        "datetime_raw": "anytime this week",
+        "resolved_datetime_start": null,
+        "recurring": null,
+        "level_raw": "competitive squash (played varsity)",
+        "level_min": 5,
+        "level_max": null,
+        "format": null,
+        "spots_needed": 1,
+        "language": "en",
+        "confidence": "medium",
+        "needs_clarification": [
+          "resolved_datetime_start",
+          "place_raw"
+        ]
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2174,
+        "output_tokens": 126
+      },
+      "latency_ms": 1625
+    },
+    {
+      "id": "p09",
+      "text": "Recherche joueur/joueuse pour du simple au parc La Fontaine samedi matin 10h. Niveau 3.0 a 4.0. Beau temps mauvais temps lol (non je niaise, s'il pleut on annule)",
+      "extraction": {
+        "is_game_request": true,
+        "sport": "tennis",
+        "place_raw": "parc La Fontaine",
+        "datetime_raw": "samedi matin 10h",
+        "resolved_datetime_start": "2026-08-29T10:00",
+        "recurring": null,
+        "level_raw": "Niveau 3.0 a 4.0",
+        "level_min": 3,
+        "level_max": 4,
+        "format": "singles",
+        "spots_needed": 1,
+        "language": "fr",
+        "confidence": "high",
+        "needs_clarification": []
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2198,
+        "output_tokens": 118
+      },
+      "latency_ms": 1423
+    },
+    {
+      "id": "p10",
+      "text": "on cherche 2 personnes pour completer un double mixte dimanche apres-midi a Ahuntsic, on est niveau 3.5-4.0, ambiance chill mais on aime ca competitif quand meme 😄",
+      "extraction": {
+        "is_game_request": true,
+        "sport": "tennis",
+        "place_raw": "Ahuntsic",
+        "datetime_raw": "dimanche apres-midi",
+        "resolved_datetime_start": "2026-08-30T14:00",
+        "recurring": null,
+        "level_raw": "niveau 3.5-4.0",
+        "level_min": 3.5,
+        "level_max": 4,
+        "format": "doubles",
+        "spots_needed": 2,
+        "language": "fr",
+        "confidence": "high",
+        "needs_clarification": []
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2192,
+        "output_tokens": 113
+      },
+      "latency_ms": 1403
+    },
+    {
+      "id": "p11",
+      "text": "Padel anyone?? Court booked at Padel MTL Saint-Laurent Friday 7pm, need 1 more player, intermediate/advanced. Split cost 4 ways, environ 15$ chaque.",
+      "extraction": {
+        "is_game_request": true,
+        "sport": "padel",
+        "place_raw": "Padel MTL Saint-Laurent",
+        "datetime_raw": "Friday 7pm",
+        "resolved_datetime_start": "2026-09-04T19:00",
+        "recurring": null,
+        "level_raw": "intermediate/advanced",
+        "level_min": 3,
+        "level_max": 4.5,
+        "format": "doubles",
+        "spots_needed": 1,
+        "language": "mixed",
+        "confidence": "high",
+        "needs_clarification": []
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2181,
+        "output_tokens": 133
+      },
+      "latency_ms": 1388
+    },
+    {
+      "id": "p12",
+      "text": "Je serais dispo en fin de semaine pour jouer, n'importe quand samedi ou dimanche. Niveau débutant-intermédiaire (je reprends après 10 ans lol). Secteur Villeray/Rosemont de préférence mais je peux me déplacer en métro.",
+      "extraction": {
+        "is_game_request": true,
+        "sport": null,
+        "place_raw": "Secteur Villeray/Rosemont",
+        "datetime_raw": "samedi ou dimanche",
+        "resolved_datetime_start": null,
+        "recurring": null,
+        "level_raw": "débutant-intermédiaire",
+        "level_min": 2,
+        "level_max": 3,
+        "format": null,
+        "spots_needed": null,
+        "language": "fr",
+        "confidence": "medium",
+        "needs_clarification": [
+          "sport",
+          "resolved_datetime_start",
+          "spots_needed"
+        ]
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2209,
+        "output_tokens": 143
+      },
+      "latency_ms": 1716
+    },
+    {
+      "id": "p13",
+      "text": "URGENT besoin d'un remplaçant pour notre ligue ce soir 19h30 chez Tennis 13 à Laval, niveau 4.0 minimum, on paye ta part de court!",
+      "extraction": {
+        "is_game_request": true,
+        "sport": "tennis",
+        "place_raw": "Tennis 13 à Laval",
+        "datetime_raw": "ce soir 19h30",
+        "resolved_datetime_start": "2026-08-29T19:30",
+        "recurring": null,
+        "level_raw": "niveau 4.0 minimum",
+        "level_min": 4,
+        "level_max": null,
+        "format": null,
+        "spots_needed": 1,
+        "language": "fr",
+        "confidence": "high",
+        "needs_clarification": []
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2183,
+        "output_tokens": 135
+      },
+      "latency_ms": 1519
+    },
+    {
+      "id": "p14",
+      "text": "Table tennis / ping pong: petit tournoi amical qu'on organise entre amis samedi le 12 septembre au sous-sol de l'église St-Arsène, tous les niveaux bienvenus, 10$ d'inscription pour les prix. Places limitées!",
+      "extraction": {
+        "is_game_request": false,
+        "sport": "table_tennis",
+        "place_raw": "sous-sol de l'église St-Arsène",
+        "datetime_raw": "samedi le 12 septembre",
+        "resolved_datetime_start": "2026-09-12",
+        "recurring": null,
+        "level_raw": "tous les niveaux bienvenus",
+        "level_min": null,
+        "level_max": null,
+        "format": null,
+        "spots_needed": null,
+        "language": "fr",
+        "confidence": "high",
+        "needs_clarification": []
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2198,
+        "output_tokens": 135
+      },
+      "latency_ms": 1415
+    },
+    {
+      "id": "p15",
+      "text": "3.5 player here, my regular partner bailed on me AGAIN so looking for someone reliable for weekly hits, Tuesday or Wednesday evenings, indoor preferably (winter is coming). West Island area.",
+      "extraction": {
+        "is_game_request": true,
+        "sport": "tennis",
+        "place_raw": "West Island area",
+        "datetime_raw": "Tuesday or Wednesday evenings",
+        "resolved_datetime_start": null,
+        "recurring": "weekly, Tuesday or Wednesday evenings",
+        "level_raw": "3.5 player",
+        "level_min": 3.5,
+        "level_max": null,
+        "format": "doubles",
+        "spots_needed": 1,
+        "language": "en",
+        "confidence": "high",
+        "needs_clarification": [
+          "resolved_datetime_start"
+        ]
+      },
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 2177,
+        "output_tokens": 130
+      },
+      "latency_ms": 1350
+    }
+  ]
+}
