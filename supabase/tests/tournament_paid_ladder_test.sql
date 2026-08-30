@@ -5,10 +5,10 @@
 --   * semi 1: one side has effort → walkover; the silent loser PLAYED
 --     nothing but a single walkover is not the refund case → stays
 --     registered, no refund queued;
---   * semi 2: both silent → double walkover; both sides have zero completed
---     games → both registrations disqualified, both succeeded payments
---     surface in lt_cancel_refund_candidates and neither in
---     lt_release_candidates.
+--   * semi 2: both silent → double walkover; the zero-games refund is
+--     retired (Jean 2026-08-23, unplayed-match-resolution.md § 10), so both
+--     sides STAY registered, no refund is queued, and once the event
+--     completes both entries release to the organizer like any played entry.
 --
 -- Run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
 --        -v ON_ERROR_STOP=1 -f supabase/tests/tournament_paid_ladder_test.sql
@@ -141,32 +141,44 @@ BEGIN
         RAISE EXCEPTION 'single-walkover loser should stay registered, got %', v_reg.status;
     END IF;
 
-    -- Semi 2: double walkover; both zero-game sides disqualified.
+    -- Semi 2: double walkover; the zero-games refund is retired, so both
+    -- sides keep their registration and nothing is queued.
     SELECT * INTO v_m2 FROM tournament_matches WHERE id = v_m2.id;
     IF v_m2.status <> 'walkover' OR v_m2.winner_registration_id IS NOT NULL THEN
         RAISE EXCEPTION 'paid semi 2 not a double walkover';
     END IF;
     SELECT count(*) INTO v_cnt FROM tournament_registrations
      WHERE id IN (v_m2.player1_registration_id, v_m2.player2_registration_id)
-       AND status = 'disqualified';
+       AND status = 'registered';
     IF v_cnt <> 2 THEN
-        RAISE EXCEPTION 'expected both double-walkover sides disqualified, got %', v_cnt;
+        RAISE EXCEPTION 'expected both double-walkover sides to stay registered, got %', v_cnt;
     END IF;
-
-    -- Both queued for refund, neither releasable to the organizer.
+    SELECT count(*) INTO v_cnt FROM leagues_tournaments_audit
+     WHERE scope = 'registration' AND action = 'auto_refund_queued'
+       AND entity_id IN (v_m2.player1_registration_id, v_m2.player2_registration_id);
+    IF v_cnt <> 0 THEN
+        RAISE EXCEPTION 'no refund may be queued post-open, got % audit rows', v_cnt;
+    END IF;
     SELECT count(*) INTO v_cnt FROM public.lt_cancel_refund_candidates() c
       JOIN lt_registration_payment p ON p.id = c.payment_id
      WHERE p.tournament_registration_id
            IN (v_m2.player1_registration_id, v_m2.player2_registration_id);
-    IF v_cnt <> 2 THEN
-        RAISE EXCEPTION 'expected 2 refund candidates, got %', v_cnt;
+    IF v_cnt <> 0 THEN
+        RAISE EXCEPTION 'expected 0 refund candidates, got %', v_cnt;
     END IF;
+
+    -- And at completion the entries settle to the organizer like any played
+    -- entry, so no payment sits 'succeeded' forever.
+    UPDATE tournaments
+       SET status = 'completed', start_date = now() - interval '3 days',
+           end_date = now() - interval '2 days'
+     WHERE id = v_t.id;
     SELECT count(*) INTO v_cnt FROM public.lt_release_candidates() c
       JOIN lt_registration_payment p ON p.id = c.payment_id
      WHERE p.tournament_registration_id
            IN (v_m2.player1_registration_id, v_m2.player2_registration_id);
-    IF v_cnt <> 0 THEN
-        RAISE EXCEPTION 'refund-queued entries must not be releasable, got %', v_cnt;
+    IF v_cnt <> 2 THEN
+        RAISE EXCEPTION 'expected both double-walkover entries releasable at completion, got %', v_cnt;
     END IF;
 
     RAISE NOTICE 'tournament_paid_ladder_test: ALL PASS';
