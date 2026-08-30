@@ -47,6 +47,8 @@ import {
   forfeitTournamentRegistration,
   getTournamentRoundDeadlines,
   setTournamentRoundDeadlines,
+  getTournamentPhaseAvailability,
+  submitPhaseAvailability,
   extendTournamentMatchDeadline,
   getTournamentCoOrganizers,
   addTournamentCoOrganizer,
@@ -86,6 +88,8 @@ import {
   type PoolStandingRow,
   type TournamentRoundDeadline,
   type RoundDeadlineInput,
+  type TournamentPhaseAvailability,
+  type SubmitPhaseAvailabilityInput,
   type TournamentCoOrganizer,
   type LinkableMatch,
   type PlayerProfile,
@@ -130,6 +134,8 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'poolStandings', tournamentId] as const,
   roundDeadlines: (tournamentId: string) =>
     [...tournamentKeys.all, 'roundDeadlines', tournamentId] as const,
+  phaseAvailability: (tournamentId: string, bracketSide: string, roundNumber: number) =>
+    [...tournamentKeys.all, 'phaseAvailability', tournamentId, bracketSide, roundNumber] as const,
   coOrganizers: (tournamentId: string) =>
     [...tournamentKeys.all, 'coOrganizers', tournamentId] as const,
   amIOrganizer: (tournamentId: string) =>
@@ -706,6 +712,47 @@ export function useSetTournamentRoundDeadlines(
     onSuccess: (rows, vars) => {
       qc.invalidateQueries({ queryKey: tournamentKeys.roundDeadlines(vars.tournamentId) });
       options.onSuccess?.(rows);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/** Gate answers for one phase ('pool' normalises to round 0). */
+export function useTournamentPhaseAvailability(
+  tournamentId: string | undefined,
+  bracketSide: 'pool' | 'main',
+  roundNumber: number,
+  enabled = true
+) {
+  const round = bracketSide === 'pool' ? 0 : roundNumber;
+  return useQuery<TournamentPhaseAvailability[]>({
+    queryKey: tournamentKeys.phaseAvailability(tournamentId ?? '', bracketSide, round),
+    queryFn: () => getTournamentPhaseAvailability(tournamentId!, bracketSide, round),
+    enabled: !!tournamentId && enabled,
+  });
+}
+
+/** The scheduling gate: answer a phase with dispos (or skip). Upserts. */
+export function useSubmitPhaseAvailability(
+  options: MutationOptions<TournamentPhaseAvailability> = {}
+) {
+  const qc = useQueryClient();
+  const mutation = useMutation<TournamentPhaseAvailability, Error, SubmitPhaseAvailabilityInput>({
+    mutationFn: input => submitPhaseAvailability(input),
+    onSuccess: (row, vars) => {
+      qc.invalidateQueries({
+        queryKey: tournamentKeys.phaseAvailability(
+          vars.tournamentId,
+          vars.bracketSide,
+          vars.bracketSide === 'pool' ? 0 : vars.roundNumber
+        ),
+      });
+      options.onSuccess?.(row);
     },
     onError: e => options.onError?.(e),
   });

@@ -1322,6 +1322,57 @@ export async function setTournamentRoundDeadlines(
   return (data ?? []) as TournamentRoundDeadline[];
 }
 
+export type TournamentPhaseAvailability = Tables<'tournament_phase_availability'>;
+
+export type PhaseAvailabilityOutcome = 'confirmed' | 'edited' | 'skipped' | 'forfeited';
+
+/** Gate answers for one phase ('pool' normalises to round 0). RLS mirrors tournament visibility. */
+export async function getTournamentPhaseAvailability(
+  tournamentId: string,
+  bracketSide: 'pool' | 'main',
+  roundNumber: number
+): Promise<TournamentPhaseAvailability[]> {
+  const { data, error } = await supabase
+    .from('tournament_phase_availability')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .eq('bracket_side', bracketSide)
+    .eq('round_number', bracketSide === 'pool' ? 0 : roundNumber);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentPhaseAvailability[];
+}
+
+export interface PhaseAvailabilityCell {
+  day: string;
+  hour: number;
+}
+
+export interface SubmitPhaseAvailabilityInput {
+  tournamentId: string;
+  bracketSide: 'pool' | 'main';
+  roundNumber: number;
+  outcome: PhaseAvailabilityOutcome;
+  grid: PhaseAvailabilityCell[];
+  /** IANA zone; the grid is declared in local time. */
+  timezone: string;
+}
+
+/** The scheduling gate: one answer per phase, upserted, grid snapshotted over the window. */
+export async function submitPhaseAvailability(
+  input: SubmitPhaseAvailabilityInput
+): Promise<TournamentPhaseAvailability> {
+  const { data, error } = await supabase.rpc('tournament_submit_phase_availability', {
+    p_tournament_id: input.tournamentId,
+    p_bracket_side: input.bracketSide,
+    p_round_number: input.roundNumber,
+    p_outcome: input.outcome,
+    p_grid: input.grid.map(c => ({ day: c.day, hour: c.hour })),
+    p_timezone: input.timezone,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentPhaseAvailability;
+}
+
 /** Organizer gives one match its own deadline (extension). */
 export async function extendTournamentMatchDeadline(
   tournamentMatchId: string,

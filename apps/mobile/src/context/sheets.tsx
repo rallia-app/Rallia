@@ -41,6 +41,7 @@ import { TournamentInviteSheet } from '#/features/tournaments/components/Tournam
 import { TournamentInvitePlayersActionSheet } from '#/features/tournaments/components/TournamentInvitePlayersSheet';
 import { TournamentCoOrganizerActionSheet } from '#/features/tournaments/components/TournamentCoOrganizerSheet';
 import { TournamentDeadlinesActionSheet } from '#/features/tournaments/components/TournamentDeadlinesSheet';
+import { TournamentAvailabilityGateSheet } from '#/features/tournaments/components/TournamentAvailabilityGateSheet';
 import { LeagueInvitePlayersActionSheet } from '#/features/leagues/components/LeagueInvitePlayersSheet';
 import { LeagueInviteSheet } from '#/features/leagues/components/LeagueInviteSheet';
 import { LeagueEditActionSheet } from '#/features/leagues/components/LeagueFormSheets';
@@ -483,6 +484,20 @@ declare module 'react-native-actions-sheet' {
         knockoutRounds: number[];
         /** Highest knockout round, so rounds can be named final / semifinal. */
         totalRounds: number;
+      };
+    }>;
+    'tournament-availability-gate': SheetDefinition<{
+      payload: {
+        tournamentId: string;
+        /** 'pool' answers the whole round robin (round 0). */
+        bracketSide: 'pool' | 'main';
+        roundNumber: number;
+        /** Header label, e.g. the phase or round name. */
+        phaseLabel?: string;
+        /** ISO deadline closing the phase window. */
+        deadlineAt?: string | null;
+        /** Organizer's suggested minimum hours; advisory only. */
+        minHours?: number | null;
       };
     }>;
     'league-invite': SheetDefinition<{
@@ -1035,6 +1050,7 @@ export const Sheets = () => {
         'tournament-invite-players': TournamentInvitePlayersActionSheet,
         'tournament-co-organizers': TournamentCoOrganizerActionSheet,
         'tournament-deadlines': TournamentDeadlinesActionSheet,
+        'tournament-availability-gate': TournamentAvailabilityGateSheet,
         'league-invite': LeagueInviteSheet,
         'league-invite-players': LeagueInvitePlayersActionSheet,
         'league-edit': LeagueEditActionSheet,

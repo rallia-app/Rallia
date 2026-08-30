@@ -5976,6 +5976,22 @@
       "errorInvalid": "Those dates could not be saved.",
       "errorGeneric": "The deadlines could not be saved."
     },
+    "availabilityGate": {
+      "title": "Your availability",
+      "poolPhase": "Pool phase",
+      "window": "Your hours count until {date}. Check off everything that works, your opponents will see the hours you share.",
+      "cta": "Give my availability",
+      "confirm": "Confirm my availability",
+      "saveEdited": "Save my availability",
+      "skip": "Continue without giving hours",
+      "saved": "Availability saved. Your games can now be planned.",
+      "minHint": "Aim for at least {hours} h of availability so your games are easy to plan.",
+      "errorNoDeadline": "The organizer has not set this phase's deadline yet.",
+      "errorWindowClosed": "This phase's deadline has passed.",
+      "errorNotParticipant": "Only registered players can answer.",
+      "errorNotInProgress": "The tournament is not live.",
+      "errorGeneric": "Could not save your availability. Try again."
+    },
     "goodToKnow": {
       "title": "Good to know",
       "courts": "Court time isn't included. You book your court and split the cost with your opponent.",

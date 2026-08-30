@@ -5976,6 +5976,22 @@
       "errorInvalid": "Ces dates n'ont pas pu être enregistrées.",
       "errorGeneric": "Les échéances n'ont pas pu être enregistrées."
     },
+    "availabilityGate": {
+      "title": "Tes disponibilités",
+      "poolPhase": "Phase de poules",
+      "window": "Tes heures comptent jusqu'au {date}. Coche tout ce qui marche, tes adversaires verront les heures que vous avez en commun.",
+      "cta": "Donner mes dispos",
+      "confirm": "Confirmer mes dispos",
+      "saveEdited": "Enregistrer mes dispos",
+      "skip": "Continuer sans donner d'heures",
+      "saved": "Dispos enregistrées. Tes parties peuvent maintenant se planifier.",
+      "minHint": "Vise au moins {hours} h de disponibilité pour que tes parties se planifient facilement.",
+      "errorNoDeadline": "L'organisateur n'a pas encore fixé l'échéance de cette phase.",
+      "errorWindowClosed": "L'échéance de cette phase est passée.",
+      "errorNotParticipant": "Seuls les joueurs inscrits peuvent répondre.",
+      "errorNotInProgress": "Le tournoi n'est pas en cours.",
+      "errorGeneric": "Impossible d'enregistrer tes dispos. Réessaie."
+    },
     "goodToKnow": {
       "title": "Bon à savoir",
       "courts": "Le temps de terrain n'est pas inclus. Tu réserves ton terrain et tu partages le coût avec ton adversaire.",

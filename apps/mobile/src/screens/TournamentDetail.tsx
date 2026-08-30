@@ -84,6 +84,7 @@ import {
   useTournamentPoolStandings,
   useGenerateTournamentKnockout,
   useTournamentRoundDeadlines,
+  useTournamentPhaseAvailability,
   useOpenTournamentRoundChat,
   useIsTournamentOrganizer,
   useIsCertifiedOrganizer,
@@ -1641,6 +1642,59 @@ export const TournamentDetail: React.FC = () => {
     return row?.deadline_at ?? null;
   }, [myNextMatch, roundDeadlines]);
 
+  // Scheduling funnel: the phase gate. Answering is the ack that unlocks the
+  // pool room composer and the pairing rooms (scheduling-funnel.md § 3).
+  const funnelEnabled = !!tournament?.scheduling_funnel_enabled;
+  const gatePhase = useMemo(() => {
+    if (!myNextMatch) return null;
+    return myNextMatch.bracket_side === 'pool'
+      ? { bracketSide: 'pool' as const, roundNumber: 0 }
+      : { bracketSide: 'main' as const, roundNumber: myNextMatch.round_number };
+  }, [myNextMatch]);
+  const phaseDeadlineAt = useMemo(() => {
+    if (!gatePhase) return null;
+    const row = roundDeadlines.find(d =>
+      gatePhase.bracketSide === 'pool'
+        ? d.bracket_side === 'pool'
+        : d.bracket_side === 'main' && d.round_number === gatePhase.roundNumber
+    );
+    return row?.deadline_at ?? null;
+  }, [gatePhase, roundDeadlines]);
+  const { data: gateAnswers = [] } = useTournamentPhaseAvailability(
+    tournament?.id,
+    gatePhase?.bracketSide ?? 'pool',
+    gatePhase?.roundNumber ?? 0,
+    funnelEnabled && !!gatePhase && tournament?.status === 'in_progress'
+  );
+  const myGateAnswer = useMemo(
+    () => (userId ? (gateAnswers.find(a => a.player_id === userId) ?? null) : null),
+    [gateAnswers, userId]
+  );
+  const needsGateAnswer =
+    funnelEnabled &&
+    tournament?.status === 'in_progress' &&
+    !!myActiveRegistration &&
+    !!gatePhase &&
+    !!phaseDeadlineAt &&
+    !myGateAnswer &&
+    new Date(phaseDeadlineAt).getTime() > Date.now();
+  const handleOpenAvailabilityGate = useCallback(() => {
+    if (!tournament || !gatePhase) return;
+    void SheetManager.show('tournament-availability-gate', {
+      payload: {
+        tournamentId: tournament.id,
+        bracketSide: gatePhase.bracketSide,
+        roundNumber: gatePhase.roundNumber,
+        phaseLabel:
+          gatePhase.bracketSide === 'pool'
+            ? t('tournamentDetail.availabilityGate.poolPhase')
+            : roundLabel(gatePhase.roundNumber, totalRounds, t),
+        deadlineAt: phaseDeadlineAt,
+        minHours: tournament.min_availability_hours ?? null,
+      },
+    });
+  }, [tournament, gatePhase, phaseDeadlineAt, totalRounds, t]);
+
   const myBracketState = useMemo<'next' | 'waiting' | 'eliminated' | 'champion' | null>(() => {
     if (!myRegId || tournament?.status !== 'in_progress') return null;
     if (myNextMatch) {
@@ -2188,6 +2242,18 @@ export const TournamentDetail: React.FC = () => {
     hint: string | null;
     testID: string;
   } | null = (() => {
+    // Live phase: give the gate the dock. It is the one action that advances
+    // the viewer's own state while play is on.
+    if (needsGateAnswer) {
+      return {
+        label: t('tournamentDetail.availabilityGate.cta'),
+        icon: 'calendar-outline',
+        onPress: handleOpenAvailabilityGate,
+        disabled: false,
+        hint: phaseDeadlineAt ? formatDeadline(phaseDeadlineAt) : null,
+        testID: 'cta-availability-gate',
+      };
+    }
     if (wasCancelled || isFinished || isLive) return null;
     const withFee = (base: string) => (feeTotalLabel ? `${base} · ${feeTotalLabel}` : base);
     const registerHint = [spotsLeftLabel, registerCloseHint, refundSummary]
