@@ -13081,6 +13081,15 @@ export type Database = {
           seated: boolean
         }[]
       }
+      lt_forfeit_score: {
+        Args: {
+          p_format: Database["public"]["Enums"]["match_format"]
+          p_games_per_set: number
+          p_points_per_game: number
+          p_winner_is_p1: boolean
+        }
+        Returns: string
+      }
       lt_format_date_fr: { Args: { p_ts: string }; Returns: string }
       lt_get_or_create_session_pairing_chat_unchecked: {
         Args: { p_session_match_id: string }

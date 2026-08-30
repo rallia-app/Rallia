@@ -205,7 +205,7 @@ export function TournamentRecordScoreActionSheet({
         winnerRegistrationId:
           outcome === 'cancelled' ? null : declaredSide === 1 ? player1RegId : player2RegId,
         // A retirement keeps whatever was played up to the abandon; a walkover
-        // has no score at all and the server stamps its own W/O.
+        // sends no score and the server stamps the format's forfeit score.
         score: outcome === 'retired' && validSets.length > 0 ? serializeSets(validSets) : undefined,
         outcome,
         tournamentId,

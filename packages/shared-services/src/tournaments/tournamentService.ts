@@ -1604,8 +1604,9 @@ export type TournamentMatchOutcome = 'completed' | 'walkover' | 'retired' | 'can
  * Organizer/admin authoritative OUTCOME for a stalled or disputed bracket
  * match. Sets the winner (and optional score string), settles the match in the
  * shape the outcome names, and advances the bracket when there is a winner.
- * A walkover with no score is stamped 'W/O', the same string the automated
- * resolver writes. Does not modify any linked casual match row.
+ * A walkover is stamped with the format's forfeit score (8-0, or 6-0 6-0),
+ * fixed server-side whatever score is sent. Does not modify any linked casual
+ * match row.
  */
 export async function overrideTournamentMatchScore(
   tournamentMatchId: string,

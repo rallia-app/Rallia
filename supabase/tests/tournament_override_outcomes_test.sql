@@ -4,7 +4,7 @@
 -- Covers 20260825120000. Série 1 was settled by typing a generic 8-6 on 27 of
 -- 70 pairings because the override could only ever write status='completed';
 -- these assertions are the ones that stop that being the only option:
---   * walkover stamps the resolver's own 'W/O' when no score is given
+--   * walkover stamps the format's forfeit score, whatever the caller sends
 --   * retired keeps the score at retirement
 --   * cancelled on a POOL row: no winner, no score, no played_at
 --   * a cancelled pool row counts for NEITHER player in the standings
@@ -108,13 +108,14 @@ BEGIN
      WHERE tr.id = v_pool.player2_registration_id;
 
     -- ---------------------------------------------------------------------
-    -- 1. walkover stamps the resolver's own 'W/O' when no score is supplied
+    -- 1. walkover stamps the format's forfeit score, player1-first, and a
+    --    caller-typed score is ignored: the forfeit score is fixed by format
     -- ---------------------------------------------------------------------
     v_row := public.tournament_override_score(
-        v_pool.id, v_pool.player1_registration_id, NULL, 'walkover');
+        v_pool.id, v_pool.player1_registration_id, '8-6', 'walkover');
     ASSERT v_row.status = 'walkover',
         'walkover: status is ' || v_row.status;
-    ASSERT v_row.score = 'W/O',
+    ASSERT v_row.score = '6-0 6-0',
         'walkover: score is ' || coalesce(v_row.score, '<null>');
     ASSERT v_row.winner_registration_id = v_pool.player1_registration_id,
         'walkover: winner not recorded';

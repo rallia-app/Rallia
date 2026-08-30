@@ -10,8 +10,8 @@
 --   * pool 2 (circular): a three-way tie with identical set/game ratios
 --     falls through to seed position; last place unambiguous;
 --   * forfeit: mid-pool disqualification converts unsettled matches to
---     walkovers, opponents get the win with no sets, the forfeited player
---     ranks last and ineligible;
+--     walkovers carrying the format's forfeit line (6-0 6-0) on both
+--     records, the forfeited player ranks last and ineligible;
 --   * standings guard NOT_POOL_TOURNAMENT on a single-elim id.
 --
 -- Run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
@@ -259,8 +259,8 @@ BEGIN
         RAISE EXCEPTION 'forfeited player won a walkover';
     END IF;
 
-    -- Standings: forfeited player last in pool, ineligible; walkover wins
-    -- carry no sets for the winners.
+    -- Standings: forfeited player last in pool, ineligible; a walkover
+    -- carries the format's forfeit line for both sides (6-0 6-0 here).
     IF NOT EXISTS (
         SELECT 1 FROM public.tournament_pool_standings(v_t.id) ps
          WHERE ps.user_id = p1[1] AND ps.withdrawn AND NOT ps.eligible
@@ -271,7 +271,7 @@ BEGIN
     END IF;
     -- 6 players → pools of 3. p1[2] already beat p1[1] for real (2 sets);
     -- p1[3] never played them, so the forfeit hands p1[3] a walkover win
-    -- that carries no sets.
+    -- carrying the full forfeit line: 2 sets, 12 games, 0 against.
     IF EXISTS (
         SELECT 1 FROM public.tournament_pool_standings(v_t.id) ps
          WHERE ps.user_id = p1[2] AND (ps.wins <> 1 OR ps.sets_won <> 2)
@@ -280,9 +280,28 @@ BEGIN
     END IF;
     IF EXISTS (
         SELECT 1 FROM public.tournament_pool_standings(v_t.id) ps
-         WHERE ps.user_id = p1[3] AND (ps.wins <> 1 OR ps.sets_won <> 0 OR ps.settled <> 1)
+         WHERE ps.user_id = p1[3] AND (ps.wins <> 1 OR ps.sets_won <> 2
+                OR ps.games_won <> 12 OR ps.games_lost <> 0 OR ps.settled <> 1)
     ) THEN
         RAISE EXCEPTION 'walkover win miscounted for third member';
+    END IF;
+    -- The defeat reaches the forfeited player's record too: the real loss to
+    -- p1[2] (2 sets) plus the forfeit mirror (2 sets, 12 games against).
+    IF EXISTS (
+        SELECT 1 FROM public.tournament_pool_standings(v_t.id) ps
+         WHERE ps.user_id = p1[1] AND (ps.sets_won <> 0 OR ps.sets_lost <> 4)
+    ) THEN
+        RAISE EXCEPTION 'forfeit defeat missing from the forfeited record';
+    END IF;
+    -- And the row itself shows the score, oriented to the winner's slot.
+    IF EXISTS (
+        SELECT 1 FROM tournament_matches tm
+         WHERE tm.tournament_id = v_t.id AND tm.status = 'walkover'
+           AND tm.score IS DISTINCT FROM public.lt_forfeit_score(
+                   'two_of_three', 6::smallint, NULL,
+                   tm.winner_registration_id = tm.player1_registration_id)
+    ) THEN
+        RAISE EXCEPTION 'walkover row not stamped with the forfeit score';
     END IF;
 
     -- forfeited_at marks this exit apart from a pre-draw removal; the refund
