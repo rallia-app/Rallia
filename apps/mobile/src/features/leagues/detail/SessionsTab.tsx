@@ -103,7 +103,10 @@ export const SessionsTab: React.FC<SessionsTabProps> = ({
           )}
         </Section>
 
-        {isOrganizer && (
+        {/* "Add another", not "create the first": an empty season already gets
+            a docked Create session, and session_create refuses a paused league
+            anyway, which is the one empty case the dock stays quiet for. */}
+        {isOrganizer && seasonSessions.length > 0 && (
           <TouchableOpacity
             onPress={handleOpenCreateSession}
             style={[styles.primaryButton, { backgroundColor: colors.primary }]}
