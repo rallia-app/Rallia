@@ -117,7 +117,7 @@ import { EventDetailTabBar } from '../features/events/components/EventDetailChro
 import { styles } from '../features/tournaments/detail/detailStyles';
 import { BracketTab } from '../features/tournaments/detail/BracketTab';
 import { OverviewTab } from '../features/tournaments/detail/OverviewTab';
-import { roundLabel } from '../features/tournaments/detail/BracketSection';
+import { parseScoreSets, roundLabel } from '../features/tournaments/detail/BracketSection';
 import { DetailsTab } from '../features/tournaments/detail/DetailsTab';
 import { PlayersTab } from '../features/tournaments/detail/PlayersTab';
 import { RulesTab } from '../features/tournaments/detail/RulesTab';
@@ -1737,6 +1737,61 @@ export const TournamentDetail: React.FC = () => {
     return nameByRegId.get(oppId) ?? seedFallbackLabel(seedByRegId.get(oppId), t);
   }, [myNextMatch, myRegId, nameByRegId, seedByRegId, t]);
 
+  // Pool play is not knockout: all of a player's pool games share one deadline
+  // instead of arriving one round at a time. Handing the dashboard the whole
+  // set keeps it from showing a single opponent, which reads as "one game to
+  // play by that date" and leaves the other two unscheduled.
+  const myPoolPhase = useMemo(() => {
+    if (!myRegId || myNextMatch?.bracket_side !== 'pool') return null;
+    const deadlineAt = roundDeadlines.find(d => d.bracket_side === 'pool')?.deadline_at ?? null;
+    const games = poolMatches
+      .filter(
+        m =>
+          !m.player1_is_bye &&
+          !m.player2_is_bye &&
+          !!m.player1_registration_id &&
+          !!m.player2_registration_id &&
+          // A cancelled pairing is not a game the player still owes.
+          m.status !== 'cancelled' &&
+          (m.player1_registration_id === myRegId || m.player2_registration_id === myRegId)
+      )
+      .sort((a, b) => a.round_number - b.round_number)
+      .map(m => {
+        const oppId =
+          m.player1_registration_id === myRegId
+            ? m.player2_registration_id
+            : m.player1_registration_id;
+        // Settled means a result is on the books. A disputed game was played
+        // but is unresolved, so it stays actionable alongside the unplayed ones.
+        const settled =
+          ['completed', 'walkover', 'retired'].includes(m.status) || !!m.winner_registration_id;
+        // The stored score is player1-first; flip it when the viewer is player2
+        // so their own games always read on the left.
+        const iAmPlayer1 = m.player1_registration_id === myRegId;
+        const sets = parseScoreSets(m.score);
+        const scoreLabel = sets.length
+          ? sets.map(s => (iAmPlayer1 ? `${s.a}-${s.b}` : `${s.b}-${s.a}`)).join(' ')
+          : null;
+        return {
+          id: m.id,
+          p1RegId: m.player1_registration_id as string,
+          p2RegId: m.player2_registration_id as string,
+          opponentLabel: oppId
+            ? (nameByRegId.get(oppId) ?? seedFallbackLabel(seedByRegId.get(oppId), t))
+            : null,
+          settled,
+          isDisputed: m.status === 'disputed',
+          isWalkover: m.status === 'walkover',
+          didWin: m.winner_registration_id ? m.winner_registration_id === myRegId : null,
+          scoreLabel,
+          // An organizer extension on one pairing wins over the phase row, so
+          // that row states its own date rather than the shared one.
+          deadlineAt: m.deadline_override_at ?? deadlineAt,
+        };
+      });
+    return games.length > 0 ? { games, deadlineAt } : null;
+  }, [myRegId, myNextMatch, poolMatches, roundDeadlines, nameByRegId, seedByRegId, t]);
+
   // Flashscore-style content tabs (Overview / Bracket / Players / Details).
   // Keyed, not positional: tabs appear and disappear with tournament state, so
   // an index would silently select a different tab underneath the user.
@@ -2224,6 +2279,8 @@ export const TournamentDetail: React.FC = () => {
       : daysToStart === 0
         ? t('tournamentDetail.dashboard.stats.startsToday')
         : shortDate(tournament.start_date);
+  // Which pairing's chat is opening, so a pool list spins only the row tapped.
+  const openRoundChatPendingId = openRoundChat.isPending ? (openRoundChat.variables ?? null) : null;
   const myMatchP1 = myNextMatch?.player1_registration_id ?? null;
   const myMatchP2 = myNextMatch?.player2_registration_id ?? null;
   const registerCloseHint = tournament.registration_closes_at
@@ -2826,6 +2883,7 @@ export const TournamentDetail: React.FC = () => {
             myBracketState={myBracketState}
             myNextMatch={myNextMatch}
             myNextMatchDeadline={myNextMatchDeadline}
+            myPoolPhase={myPoolPhase}
             onEditAvailability={canEditGateAnswer ? handleOpenAvailabilityGate : null}
             myOpponentLabel={myOpponentLabel}
             myMatchP1={myMatchP1}
@@ -2833,6 +2891,7 @@ export const TournamentDetail: React.FC = () => {
             handleBracketMatchTap={handleBracketMatchTap}
             handleOpenRoundChat={handleOpenRoundChat}
             openRoundChat={openRoundChat}
+            openRoundChatPendingId={openRoundChatPendingId}
             onWithdraw={onWithdraw}
             withdraw={withdraw}
             refundRegistration={refundRegistration}

@@ -34,6 +34,31 @@ interface PendingOnly {
   isPending: boolean;
 }
 
+/** One of the viewer's pool games, in the order they sit in the pool. */
+export interface MyPoolGame {
+  id: string;
+  p1RegId: string;
+  p2RegId: string;
+  opponentLabel: string | null;
+  /** A result is on the books: the row is done and counts toward progress. */
+  settled: boolean;
+  /** Played, but the result is contested and still needs sorting out. */
+  isDisputed: boolean;
+  isWalkover: boolean;
+  /** Null when no winner is recorded yet. */
+  didWin: boolean | null;
+  /** Set scores written viewer-first, e.g. "8-1". Null when none recorded. */
+  scoreLabel: string | null;
+  /** Effective deadline: an organizer extension, else the shared phase date. */
+  deadlineAt: string | null;
+}
+
+/** The viewer's whole pool slate. Null outside the pool phase. */
+export interface MyPoolPhase {
+  games: MyPoolGame[];
+  deadlineAt: string | null;
+}
+
 interface OverviewTabProps {
   tournament: Tournament;
   colors: ScreenColors;
@@ -67,6 +92,8 @@ interface OverviewTabProps {
   myBracketState: 'next' | 'waiting' | 'eliminated' | 'champion' | null;
   myNextMatch: TournamentMatch | null;
   myNextMatchDeadline: string | null;
+  /** Pool slate; when set the pane lists every pool game instead of one card. */
+  myPoolPhase: MyPoolPhase | null;
   /** Reopen the phase availability gate; null hides the link. */
   onEditAvailability?: (() => void) | null;
   myOpponentLabel: string | null;
@@ -75,6 +102,8 @@ interface OverviewTabProps {
   handleBracketMatchTap: (tournamentMatchId: string, p1RegId: string, p2RegId: string) => void;
   handleOpenRoundChat: (tournamentMatchId: string) => void;
   openRoundChat: PendingOnly;
+  /** The pairing whose chat is opening, so only that row shows a spinner. */
+  openRoundChatPendingId: string | null;
   onWithdraw: () => void;
   withdraw: PendingOnly;
   refundRegistration: PendingOnly;
@@ -128,6 +157,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   myBracketState,
   myNextMatch,
   myNextMatchDeadline,
+  myPoolPhase,
   onEditAvailability = null,
   myOpponentLabel,
   myMatchP1,
@@ -135,6 +165,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   handleBracketMatchTap,
   handleOpenRoundChat,
   openRoundChat,
+  openRoundChatPendingId,
   onWithdraw,
   withdraw,
   refundRegistration,
@@ -310,52 +341,214 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     {myBracketState && (
       <View style={styles.section}>
         <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.sectionTitle}>
-          {t('tournamentDetail.dashboard.myMatch.title').toUpperCase()}
+          {t(
+            myPoolPhase
+              ? ('tournamentDetail.dashboard.myMatch.poolTitle' as TranslationKey)
+              : 'tournamentDetail.dashboard.myMatch.title'
+          ).toUpperCase()}
         </Text>
         {myBracketState === 'next' && myNextMatch && myMatchP1 && myMatchP2 ? (
           <>
-            <TouchableOpacity
-              onPress={() => handleBracketMatchTap(myNextMatch.id, myMatchP1, myMatchP2)}
-              activeOpacity={0.7}
-              style={[
-                styles.card,
-                styles.myMatchCard,
-                { backgroundColor: colors.highlightBg, borderColor: colors.primary },
-              ]}
-              accessibilityRole="button"
-            >
-              <View style={styles.myMatchMain}>
-                <Text size="lg" weight="bold" color={colors.text}>
-                  {t('tournamentDetail.dashboard.myMatch.vs').replace(
-                    '{name}',
-                    myOpponentLabel ?? '?'
+            {myPoolPhase ? (
+              /* Pool play: every game is due on the same date, so the slate is
+                 listed in full. One opponent alone reads as one game to play. */
+              <View
+                style={[
+                  styles.card,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.poolSlateHeader}>
+                  <Text size="base" weight="bold" color={colors.text}>
+                    {t(
+                      (myPoolPhase.games.length === 1
+                        ? 'tournamentDetail.dashboard.myMatch.poolProgress_one'
+                        : 'tournamentDetail.dashboard.myMatch.poolProgress') as TranslationKey
+                    )
+                      .replace('{done}', String(myPoolPhase.games.filter(g => g.settled).length))
+                      .replace('{total}', String(myPoolPhase.games.length))}
+                  </Text>
+                  {myPoolPhase.deadlineAt && (
+                    <View style={styles.myMatchDeadlineRow}>
+                      <Ionicons
+                        name="time-outline"
+                        size={13}
+                        color={
+                          deadlineUrgent(myPoolPhase.deadlineAt) ? colors.danger : colors.textMuted
+                        }
+                      />
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        color={
+                          deadlineUrgent(myPoolPhase.deadlineAt) ? colors.danger : colors.textMuted
+                        }
+                      >
+                        {formatDeadline(myPoolPhase.deadlineAt)}
+                      </Text>
+                    </View>
                   )}
-                </Text>
-                <Text size="xs" color={colors.textMuted}>
-                  {myNextMatch.bracket_side === 'pool'
-                    ? t('tournamentDetail.pools.poolGame' as TranslationKey)
-                    : roundLabel(myNextMatch.round_number, totalRounds, t)}{' '}
-                  · {t('tournamentDetail.dashboard.myMatch.hint')}
-                </Text>
-                {myNextMatchDeadline && (
-                  <View style={styles.myMatchDeadlineRow}>
-                    <Ionicons
-                      name="time-outline"
-                      size={13}
-                      color={deadlineUrgent(myNextMatchDeadline) ? colors.danger : colors.textMuted}
-                    />
-                    <Text
-                      size="xs"
-                      weight="semibold"
-                      color={deadlineUrgent(myNextMatchDeadline) ? colors.danger : colors.textMuted}
+                </View>
+
+                {myPoolPhase.games.map(game => {
+                  // A finished game is a read-only result line. Everything else
+                  // is still yours to arrange, so the whole row opens that
+                  // pairing's chat: one action per row, no guessing.
+                  const done = game.settled && !game.isDisputed;
+                  const detail =
+                    game.scoreLabel ??
+                    (game.isWalkover
+                      ? t('tournamentDetail.pools.byWalkover' as TranslationKey)
+                      : '');
+                  const resultText =
+                    game.didWin === null
+                      ? t('tournamentDetail.pools.played' as TranslationKey)
+                      : t(
+                          (game.didWin
+                            ? 'tournamentDetail.pools.resultWon'
+                            : 'tournamentDetail.pools.resultLost') as TranslationKey
+                        )
+                          .replace('{detail}', detail)
+                          .trim();
+                  const rowBody = (
+                    <>
+                      <Ionicons
+                        name={
+                          done
+                            ? 'checkmark-circle'
+                            : game.isDisputed
+                              ? 'alert-circle-outline'
+                              : 'ellipse-outline'
+                        }
+                        size={18}
+                        color={
+                          done
+                            ? colors.statusPositiveText
+                            : game.isDisputed
+                              ? colors.danger
+                              : colors.primary
+                        }
+                      />
+                      <View style={styles.poolSlateRowText}>
+                        <Text
+                          size="base"
+                          weight={done ? 'regular' : 'semibold'}
+                          color={done ? colors.textMuted : colors.text}
+                        >
+                          {game.opponentLabel ?? '?'}
+                        </Text>
+                        <Text size="xs" color={game.isDisputed ? colors.danger : colors.textMuted}>
+                          {done
+                            ? resultText
+                            : game.isDisputed
+                              ? t('tournamentDetail.bracket.disputed')
+                              : t('tournamentDetail.pools.toPlay' as TranslationKey)}
+                        </Text>
+                        {/* Only when an organizer moved this one off the shared date. */}
+                        {!done && game.deadlineAt && game.deadlineAt !== myPoolPhase.deadlineAt && (
+                          <Text
+                            size="xs"
+                            color={
+                              deadlineUrgent(game.deadlineAt) ? colors.danger : colors.textMuted
+                            }
+                          >
+                            {formatDeadline(game.deadlineAt)}
+                          </Text>
+                        )}
+                      </View>
+                    </>
+                  );
+
+                  return done ? (
+                    <View
+                      key={game.id}
+                      style={[
+                        styles.poolSlateRow,
+                        styles.poolSlateRowMain,
+                        { borderTopColor: colors.border },
+                      ]}
                     >
-                      {formatDeadline(myNextMatchDeadline)}
-                    </Text>
-                  </View>
-                )}
+                      {rowBody}
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      key={game.id}
+                      onPress={() => handleOpenRoundChat(game.id)}
+                      activeOpacity={0.7}
+                      disabled={openRoundChat.isPending}
+                      style={[
+                        styles.poolSlateRow,
+                        styles.poolSlateRowMain,
+                        { borderTopColor: colors.border },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('tournamentDetail.dashboard.myMatch.organize')} · ${game.opponentLabel ?? ''}`}
+                      testID={`pool-game-${game.id}`}
+                    >
+                      {rowBody}
+                      {openRoundChatPendingId === game.id ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      ) : (
+                        <Ionicons
+                          name="chatbubbles-outline"
+                          size={20}
+                          color={openRoundChat.isPending ? colors.textMuted : colors.primary}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
-            </TouchableOpacity>
+            ) : (
+              <>
+                <TouchableOpacity
+                  onPress={() => handleBracketMatchTap(myNextMatch.id, myMatchP1, myMatchP2)}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.card,
+                    styles.myMatchCard,
+                    { backgroundColor: colors.highlightBg, borderColor: colors.primary },
+                  ]}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.myMatchMain}>
+                    <Text size="lg" weight="bold" color={colors.text}>
+                      {t('tournamentDetail.dashboard.myMatch.vs').replace(
+                        '{name}',
+                        myOpponentLabel ?? '?'
+                      )}
+                    </Text>
+                    <Text size="xs" color={colors.textMuted}>
+                      {myNextMatch.bracket_side === 'pool'
+                        ? t('tournamentDetail.pools.poolGame' as TranslationKey)
+                        : roundLabel(myNextMatch.round_number, totalRounds, t)}{' '}
+                      · {t('tournamentDetail.dashboard.myMatch.hint')}
+                    </Text>
+                    {myNextMatchDeadline && (
+                      <View style={styles.myMatchDeadlineRow}>
+                        <Ionicons
+                          name="time-outline"
+                          size={13}
+                          color={
+                            deadlineUrgent(myNextMatchDeadline) ? colors.danger : colors.textMuted
+                          }
+                        />
+                        <Text
+                          size="xs"
+                          weight="semibold"
+                          color={
+                            deadlineUrgent(myNextMatchDeadline) ? colors.danger : colors.textMuted
+                          }
+                        >
+                          {formatDeadline(myNextMatchDeadline)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </>
+            )}
 
             {onEditAvailability && (
               <TouchableOpacity
