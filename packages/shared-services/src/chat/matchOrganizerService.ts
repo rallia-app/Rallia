@@ -440,3 +440,72 @@ export async function createCasualMatch(params: {
 
   return data as string;
 }
+
+// ============================================================================
+// SCHEDULING FUNNEL — ONE-TAP BOOKING
+// ============================================================================
+
+/** The tentative booking behind a funnel pairing, if one exists. */
+export interface PairingBooking {
+  tournament_match_id: string;
+  match_id: string;
+  booked_by: string;
+  booked_at: string;
+  tentative_until: string;
+  accepted_at: string | null;
+  accepted_by: string | null;
+}
+
+/**
+ * Book a MUTUAL option in one tap (scheduling-funnel.md § 5.3). Both sides
+ * declared themselves free for it inside the phase, so no vote is asked for.
+ * Creates and links the game, and opens the 24 h tentative window the other
+ * side is notified about. Returns the game id.
+ */
+export async function bookMutualOption(messageId: string, optionIndex: number): Promise<string> {
+  const { data, error } = await supabase.rpc('lt_funnel_book_mutual_option', {
+    p_message_id: messageId,
+    p_option_index: optionIndex,
+  });
+
+  if (error) {
+    console.error('Error booking mutual option:', error);
+    throw error;
+  }
+
+  return data as string;
+}
+
+/**
+ * "Ça marche": the side that did not book accepts, which makes the agreement
+ * firm at once and records it as EXPLICIT, so a later absence is a no-show
+ * rather than unresponsiveness (scheduling-funnel.md § 5.4 and § 8).
+ */
+export async function acceptPairingBooking(tournamentMatchId: string): Promise<PairingBooking> {
+  const { data, error } = await supabase.rpc('lt_funnel_accept_booking', {
+    p_tournament_match_id: tournamentMatchId,
+  });
+
+  if (error) {
+    console.error('Error accepting booking:', error);
+    throw error;
+  }
+
+  return data as PairingBooking;
+}
+
+/** The pairing's tentative booking, or null when nothing is booked. */
+export async function getPairingBooking(tournamentMatchId: string): Promise<PairingBooking | null> {
+  const { data, error } = await supabase
+    .from('lt_pairing_booking')
+    .select('*')
+    .eq('tournament_match_id', tournamentMatchId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching pairing booking:', error);
+    throw error;
+  }
+
+  return (data as PairingBooking | null) ?? null;
+}

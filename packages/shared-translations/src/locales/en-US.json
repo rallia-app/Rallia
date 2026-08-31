@@ -3373,7 +3373,11 @@
       "previewSuggestions": "Suggested times to play",
       "staleOption": "No longer open",
       "likedBy": "{name} likes this time",
-      "likedByCount": "{count} players like this time"
+      "likedByCount": "{count} players like this time",
+      "tentative": "Game proposed",
+      "tentativeWaiting": "Waiting for {name} to confirm. Without an answer it stands in 24 h.",
+      "tentativeAsk": "{name} created this game. Confirm it, or say so in the chat.",
+      "tentativeAccept": "Works for me"
     },
     "banner": {
       "title": "Organize a game",

@@ -33,6 +33,9 @@ import type {
 } from '@rallia/shared-services';
 import {
   useMatchTimeVotes,
+  usePairingBooking,
+  useBookMutualOption,
+  useAcceptPairingBooking,
   useToggleMatchTimeVote,
   useCreateCasualMatch,
   useProfilesByIds,
@@ -94,6 +97,17 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
 
   const createdMatchId = metadata?.created_match_id ?? null;
 
+  // Scheduling funnel: on a funnel event the options were built from the phase
+  // snapshots, so a slot every side declared free is pre-agreed and books in
+  // one tap instead of collecting thumbs (scheduling-funnel.md § 5.3). The
+  // card records this itself, because a round chat carries no tournament_id to
+  // walk back from, and because it is a fact about this snapshot.
+  const pairingId = metadata?.tournament_match_id ?? null;
+  const funnelEnabled = !!pairingId && metadata?.funnel === true;
+  const { data: booking } = usePairingBooking(pairingId ?? undefined, funnelEnabled);
+  const bookOption = useBookMutualOption();
+  const acceptBooking = useAcceptPairingBooking();
+
   // Players read the list like a calendar, so it is shown chronologically. The
   // true array index rides along because votes are stored positionally
   // (match_time_vote.option_index): a proposal appended to the end of the
@@ -116,6 +130,15 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
   const { data: opponentProfiles = {} } = useProfilesByIds(opponentIds);
   const { data: myGrid } = useSharedAvailability(currentUserId ? [currentUserId] : undefined);
 
+  const opponentLabel = useMemo(
+    () =>
+      Object.values(opponentProfiles)
+        .map(p => p.first_name)
+        .filter(Boolean)
+        .join(', ') || null,
+    [opponentProfiles]
+  );
+
   const openAvailabilityEditor = useCallback(() => {
     void lightHaptic();
     void SheetManager.show('player-availabilities', {
@@ -123,15 +146,11 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
         mode: 'edit',
         initialData: myGrid ? new Set(myGrid) : undefined,
         opponentIds,
-        opponentName:
-          Object.values(opponentProfiles)
-            .map(p => p.first_name)
-            .filter(Boolean)
-            .join(', ') || null,
+        opponentName: opponentLabel,
         tournamentMatchId: metadata?.tournament_match_id ?? null,
       },
     });
-  }, [myGrid, opponentIds, opponentProfiles, metadata?.tournament_match_id]);
+  }, [myGrid, opponentIds, opponentLabel, metadata?.tournament_match_id]);
 
   // The funnel floor: when the engine has nothing to offer (no shared hours, no
   // facility it knows), a participant names a slot themselves and it becomes a
@@ -216,6 +235,46 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
       message.conversation_id,
     ]
   );
+
+  // One tap on a pre-agreed slot: the RPC creates the game, links it to the
+  // pairing and opens the 24 h window the other side answers in.
+  const handleBook = useCallback(
+    async (optionIndex: number) => {
+      if (!currentUserId || bookOption.isPending || createdMatchId || !pairingId) return;
+      void lightHaptic();
+      setCreatingIndex(optionIndex);
+      try {
+        await bookOption.mutateAsync({
+          messageId: message.id,
+          optionIndex,
+          conversationId: message.conversation_id,
+          tournamentMatchId: pairingId,
+        });
+        void successHaptic();
+      } catch (error) {
+        console.error('Failed to book a mutual slot:', error);
+        void warningHaptic();
+      } finally {
+        setCreatingIndex(null);
+      }
+    },
+    [currentUserId, bookOption, createdMatchId, pairingId, message.id, message.conversation_id]
+  );
+
+  const handleAccept = useCallback(async () => {
+    if (!pairingId || acceptBooking.isPending) return;
+    void lightHaptic();
+    try {
+      await acceptBooking.mutateAsync({
+        tournamentMatchId: pairingId,
+        conversationId: message.conversation_id,
+      });
+      void successHaptic();
+    } catch (error) {
+      console.error('Failed to accept the booking:', error);
+      void warningHaptic();
+    }
+  }, [pairingId, acceptBooking, message.conversation_id]);
 
   const handleOpenMatch = useCallback(async () => {
     if (!createdMatchId || isOpening) return;
@@ -304,25 +363,59 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
     const start = confirmed ? new Date(confirmed.slot_start) : null;
     const success = statusColors.success.DEFAULT;
 
+    // A funnel booking is tentative until the other side answers or the 24 h
+    // window runs out (scheduling-funnel.md § 5.4). The band below says which,
+    // and gives the side that did not book their say.
+    const isTentative =
+      !!booking && booking.accepted_at == null && Date.parse(booking.tentative_until) > Date.now();
+    const iBooked = booking?.booked_by === currentUserId;
+
     // The same confirmation band the court-booked card uses, so every
     // "it happened" message in a chat reads identically.
     return (
-      <ChatConfirmationBand
-        accent={success}
-        title={t('matchOrganizer.card.created')}
-        lines={[
-          confirmed && start
-            ? `${friendlyDate(start)} · ${formatTimeOfDay(start, locale)}`
-            : t('matchOrganizer.card.createdSubtitle'),
-          confirmed?.facility_name ?? confirmed?.place_name,
-        ]}
-        onPress={() => {
-          void handleOpenMatch();
-        }}
-        isOpening={isOpening}
-        accessibilityLabel={t('matchOrganizer.card.viewGame')}
-        colors={colors}
-      />
+      <>
+        <ChatConfirmationBand
+          accent={isTentative ? accent : success}
+          title={t(isTentative ? 'matchOrganizer.card.tentative' : 'matchOrganizer.card.created')}
+          lines={[
+            confirmed && start
+              ? `${friendlyDate(start)} · ${formatTimeOfDay(start, locale)}`
+              : t('matchOrganizer.card.createdSubtitle'),
+            confirmed?.facility_name ?? confirmed?.place_name,
+          ]}
+          onPress={() => {
+            void handleOpenMatch();
+          }}
+          isOpening={isOpening}
+          accessibilityLabel={t('matchOrganizer.card.viewGame')}
+          colors={colors}
+        />
+        {isTentative && (
+          <View style={styles.tentativeBand}>
+            <Text size="xs" color={colors.textMuted} style={styles.tentativeText}>
+              {t(
+                iBooked
+                  ? 'matchOrganizer.card.tentativeWaiting'
+                  : 'matchOrganizer.card.tentativeAsk'
+              ).replace('{name}', opponentLabel ?? '')}
+            </Text>
+            {!iBooked && isParticipant && (
+              <Button
+                onPress={() => {
+                  void handleAccept();
+                }}
+                loading={acceptBooking.isPending}
+                disabled={acceptBooking.isPending}
+                size="sm"
+                fullWidth
+                testID="booking-accept"
+              >
+                {t('matchOrganizer.card.tentativeAccept')}
+              </Button>
+            )}
+          </View>
+        )}
+      </>
     );
   }
 
@@ -347,7 +440,17 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
           {orderedOptions.map(({ option, index }) => {
             const voters = votersByOption.get(index) ?? new Set<string>();
             const hasVoted = currentUserId ? voters.has(currentUserId) : false;
-            const isMutual = participants.length > 0 && participants.every(p => voters.has(p));
+            const votedMutual = participants.length > 0 && participants.every(p => voters.has(p));
+            // On the funnel the hours came from the phase snapshots, so a slot
+            // every side declared free is already agreed in principle and asks
+            // for no thumbs. A custom or one-sided slot still needs them:
+            // only one side's hours back it (scheduling-funnel.md § 5.3).
+            const preAgreed =
+              funnelEnabled &&
+              option.tier !== 'custom' &&
+              participants.length > 0 &&
+              (option.free_count ?? 0) >= participants.length;
+            const isMutual = votedMutual || preAgreed;
             const start = new Date(option.slot_start);
             const dateLabel = friendlyDate(start);
             const timeLabel = formatTimeOfDay(start, locale);
@@ -458,9 +561,11 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
                   {isMutual ? (
                     <Pressable
                       onPress={() => {
-                        void handleCreate(option, index);
+                        // The funnel's booking records the tentative window and
+                        // tells the other side; the plain create does neither.
+                        void (preAgreed ? handleBook(index) : handleCreate(option, index));
                       }}
-                      disabled={createMatch.isPending || !isParticipant}
+                      disabled={createMatch.isPending || bookOption.isPending || !isParticipant}
                       style={[styles.createBtn, { backgroundColor: accent }]}
                     >
                       {isCreatingThis ? (
@@ -627,6 +732,14 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
 export default MatchOrganizerCard;
 
 const styles = StyleSheet.create({
+  tentativeBand: {
+    gap: spacingPixels[2],
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
+  },
+  tentativeText: {
+    textAlign: 'center',
+  },
   options: {
     marginTop: spacingPixels[4],
     gap: spacingPixels[1.5],

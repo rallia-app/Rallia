@@ -7,6 +7,10 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  bookMutualOption,
+  acceptPairingBooking,
+  getPairingBooking,
+  type PairingBooking,
   getMatchOrganizerOptions,
   getSharedSports,
   postMatchOrganizerCard,
@@ -39,6 +43,8 @@ export const matchOrganizerKeys = {
   votes: (messageId: string) => [...matchOrganizerKeys.all, 'votes', messageId] as const,
   tournamentSport: (tournamentMatchId: string) =>
     [...matchOrganizerKeys.all, 'tournamentSport', tournamentMatchId] as const,
+  booking: (tournamentMatchId: string) =>
+    [...matchOrganizerKeys.all, 'booking', tournamentMatchId] as const,
   sessionSport: (sessionMatchId: string) =>
     [...matchOrganizerKeys.all, 'sessionSport', sessionMatchId] as const,
 };
@@ -248,6 +254,67 @@ export function useCreateCasualMatch() {
         queryClient.invalidateQueries({
           queryKey: matchOrganizerKeys.votes(variables.sourceMessageId),
         });
+      }
+    },
+  });
+}
+
+// ============================================================================
+// SCHEDULING FUNNEL — ONE-TAP BOOKING
+// ============================================================================
+
+/** The pairing's tentative booking, if any. */
+export function usePairingBooking(tournamentMatchId: string | undefined, enabled = true) {
+  return useQuery<PairingBooking | null>({
+    queryKey: matchOrganizerKeys.booking(tournamentMatchId ?? ''),
+    queryFn: () => getPairingBooking(tournamentMatchId!),
+    enabled: !!tournamentMatchId && enabled,
+  });
+}
+
+/**
+ * One-tap booking of a mutual option. Invalidates the card's thread and the
+ * booking, so the tentative state replaces the option list in place.
+ */
+export function useBookMutualOption() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      messageId,
+      optionIndex,
+    }: {
+      messageId: string;
+      optionIndex: number;
+      conversationId?: string;
+      tournamentMatchId?: string;
+    }) => bookMutualOption(messageId, optionIndex),
+    onSuccess: (_matchId, variables) => {
+      if (variables.conversationId) {
+        queryClient.invalidateQueries({ queryKey: chatKeys.messages(variables.conversationId) });
+      }
+      if (variables.tournamentMatchId) {
+        queryClient.invalidateQueries({
+          queryKey: matchOrganizerKeys.booking(variables.tournamentMatchId),
+        });
+      }
+    },
+  });
+}
+
+/** "Ça marche": the other side makes the tentative agreement firm. */
+export function useAcceptPairingBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tournamentMatchId }: { tournamentMatchId: string; conversationId?: string }) =>
+      acceptPairingBooking(tournamentMatchId),
+    onSuccess: (_booking, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: matchOrganizerKeys.booking(variables.tournamentMatchId),
+      });
+      if (variables.conversationId) {
+        queryClient.invalidateQueries({ queryKey: chatKeys.messages(variables.conversationId) });
       }
     },
   });

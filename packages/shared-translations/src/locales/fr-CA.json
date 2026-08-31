@@ -3373,7 +3373,11 @@
       "previewSuggestions": "Suggestions d'heures pour jouer",
       "staleOption": "Plus disponible",
       "likedBy": "{name} aime ce moment",
-      "likedByCount": "{count} joueurs aiment ce moment"
+      "likedByCount": "{count} joueurs aiment ce moment",
+      "tentative": "Partie proposée",
+      "tentativeWaiting": "En attente de la confirmation de {name}. Sans réponse, elle tient dans 24 h.",
+      "tentativeAsk": "{name} a créé cette partie. Confirme, ou dis-le dans le clavardage.",
+      "tentativeAccept": "Ça marche"
     },
     "banner": {
       "title": "Organiser une partie",

@@ -152,6 +152,12 @@ export interface MatchOrganizerMetadata {
   /** True when no option was free for every participant — options is empty. */
   no_overlap?: boolean;
   options: MatchOrganizerOption[];
+  /**
+   * True when the options were generated from the phase snapshots, i.e. the
+   * event is on the scheduling funnel. A mutual option on such a card is
+   * pre-agreed and books in one tap; elsewhere it still collects two thumbs.
+   */
+  funnel?: boolean;
   /** Set once a game is created from this card (flips the card to a final state). */
   created_match_id?: string | null;
   confirmed_option_index?: number | null;
