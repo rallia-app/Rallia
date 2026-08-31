@@ -13158,6 +13158,10 @@ export type Database = {
         Returns: string[]
       }
       lt_pairing_gate_ready: { Args: { p_tm_id: string }; Returns: boolean }
+      lt_pairing_score_context: {
+        Args: { p_session_match_id?: string; p_tournament_match_id?: string }
+        Returns: Json
+      }
       lt_parse_score: {
         Args: { p_score: string }
         Returns: Record<string, unknown>
@@ -13169,6 +13173,10 @@ export type Database = {
           p_tournament_id: string
         }
         Returns: string
+      }
+      lt_phase_grid_avail: {
+        Args: { p_tournament_match_id: string }
+        Returns: Json
       }
       lt_pool_room_composer_locked: {
         Args: { p_conversation_id: string }
@@ -13361,6 +13369,7 @@ export type Database = {
       }
       match_organizer_options: {
         Args: {
+          p_avail_override?: Json
           p_limit?: number
           p_player_ids: string[]
           p_sport_id: string
