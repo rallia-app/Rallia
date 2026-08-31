@@ -509,3 +509,29 @@ export async function getPairingBooking(tournamentMatchId: string): Promise<Pair
 
   return (data as PairingBooking | null) ?? null;
 }
+
+/**
+ * "Proposer un autre moment" (scheduling-funnel.md § 5.4). Cancels the tentative
+ * game without penalty and posts the counter-slot as a custom option the booker
+ * then thumbs. One per side per pairing. Returns the card's message id.
+ */
+export async function reproposePairingSlot(params: {
+  tournamentMatchId: string;
+  slotStart: string;
+  facilityId?: string | null;
+  placeName?: string | null;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('lt_funnel_repropose_slot', {
+    p_tournament_match_id: params.tournamentMatchId,
+    p_slot_start: params.slotStart,
+    ...(params.facilityId ? { p_facility_id: params.facilityId } : {}),
+    ...(params.placeName ? { p_place_name: params.placeName } : {}),
+  });
+
+  if (error) {
+    console.error('Error re-proposing a slot:', error);
+    throw error;
+  }
+
+  return data as string;
+}

@@ -3376,8 +3376,9 @@
       "likedByCount": "{count} players like this time",
       "tentative": "Game proposed",
       "tentativeWaiting": "Waiting for {name} to confirm. Without an answer it stands in 24 h.",
-      "tentativeAsk": "{name} created this game. Confirm it, or say so in the chat.",
-      "tentativeAccept": "Works for me"
+      "tentativeAsk": "{name} created this game. Confirm it, or propose another time.",
+      "tentativeAccept": "Works for me",
+      "tentativeRepropose": "Propose another time"
     },
     "banner": {
       "title": "Organize a game",
@@ -3425,7 +3426,10 @@
       "systemNote": "{name} suggested another time",
       "errorPast": "Pick a time in the future.",
       "errorSettled": "The game for this matchup already exists.",
-      "errorGeneric": "Could not suggest that time. Try again."
+      "errorGeneric": "Could not suggest that time. Try again.",
+      "errorReproposalSpent": "You have already proposed another time for this game.",
+      "errorWindowClosed": "This game is confirmed now. To change it, cancel the game.",
+      "errorPastDeadline": "That time is after the deadline for this round."
     }
   },
   "matchShare": {

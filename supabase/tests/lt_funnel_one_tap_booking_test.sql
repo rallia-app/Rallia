@@ -20,6 +20,15 @@
 --   lt_booking_is_firm
 --     * inside the window, unaccepted  -> false
 --     * accepted                       -> true
+--     * the window never outlives the phase deadline
+--
+--   lt_funnel_repropose_slot
+--     * the booker                     -> BOOKER_CANNOT_REPROPOSE
+--     * the other side                 -> game cancelled (mutually, no fault),
+--                                         pairing released, card reopened with
+--                                         the counter as a custom option
+--     * a second counter by that side  -> REPROPOSAL_SPENT (one per PAIRING)
+--     * once the window has closed     -> WINDOW_CLOSED
 --
 -- Run against a fresh local stack:
 --   psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
@@ -48,6 +57,7 @@ DECLARE
     v_match    uuid;
     v_booking  lt_pairing_booking;
     v_err      text;
+    v_meta     jsonb;
 BEGIN
     -- A real pool pairing whose phase has a deadline ahead of us.
     SELECT tm.* INTO v_tm
@@ -80,8 +90,14 @@ BEGIN
     SELECT p.id INTO v_outsider FROM player p
      WHERE NOT (p.id = ANY (v_players)) LIMIT 1;
 
-    -- A card to tap. Two options: index 0 mutual, index 1 one-sided.
-    SELECT c.id INTO v_conv FROM conversation c LIMIT 1;
+    -- The card must live in the pairing's REAL round chat: create_casual_match
+    -- reads that conversation's tournament_match_id and attaches the game
+    -- itself, which is the path production takes. Posting into any old
+    -- conversation hides that and lets a double-attach through.
+    PERFORM pg_temp.as_user(v_players[1]);
+    SELECT public.get_or_create_tournament_round_chat(v_tm.id) INTO v_conv;
+    -- One system card per pairing is enforced; this test supplies its own.
+    DELETE FROM message WHERE conversation_id = v_conv AND message_type = 'match_organizer';
     INSERT INTO message (conversation_id, sender_id, content, status, message_type, metadata)
     VALUES (v_conv, v_players[1], 'card', 'sent', 'match_organizer',
             jsonb_build_object(
@@ -203,6 +219,95 @@ BEGIN
     IF v_booking.accepted_by <> v_players[2] THEN
         RAISE EXCEPTION 'a repeated acceptance changed the record';
     END IF;
+
+    -- 11. The window never outlives the clock that judges the pairing.
+    DELETE FROM lt_pairing_booking WHERE tournament_match_id = v_tm.id;
+    UPDATE tournament_matches SET match_id = NULL WHERE id = v_tm.id;
+    UPDATE message SET metadata = metadata || jsonb_build_object(
+             'created_match_id', NULL, 'confirmed_option_index', NULL)
+     WHERE id = v_msg;
+    -- A slot inside a deliberately short window, so the clamp is what bites.
+    UPDATE message
+       SET metadata = jsonb_set(metadata, '{options}',
+             (metadata -> 'options') || jsonb_build_array(jsonb_build_object(
+                'slot_start', date_trunc('hour', now() + interval '1 hour'),
+                'free_count', v_n, 'facility_id', NULL, 'facility_name', 'Parc Test')))
+     WHERE id = v_msg;
+    UPDATE tournament_round_deadlines SET deadline_at = now() + interval '3 hours'
+     WHERE tournament_id = v_t.id AND bracket_side = 'pool';
+    PERFORM pg_temp.as_user(v_players[1]);
+    v_match := public.lt_funnel_book_mutual_option(v_msg, 3);
+    SELECT * INTO v_booking FROM lt_pairing_booking WHERE tournament_match_id = v_tm.id;
+    IF v_booking.tentative_until > now() + interval '3 hours' + interval '1 minute' THEN
+        RAISE EXCEPTION 'the tentative window outlived the deadline: %', v_booking.tentative_until;
+    END IF;
+
+    -- 12. The booker does not get to counter their own booking.
+    BEGIN
+        PERFORM public.lt_funnel_repropose_slot(v_tm.id, v_slot + interval '3 hours');
+        RAISE EXCEPTION 'the booker should not be able to re-propose';
+    EXCEPTION WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS v_err = MESSAGE_TEXT;
+        IF v_err <> 'BOOKER_CANNOT_REPROPOSE' THEN RAISE EXCEPTION 'expected BOOKER_CANNOT_REPROPOSE, got %', v_err; END IF;
+    END;
+
+    -- 13. The other side counters: penalty-free cancel, pairing released, card
+    --     reopened with the counter offered as a custom option.
+    UPDATE tournament_round_deadlines SET deadline_at = v_deadline
+     WHERE tournament_id = v_t.id AND bracket_side = 'pool';
+    PERFORM pg_temp.as_user(v_players[2]);
+    PERFORM public.lt_funnel_repropose_slot(v_tm.id, v_slot + interval '3 hours');
+
+    IF EXISTS (SELECT 1 FROM lt_pairing_booking WHERE tournament_match_id = v_tm.id) THEN
+        RAISE EXCEPTION 'the counter did not clear the booking';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM match WHERE id = v_match
+           AND cancelled_at IS NOT NULL AND mutually_cancelled
+    ) THEN
+        RAISE EXCEPTION 'the game was not cancelled without fault';
+    END IF;
+    SELECT * INTO v_tm FROM tournament_matches WHERE id = v_tm.id;
+    IF v_tm.match_id IS NOT NULL THEN
+        RAISE EXCEPTION 'the pairing still points at the cancelled game';
+    END IF;
+    SELECT metadata INTO v_meta FROM message WHERE id = v_msg;
+    IF COALESCE(v_meta ->> 'created_match_id', '') <> '' THEN
+        RAISE EXCEPTION 'the card is still settled after a counter';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM jsonb_array_elements(v_meta -> 'options') o
+         WHERE o ->> 'tier' = 'custom'
+    ) THEN
+        RAISE EXCEPTION 'the counter-slot was not offered on the card';
+    END IF;
+
+    -- 14. One per side per PAIRING: the counter is spent even though the
+    --     booking it was spent on is gone. This is what terminates the
+    --     exchange instead of letting the two sides trade slots forever.
+    PERFORM pg_temp.as_user(v_players[1]);
+    v_match := public.lt_funnel_book_mutual_option(v_msg, 0);
+    PERFORM pg_temp.as_user(v_players[2]);
+    BEGIN
+        PERFORM public.lt_funnel_repropose_slot(v_tm.id, v_slot + interval '5 hours');
+        RAISE EXCEPTION 'a second counter by the same side should have been refused';
+    EXCEPTION WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS v_err = MESSAGE_TEXT;
+        IF v_err <> 'REPROPOSAL_SPENT' THEN RAISE EXCEPTION 'expected REPROPOSAL_SPENT, got %', v_err; END IF;
+    END;
+
+    -- 15. Once the window is closed the counter is a cancellation, not a say.
+    UPDATE lt_pairing_booking SET tentative_until = now() - interval '1 minute'
+     WHERE tournament_match_id = v_tm.id;
+    DELETE FROM leagues_tournaments_audit
+     WHERE entity_id = v_tm.id AND action = 'funnel_reproposed';
+    BEGIN
+        PERFORM public.lt_funnel_repropose_slot(v_tm.id, v_slot + interval '6 hours');
+        RAISE EXCEPTION 'a counter past the window should have been refused';
+    EXCEPTION WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS v_err = MESSAGE_TEXT;
+        IF v_err <> 'WINDOW_CLOSED' THEN RAISE EXCEPTION 'expected WINDOW_CLOSED, got %', v_err; END IF;
+    END;
 
     RAISE NOTICE 'lt_funnel_one_tap_booking_test: ALL PASS';
 END;

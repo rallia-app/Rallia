@@ -3376,8 +3376,9 @@
       "likedByCount": "{count} joueurs aiment ce moment",
       "tentative": "Partie proposée",
       "tentativeWaiting": "En attente de la confirmation de {name}. Sans réponse, elle tient dans 24 h.",
-      "tentativeAsk": "{name} a créé cette partie. Confirme, ou dis-le dans le clavardage.",
-      "tentativeAccept": "Ça marche"
+      "tentativeAsk": "{name} a créé cette partie. Confirme, ou propose un autre moment.",
+      "tentativeAccept": "Ça marche",
+      "tentativeRepropose": "Proposer un autre moment"
     },
     "banner": {
       "title": "Organiser une partie",
@@ -3425,7 +3426,10 @@
       "systemNote": "{name} a proposé un autre moment",
       "errorPast": "Choisis un moment à venir.",
       "errorSettled": "La partie est déjà créée pour cette rencontre.",
-      "errorGeneric": "Impossible de proposer ce moment. Réessaie."
+      "errorGeneric": "Impossible de proposer ce moment. Réessaie.",
+      "errorReproposalSpent": "Tu as déjà proposé un autre moment pour cette partie.",
+      "errorWindowClosed": "La partie est confirmée. Pour la changer, annule-la.",
+      "errorPastDeadline": "Ce moment est après l'échéance de ce tour."
     }
   },
   "matchShare": {

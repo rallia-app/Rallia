@@ -152,6 +152,19 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
     });
   }, [myGrid, opponentIds, opponentLabel, metadata?.tournament_match_id]);
 
+  // Countering a tentative booking reuses the same picker; the sheet routes to
+  // the repropose RPC, which cancels the game and offers this slot instead.
+  const openCounterSlotSheet = useCallback(() => {
+    void lightHaptic();
+    void SheetManager.show('match-organizer-custom-slot', {
+      payload: {
+        messageId: message.id,
+        conversationId: message.conversation_id,
+        reproposeForPairing: pairingId ?? undefined,
+      },
+    });
+  }, [message.id, message.conversation_id, pairingId]);
+
   // The funnel floor: when the engine has nothing to offer (no shared hours, no
   // facility it knows), a participant names a slot themselves and it becomes a
   // normal votable option. Without this the card can dead-end.
@@ -373,7 +386,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
     // The same confirmation band the court-booked card uses, so every
     // "it happened" message in a chat reads identically.
     return (
-      <>
+      <View>
         <ChatConfirmationBand
           accent={isTentative ? accent : success}
           title={t(isTentative ? 'matchOrganizer.card.tentative' : 'matchOrganizer.card.created')}
@@ -400,22 +413,34 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
               ).replace('{name}', opponentLabel ?? '')}
             </Text>
             {!iBooked && isParticipant && (
-              <Button
-                onPress={() => {
-                  void handleAccept();
-                }}
-                loading={acceptBooking.isPending}
-                disabled={acceptBooking.isPending}
-                size="sm"
-                fullWidth
-                testID="booking-accept"
-              >
-                {t('matchOrganizer.card.tentativeAccept')}
-              </Button>
+              <>
+                <Button
+                  onPress={() => {
+                    void handleAccept();
+                  }}
+                  loading={acceptBooking.isPending}
+                  disabled={acceptBooking.isPending}
+                  size="sm"
+                  fullWidth
+                  testID="booking-accept"
+                >
+                  {t('matchOrganizer.card.tentativeAccept')}
+                </Button>
+                {/* The window is this side's say: one counter, then it stands. */}
+                <Button
+                  onPress={openCounterSlotSheet}
+                  variant="ghost"
+                  size="sm"
+                  fullWidth
+                  testID="booking-repropose"
+                >
+                  {t('matchOrganizer.card.tentativeRepropose')}
+                </Button>
+              </>
             )}
           </View>
         )}
-      </>
+      </View>
     );
   }
 

@@ -13171,6 +13171,15 @@ export type Database = {
         Args: { p_message_id: string; p_option_index: number }
         Returns: string
       }
+      lt_funnel_repropose_slot: {
+        Args: {
+          p_facility_id?: string
+          p_place_name?: string
+          p_slot_start: string
+          p_tournament_match_id: string
+        }
+        Returns: string
+      }
       lt_get_or_create_session_pairing_chat_unchecked: {
         Args: { p_session_match_id: string }
         Returns: string

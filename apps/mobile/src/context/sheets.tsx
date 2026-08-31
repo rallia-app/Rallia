@@ -230,6 +230,11 @@ declare module 'react-native-actions-sheet' {
         messageId: string;
         /** Invalidated so the card re-renders with the new option. */
         conversationId: string;
+        /**
+         * Set to counter a tentative funnel booking instead of adding a plain
+         * option: the pairing whose game is cancelled and re-offered.
+         */
+        reproposeForPairing?: string;
       };
     }>;
     'match-organizer-setup': SheetDefinition<{

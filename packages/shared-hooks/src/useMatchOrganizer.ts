@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   bookMutualOption,
   acceptPairingBooking,
+  reproposePairingSlot,
   getPairingBooking,
   type PairingBooking,
   getMatchOrganizerOptions,
@@ -310,6 +311,27 @@ export function useAcceptPairingBooking() {
     mutationFn: ({ tournamentMatchId }: { tournamentMatchId: string; conversationId?: string }) =>
       acceptPairingBooking(tournamentMatchId),
     onSuccess: (_booking, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: matchOrganizerKeys.booking(variables.tournamentMatchId),
+      });
+      if (variables.conversationId) {
+        queryClient.invalidateQueries({ queryKey: chatKeys.messages(variables.conversationId) });
+      }
+    },
+  });
+}
+
+/** "Proposer un autre moment": counter the tentative booking, once per pairing. */
+export function useReproposePairingSlot() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      conversationId: _conversationId,
+      ...params
+    }: Parameters<typeof reproposePairingSlot>[0] & { conversationId?: string }) =>
+      reproposePairingSlot(params),
+    onSuccess: (_messageId, variables) => {
       queryClient.invalidateQueries({
         queryKey: matchOrganizerKeys.booking(variables.tournamentMatchId),
       });

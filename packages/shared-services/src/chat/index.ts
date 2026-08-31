@@ -101,6 +101,7 @@ export {
   createCasualMatch,
   bookMutualOption,
   acceptPairingBooking,
+  reproposePairingSlot,
   getPairingBooking,
   type PairingBooking,
   getTournamentMatchSportId,
