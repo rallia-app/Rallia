@@ -10546,6 +10546,38 @@ export type Database = {
         Args: { p_match_result_id: string; p_player_id: string }
         Returns: boolean
       }
+      contest_match_result: {
+        Args: { p_match_id: string }
+        Returns: {
+          confirmation_deadline: string | null
+          confirmed_by: string | null
+          created_at: string | null
+          dispute_reason: string | null
+          disputed: boolean | null
+          id: string
+          is_verified: boolean | null
+          match_id: string
+          rebuttal_deadline: string | null
+          rebuttal_sets: Json | null
+          rebuttal_submitted_at: string | null
+          rebuttal_submitted_by: string | null
+          rebuttal_team1_score: number | null
+          rebuttal_team2_score: number | null
+          rebuttal_winning_team: number | null
+          submitted_by: string | null
+          team1_score: number | null
+          team2_score: number | null
+          updated_at: string | null
+          verified_at: string | null
+          winning_team: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "match_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       count_auto_invite_candidates_for_slot: {
         Args: {
           p_end_time: string
@@ -13376,6 +13408,47 @@ export type Database = {
       lt_resolve_due_tournament_matches: {
         Args: { p_dry_run?: boolean }
         Returns: number
+      }
+      lt_restore_tournament_match: {
+        Args: { p_automatic?: boolean; p_tournament_match_id: string }
+        Returns: {
+          bracket_side: string
+          court_id: string | null
+          created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
+          deadline_override_at: string | null
+          id: string
+          loser_next_match_id: string | null
+          match_id: string | null
+          match_position: number
+          next_match_id: string | null
+          next_match_slot: number | null
+          played_at: string | null
+          player1_is_bye: boolean
+          player1_registration_id: string | null
+          player2_is_bye: boolean
+          player2_registration_id: string | null
+          pool_number: number | null
+          round_number: number
+          scheduled_at: string | null
+          score: string | null
+          status: Database["public"]["Enums"]["tournament_match_status"]
+          tournament_id: string
+          updated_at: string
+          version: number
+          winner_registration_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournament_matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      lt_restore_window_open: {
+        Args: { p_tournament_match_id: string }
+        Returns: boolean
       }
       lt_rotate_for_round: {
         Args: { p_ids: string[]; p_round: number }
