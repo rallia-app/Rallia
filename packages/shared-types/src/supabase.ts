@@ -14438,6 +14438,7 @@ export type Database = {
       }
       send_court_booking_nudges: { Args: never; Returns: number }
       send_last_minute_spot_pushes: { Args: never; Returns: number }
+      send_pending_invite_reminders: { Args: never; Returns: number }
       send_play_rhythm_nudges: { Args: never; Returns: number }
       send_recurring_court_open_alerts: { Args: never; Returns: number }
       send_unfilled_host_recovery: { Args: never; Returns: number }
