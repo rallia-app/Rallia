@@ -10,7 +10,7 @@ import { useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Badge, Text } from '@rallia/shared-components';
+import { Button, Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, base } from '@rallia/design-system';
 import type { PoolStandingRow, TournamentMatch } from '@rallia/shared-services';
 
@@ -202,6 +202,73 @@ export const PoolsSection: React.FC<{
                     ? t('tournamentDetail.pools.cancelled')
                     : (m.score ?? '—');
               const pendingAccent = tappable ? colors.primary : colors.textMuted;
+              const identity = (
+                <>
+                  <Text size="xs" color={colors.text} numberOfLines={1} style={styles.matchPlayers}>
+                    {p1}
+                    <Text size="xs" color={colors.textMuted}>
+                      {'  '}
+                      {t('tournamentDetail.pools.vs')}
+                      {'  '}
+                    </Text>
+                    {p2}
+                  </Text>
+                  <View style={styles.matchStatus}>
+                    {/* Attached to a real Rallia game: its score comes from that
+                        game rather than from the organizer, and nothing said so. */}
+                    {!!m.match_id && (
+                      <Ionicons
+                        name="link"
+                        size={12}
+                        color={colors.textMuted}
+                        accessibilityLabel={t('tournamentDetail.pools.linkedGame')}
+                      />
+                    )}
+                    <Text
+                      size="xs"
+                      weight={settled && !noResult ? 'semibold' : 'regular'}
+                      color={noResult ? colors.textMuted : settled ? colors.text : pendingAccent}
+                    >
+                      {label}
+                    </Text>
+                    {tappable && !isMyTurn && (
+                      <Ionicons
+                        name={settled ? 'create-outline' : 'chevron-forward'}
+                        size={13}
+                        color={settled ? colors.textMuted : colors.primary}
+                      />
+                    )}
+                  </View>
+                </>
+              );
+
+              // The caller's own game stacks: names and status keep the whole
+              // width, the CTA sits under them. Side by side, a long pair of
+              // doubles names and the button fought over the same row.
+              if (isMyTurn) {
+                return (
+                  <View
+                    key={m.id}
+                    style={[styles.matchRowMine, { backgroundColor: colors.highlightBg }]}
+                    testID={`pool-match-${m.id}`}
+                  >
+                    <View style={styles.matchRowIdentity}>{identity}</View>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      fullWidth
+                      onPress={() =>
+                        onMatchPress?.(m.id, m.player1_registration_id!, m.player2_registration_id!)
+                      }
+                      leftIcon={<Ionicons name="add-circle" size={16} color={base.white} />}
+                      testID="pool-match-cta"
+                    >
+                      {t('tournamentDetail.pools.enterScore')}
+                    </Button>
+                  </View>
+                );
+              }
+
               return (
                 <TouchableOpacity
                   key={m.id}
@@ -216,73 +283,7 @@ export const PoolsSection: React.FC<{
                   activeOpacity={0.7}
                   testID={`pool-match-${m.id}`}
                 >
-                  {/* The tinted surface is a View, not the touchable: this row
-                      is a list row, not a button. */}
-                  <View
-                    style={[
-                      styles.matchRow,
-                      isMyTurn && [styles.matchRowMine, { backgroundColor: colors.highlightBg }],
-                    ]}
-                  >
-                    <Text
-                      size="xs"
-                      color={colors.text}
-                      numberOfLines={1}
-                      style={styles.matchPlayers}
-                    >
-                      {p1}
-                      <Text size="xs" color={colors.textMuted}>
-                        {'  '}
-                        {t('tournamentDetail.pools.vs')}
-                        {'  '}
-                      </Text>
-                      {p2}
-                    </Text>
-                    <View style={styles.matchStatus}>
-                      {/* Attached to a real Rallia game: its score comes from that
-                        game rather than from the organizer, and nothing said so. */}
-                      {!!m.match_id && (
-                        <Ionicons
-                          name="link"
-                          size={12}
-                          color={colors.textMuted}
-                          accessibilityLabel={t('tournamentDetail.pools.linkedGame')}
-                        />
-                      )}
-                      {isMyTurn ? (
-                        // A filled pill naming the action, rather than a status
-                        // word in brand colour that reads as decoration.
-                        <Badge
-                          size="sm"
-                          backgroundColor={colors.primary}
-                          textColor={base.white}
-                          icon={<Ionicons name="add-circle" size={13} color={base.white} />}
-                          testID="pool-match-cta"
-                        >
-                          {t('tournamentDetail.pools.enterScore')}
-                        </Badge>
-                      ) : (
-                        <>
-                          <Text
-                            size="xs"
-                            weight={settled && !noResult ? 'semibold' : 'regular'}
-                            color={
-                              noResult ? colors.textMuted : settled ? colors.text : pendingAccent
-                            }
-                          >
-                            {label}
-                          </Text>
-                          {tappable && (
-                            <Ionicons
-                              name={settled ? 'create-outline' : 'chevron-forward'}
-                              size={13}
-                              color={settled ? colors.textMuted : colors.primary}
-                            />
-                          )}
-                        </>
-                      )}
-                    </View>
-                  </View>
+                  <View style={styles.matchRow}>{identity}</View>
                 </TouchableOpacity>
               );
             })}
@@ -332,7 +333,15 @@ const styles = StyleSheet.create({
     gap: spacingPixels[2],
   },
   matchRowMine: {
+    paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[2],
+    gap: spacingPixels[2],
+  },
+  matchRowIdentity: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacingPixels[2],
   },
   matchPlayers: { flexShrink: 1 },
   matchStatus: {
