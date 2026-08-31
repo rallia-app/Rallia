@@ -3439,7 +3439,11 @@
       "stopConfirmTitle": "Stop repeating this game?",
       "stopConfirmMessage": "Games already created stay on your schedule. No new ones will be created.",
       "stopSuccess": "This game no longer repeats.",
-      "stopError": "Could not stop the repeat. Try again."
+      "stopError": "Could not stop the repeat. Try again.",
+      "cancelKeepsRepeating": "Next week's game will still be created. Turn on the option below to stop the repeat as well.",
+      "alsoStopTitle": "Stop repeating too",
+      "alsoStopSubtitle": "No new games will be created after this one.",
+      "cancelAndStop": "Cancel and stop"
     },
     "title": "Game details",
     "preferences": "Preferences",

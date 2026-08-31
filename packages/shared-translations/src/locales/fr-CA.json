@@ -3439,7 +3439,11 @@
       "stopConfirmTitle": "Arrêter la répétition?",
       "stopConfirmMessage": "Les parties déjà créées restent à ton horaire. Aucune nouvelle ne sera créée.",
       "stopSuccess": "Cette partie ne se répète plus.",
-      "stopError": "Impossible d'arrêter la répétition. Réessaie."
+      "stopError": "Impossible d'arrêter la répétition. Réessaie.",
+      "cancelKeepsRepeating": "La partie de la semaine prochaine sera quand même créée. Active l'option ci-dessous pour arrêter aussi la répétition.",
+      "alsoStopTitle": "Arrêter aussi la répétition",
+      "alsoStopSubtitle": "Aucune nouvelle partie ne sera créée après celle-ci.",
+      "cancelAndStop": "Annuler et arrêter"
     },
     "title": "Détails de la partie",
     "preferences": "Préférences",
