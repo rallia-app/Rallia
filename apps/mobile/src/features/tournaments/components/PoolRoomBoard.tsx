@@ -299,8 +299,19 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
 
             let chip: { label: string; tone: keyof typeof tones } | null = null;
             if (m.status === 'completed' || m.status === 'retired') {
-              chip = { label: m.score ?? t('tournamentDetail.poolRoom.played'), tone: 'positive' };
+              // Green is a reward, not a "this row is settled" stamp: it only
+              // fires when the viewer won. A loss stays neutral rather than
+              // going red, because losing is the normal half of playing and
+              // the board should not stamp it.
+              const iWon =
+                iPlayThis && m.winner_registration_id != null && isMySide(m.winner_registration_id);
+              chip = {
+                label: m.score ?? t('tournamentDetail.poolRoom.played'),
+                tone: iWon ? 'positive' : 'muted',
+              };
             } else if (m.status === 'walkover') {
+              // Amber reads as "nobody played this", which is true for both
+              // sides, so it does not depend on who it favoured.
               chip = { label: t('tournamentDetail.poolRoom.walkover'), tone: 'warning' };
             } else if (m.status === 'cancelled') {
               chip = { label: t('tournamentDetail.poolRoom.cancelled'), tone: 'muted' };
@@ -418,7 +429,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radiusPixels.lg,
     marginHorizontal: spacingPixels[3],
-    marginTop: spacingPixels[2],
+    marginTop: spacingPixels[3],
     paddingHorizontal: spacingPixels[3],
     paddingVertical: spacingPixels[2.5],
   },
