@@ -289,8 +289,8 @@ gate answers and every side would score U. No live event runs the funnel yet.
 | Two-tap forfeit, the nudge                                    | Shipped, 20260829230000                  |
 | Evidence model: S, E/P/U, the reactivity cap                  | Shipped, 20260831120000                  |
 | Ladder R0..R6 on it; resolver LIVE, funnel events only        | Shipped, 20260831130000 / 20260831140000 |
-| One-way score registration (§ 3, S4)                          | Not built: still mutual confirm/rebuttal |
-| Restore a late result over an automated decision (§ 9)        | Not built: organizer override only       |
+| One-way score registration (§ 3, S4)                          | Shipped, 20260831160000                  |
+| Restore a late result over an automated decision (§ 9)        | Shipped, 20260831150000                  |
 | Pool evening card                                             | Roadmap (decision 6)                     |
 
 ## 11. Decisions
