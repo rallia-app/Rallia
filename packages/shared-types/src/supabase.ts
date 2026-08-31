@@ -10701,6 +10701,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      discovery_ceiling: {
+        Args: { p_joins_60d: number; p_pushes_60d: number }
+        Returns: number
+      }
       dismiss_alert: {
         Args: { p_admin_id: string; p_alert_id: string }
         Returns: boolean
