@@ -268,6 +268,26 @@ determinate pairing, which then asks for that round's hours.
 | unplayed-match-resolution § 4.2 / § 4.3            | Ack := gate answer; the reactivity cap is load-bearing here (see § 6)                                                                                                                                                                                                                                                                                                              |
 | poules-puis-éliminatoires § 12                     | "Partie de poule prête à organiser" fires when both sides have answered, with the slot count                                                                                                                                                                                                                                                                                       |
 
+## 11. Build status (2026-08-29)
+
+Server and the first screens are on dev; the funnel stays behind
+`tournaments.scheduling_funnel_enabled`, default false, so no live event runs
+it yet.
+
+| Piece                                                         | State                                                              |
+| ------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Phase availability gate (RPC + snapshot)                      | Shipped, 20260826200000                                            |
+| Pairing rooms wait for both gate answers                      | Shipped, 20260826210000                                            |
+| Pool room, membership, composer lock                          | Shipped, 20260826230000                                            |
+| Gate sheet, docked CTA, reopen to adjust                      | Shipped, mobile                                                    |
+| Pool room UI: board, locked composer, welcome, inbox naming   | Shipped, mobile + 20260829170000                                   |
+| Options come from the phase snapshots                         | Shipped, 20260829180000                                            |
+| One-tap booking of a mutual slot, tentative 24 h, "ça marche" | Shipped server-side, 20260829190000                                |
+| Card UI for the one tap and the tentative state               | Not built                                                          |
+| "Proposer un autre moment" inside the window                  | Not built (§ 5.4; the per-side counter is settled with the screen) |
+| Two-tap forfeit, the ping                                     | Not built                                                          |
+| Pool evening card                                             | Roadmap (decision 6)                                               |
+
 ## 11. Decisions
 
 Settled by Mathis on 2026-08-21 unless marked otherwise.
