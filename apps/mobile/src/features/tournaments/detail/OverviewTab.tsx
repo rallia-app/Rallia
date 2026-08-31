@@ -67,6 +67,8 @@ interface OverviewTabProps {
   myBracketState: 'next' | 'waiting' | 'eliminated' | 'champion' | null;
   myNextMatch: TournamentMatch | null;
   myNextMatchDeadline: string | null;
+  /** Reopen the phase availability gate; null hides the link. */
+  onEditAvailability?: (() => void) | null;
   myOpponentLabel: string | null;
   myMatchP1: string | null;
   myMatchP2: string | null;
@@ -128,6 +130,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   myBracketState,
   myNextMatch,
   myNextMatchDeadline,
+  onEditAvailability = null,
   myOpponentLabel,
   myMatchP1,
   myMatchP2,
@@ -395,6 +398,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 {t('tournamentDetail.dashboard.myMatch.organize')}
               </Text>
             </TouchableOpacity>
+
+            {onEditAvailability && (
+              <TouchableOpacity
+                onPress={onEditAvailability}
+                activeOpacity={0.7}
+                style={styles.editAvailabilityLink}
+                accessibilityRole="button"
+                testID="link-edit-availability"
+              >
+                <Text size="sm" weight="semibold" color={colors.primary}>
+                  {t('tournamentDetail.availabilityGate.edit' as TranslationKey)}
+                </Text>
+              </TouchableOpacity>
+            )}
           </>
         ) : (
           <View

@@ -5981,6 +5981,7 @@
       "poolPhase": "Pool phase",
       "window": "Your hours count until {date}. Check off everything that works, your opponents will see the hours you share.",
       "cta": "Give my availability",
+      "edit": "Adjust my availability",
       "confirm": "Confirm my availability",
       "saveEdited": "Save my availability",
       "skip": "Continue without giving hours",

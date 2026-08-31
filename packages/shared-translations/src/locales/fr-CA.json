@@ -5981,6 +5981,7 @@
       "poolPhase": "Phase de poules",
       "window": "Tes heures comptent jusqu'au {date}. Coche tout ce qui marche, tes adversaires verront les heures que vous avez en commun.",
       "cta": "Donner mes dispos",
+      "edit": "Modifier mes dispos",
       "confirm": "Confirmer mes dispos",
       "saveEdited": "Enregistrer mes dispos",
       "skip": "Continuer sans donner d'heures",

@@ -556,6 +556,10 @@ export const styles = StyleSheet.create({
   roundChatBtn: {
     marginTop: spacingPixels[4],
   },
+  editAvailabilityLink: {
+    alignItems: 'center',
+    paddingVertical: spacingPixels[3],
+  },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',

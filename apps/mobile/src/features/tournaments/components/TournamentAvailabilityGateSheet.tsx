@@ -51,23 +51,27 @@ export function TournamentAvailabilityGateSheet({
   const phaseLabel = payload?.phaseLabel ?? '';
   const deadlineAt = payload?.deadlineAt ?? null;
   const minHours = payload?.minHours ?? null;
+  const initialCells = payload?.initialCells ?? null;
 
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const { locale } = useLocale();
   const toast = useToast();
 
-  // Seed once from the player's weekly grid; edits stay local to the phase.
-  const { data: weeklyKeys } = useAvailabilityKeys();
+  // Seed once: from the previous answer's snapshot when reopening, else from
+  // the player's weekly grid. Edits stay local to the phase either way.
+  const { data: weeklyKeys } = useAvailabilityKeys({ enabled: !initialCells });
   const [selection, setSelection] = useState<HourGrid | null>(null);
   const [seed, setSeed] = useState<HourGrid>(emptyGrid());
   useEffect(() => {
-    if (selection === null && weeklyKeys) {
-      const seeded: HourGrid = new Set(weeklyKeys);
+    if (selection !== null) return;
+    const source = initialCells ?? weeklyKeys;
+    if (source) {
+      const seeded: HourGrid = new Set(source);
       setSeed(seeded);
       setSelection(seeded);
     }
-  }, [selection, weeklyKeys]);
+  }, [selection, weeklyKeys, initialCells]);
 
   const submit = useSubmitPhaseAvailability({
     onSuccess: () => {

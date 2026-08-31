@@ -1680,6 +1680,11 @@ export const TournamentDetail: React.FC = () => {
     new Date(phaseDeadlineAt).getTime() > Date.now();
   const handleOpenAvailabilityGate = useCallback(() => {
     if (!tournament || !gatePhase) return;
+    const snapshot = Array.isArray(myGateAnswer?.grid_snapshot)
+      ? (myGateAnswer.grid_snapshot as { day?: string; hour?: number }[])
+          .filter(c => typeof c?.day === 'string' && typeof c?.hour === 'number')
+          .map(c => `${c.day}-${c.hour}`)
+      : null;
     void SheetManager.show('tournament-availability-gate', {
       payload: {
         tournamentId: tournament.id,
@@ -1691,9 +1696,17 @@ export const TournamentDetail: React.FC = () => {
             : roundLabel(gatePhase.roundNumber, totalRounds, t),
         deadlineAt: phaseDeadlineAt,
         minHours: tournament.min_availability_hours ?? null,
+        initialCells: snapshot && snapshot.length > 0 ? snapshot : undefined,
       },
     });
-  }, [tournament, gatePhase, phaseDeadlineAt, totalRounds, t]);
+  }, [tournament, gatePhase, myGateAnswer, phaseDeadlineAt, totalRounds, t]);
+
+  const canEditGateAnswer =
+    funnelEnabled &&
+    tournament?.status === 'in_progress' &&
+    !!myGateAnswer &&
+    !!phaseDeadlineAt &&
+    new Date(phaseDeadlineAt).getTime() > Date.now();
 
   const myBracketState = useMemo<'next' | 'waiting' | 'eliminated' | 'champion' | null>(() => {
     if (!myRegId || tournament?.status !== 'in_progress') return null;
@@ -2738,6 +2751,7 @@ export const TournamentDetail: React.FC = () => {
             myBracketState={myBracketState}
             myNextMatch={myNextMatch}
             myNextMatchDeadline={myNextMatchDeadline}
+            onEditAvailability={canEditGateAnswer ? handleOpenAvailabilityGate : null}
             myOpponentLabel={myOpponentLabel}
             myMatchP1={myMatchP1}
             myMatchP2={myMatchP2}

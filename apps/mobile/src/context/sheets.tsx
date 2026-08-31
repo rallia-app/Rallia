@@ -498,6 +498,8 @@ declare module 'react-native-actions-sheet' {
         deadlineAt?: string | null;
         /** Organizer's suggested minimum hours; advisory only. */
         minHours?: number | null;
+        /** Seed from a previous answer's snapshot ("monday-18" keys) instead of the weekly grid. */
+        initialCells?: string[];
       };
     }>;
     'league-invite': SheetDefinition<{
