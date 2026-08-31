@@ -188,7 +188,13 @@ function describeError(error) {
   return String(error?.message ?? error);
 }
 
-const cell = (v) => (v === null || v === undefined ? "" : String(v).replace(/\|/g, "\\|"));
+const cell = (v) =>
+  v === null || v === undefined
+    ? ""
+    : String(v)
+        .replace(/\\/g, "\\\\")
+        .replace(/\|/g, "\\|")
+        .replace(/\r?\n|\r/g, " ");
 
 function toMarkdown(results, summary) {
   const lines = [];
