@@ -28,6 +28,9 @@ import {
   useBlockedStatus,
   useFavoriteStatus,
   chatKeys,
+  useTournament,
+  useTournamentRoundDeadlines,
+  useTournamentPhaseAvailability,
 } from '@rallia/shared-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -40,6 +43,7 @@ import {
   type MessageWithSender,
 } from '@rallia/shared-services';
 import { SheetManager } from 'react-native-actions-sheet';
+import { PoolRoomBoard } from '#/features/tournaments/components/PoolRoomBoard';
 
 import {
   ChatHeader,
@@ -47,6 +51,7 @@ import {
   MessageInput,
   MatchOrganizerBanner,
   AnnouncementNotice,
+  PoolRoomLockedNotice,
   ChatSearchBar,
   BlockedUserModal,
 } from '#/features/chat';
@@ -320,6 +325,43 @@ export default function ChatConversationScreen() {
 
   const isAnnouncement = conversation?.conversation_type === 'announcement';
 
+  // Pool room: a tournament conversation scoped to one pool. Reading is open
+  // to every member; the composer waits for the viewer's gate answer, and the
+  // organizer is never locked (scheduling-funnel.md § 4).
+  const poolNumber =
+    conversation?.conversation_type === 'tournament'
+      ? (conversation.tournament_pool_number ?? null)
+      : null;
+  const poolRoomTournamentId =
+    poolNumber != null ? (conversation?.tournament_id ?? undefined) : undefined;
+  const { data: poolTournament } = useTournament(poolRoomTournamentId);
+  const { data: poolDeadlines = [] } = useTournamentRoundDeadlines(poolRoomTournamentId);
+  const poolFunnelEnabled = !!poolTournament?.scheduling_funnel_enabled;
+  const { data: poolGateAnswers = [] } = useTournamentPhaseAvailability(
+    poolRoomTournamentId,
+    'pool',
+    0,
+    poolFunnelEnabled
+  );
+  const poolComposerLocked =
+    !!poolRoomTournamentId &&
+    poolFunnelEnabled &&
+    poolTournament?.organizer_id !== playerId &&
+    !poolGateAnswers.some(a => a.player_id === playerId);
+  const handlePoolGiveAvailability = useCallback(() => {
+    if (!poolRoomTournamentId) return;
+    void SheetManager.show('tournament-availability-gate', {
+      payload: {
+        tournamentId: poolRoomTournamentId,
+        bracketSide: 'pool',
+        roundNumber: 0,
+        phaseLabel: t('tournamentDetail.availabilityGate.poolPhase'),
+        deadlineAt: poolDeadlines.find(d => d.bracket_side === 'pool')?.deadline_at ?? null,
+        minHours: poolTournament?.min_availability_hours ?? null,
+      },
+    });
+  }, [poolRoomTournamentId, poolDeadlines, poolTournament, t]);
+
   const headerSubtitle = useMemo(() => {
     if (!conversation) return undefined;
 
@@ -335,7 +377,16 @@ export default function ChatConversationScreen() {
       conversation.conversation_type === 'tournament'
     ) {
       const count = networkInfo?.member_count || conversation.participants?.length || 0;
-      return `${count} participant${count !== 1 ? 's' : ''}`;
+      const participants = `${count} participant${count !== 1 ? 's' : ''}`;
+      // The pool number stays out of the shared title (it is one string for
+      // every reader), so the room names itself here, per locale.
+      if (conversation.tournament_pool_number != null) {
+        return `${t('chat.poolRoom.subtitle').replace(
+          '{n}',
+          String(conversation.tournament_pool_number)
+        )} · ${participants}`;
+      }
+      return participants;
     }
 
     return undefined;
@@ -851,6 +902,10 @@ export default function ChatConversationScreen() {
       {/* Prominent pinned entry point into the Match Organizer. */}
       {canOrganizeMatch && <MatchOrganizerBanner onPress={handleOrganizeMatch} />}
 
+      {poolRoomTournamentId && poolNumber != null && (
+        <PoolRoomBoard tournamentId={poolRoomTournamentId} poolNumber={poolNumber} />
+      )}
+
       <MessageList
         ref={messageListRef}
         messages={messages}
@@ -880,6 +935,8 @@ export default function ChatConversationScreen() {
         />
       ) : isAnnouncement ? (
         <AnnouncementNotice />
+      ) : poolComposerLocked ? (
+        <PoolRoomLockedNotice onGivePress={handlePoolGiveAvailability} />
       ) : (
         <MessageInput
           onSend={handleSendMessage}

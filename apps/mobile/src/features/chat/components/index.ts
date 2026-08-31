@@ -14,6 +14,7 @@ export { ChatAgreementActionSheet as ChatAgreementModal } from './ChatAgreementM
 
 // Enhanced chat components
 export { AnnouncementNotice } from './AnnouncementNotice';
+export { PoolRoomLockedNotice } from './PoolRoomLockedNotice';
 export { MessageActionsSheet } from './MessageActionsSheet';
 export { ReplyBanner } from './ReplyBanner';
 export { ConversationActionsSheet } from './ConversationActionsSheet';

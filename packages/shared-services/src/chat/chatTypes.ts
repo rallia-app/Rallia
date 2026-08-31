@@ -55,7 +55,12 @@ export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
  * posted by the "Rallia" sender (see migration 20260605120000) and rendered as
  * rich cards instead of text bubbles.
  */
-export type MessageType = 'user' | 'court_booking_prompt' | 'court_booked' | 'match_organizer';
+export type MessageType =
+  | 'user'
+  | 'court_booking_prompt'
+  | 'court_booked'
+  | 'match_organizer'
+  | 'pool_room_welcome';
 
 /** metadata for a 'court_booking_prompt' system message. */
 export interface CourtBookingPromptMetadata {
@@ -176,6 +181,8 @@ export interface Conversation {
   picture_url: string | null;
   match_id: string | null;
   tournament_id?: string | null;
+  /** Set on a pool room — the group chat for one pool of a tournament. */
+  tournament_pool_number?: number | null;
   /** Set on a tournament "round chat" — the per-pairing chat for a bracket match. */
   tournament_match_id?: string | null;
   /** Set on a league "pairing chat" — the per-pairing chat for a session sheet match. */

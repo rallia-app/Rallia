@@ -191,6 +191,8 @@ export async function getConversation(
       title,
       picture_url,
       match_id,
+      tournament_id,
+      tournament_pool_number,
       tournament_match_id,
       session_match_id,
       created_by,

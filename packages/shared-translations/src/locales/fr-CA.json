@@ -2371,6 +2371,12 @@
     "announcement": {
       "subtitle": "Annonces officielles",
       "readOnly": "Seul Rallia publie ici"
+    },
+    "poolRoom": {
+      "subtitle": "Poule {n}",
+      "welcome": "Bienvenue dans ta poule. Donne tes disponibilités pour débloquer tes conversations de partie. Ce qui s'écrit ici n'entre pas dans les décisions automatiques à l'échéance.",
+      "lockedNotice": "La lecture est ouverte à tous. Pour écrire ici et planifier tes parties, donne d'abord tes dispos.",
+      "lockedCta": "Donner mes dispos"
     }
   },
   "map": {
@@ -5992,6 +5998,17 @@
       "errorNotParticipant": "Seuls les joueurs inscrits peuvent répondre.",
       "errorNotInProgress": "Le tournoi n'est pas en cours.",
       "errorGeneric": "Impossible d'enregistrer tes dispos. Réessaie."
+    },
+    "poolRoom": {
+      "title": "Poule {n}",
+      "settledCount": "{settled}/{total} parties réglées",
+      "deadline": "À jouer avant le {date}",
+      "ready": "Prêt à planifier",
+      "waitingFor": "En attente de {names}",
+      "walkover": "Forfait",
+      "cancelled": "Annulée",
+      "played": "Jouée",
+      "toPlay": "À jouer"
     },
     "goodToKnow": {
       "title": "Bon à savoir",

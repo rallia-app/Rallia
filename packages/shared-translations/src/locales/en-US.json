@@ -2371,6 +2371,12 @@
     "announcement": {
       "subtitle": "Official announcements",
       "readOnly": "Only Rallia posts here"
+    },
+    "poolRoom": {
+      "subtitle": "Pool {n}",
+      "welcome": "Welcome to your pool. Give your availability to unlock your game conversations. What is written here does not count in the automatic decisions at the deadline.",
+      "lockedNotice": "Reading is open to everyone. To write here and plan your games, give your availability first.",
+      "lockedCta": "Give my availability"
     }
   },
   "map": {
@@ -5992,6 +5998,17 @@
       "errorNotParticipant": "Only registered players can answer.",
       "errorNotInProgress": "The tournament is not live.",
       "errorGeneric": "Could not save your availability. Try again."
+    },
+    "poolRoom": {
+      "title": "Pool {n}",
+      "settledCount": "{settled}/{total} games settled",
+      "deadline": "Play by {date}",
+      "ready": "Ready to plan",
+      "waitingFor": "Waiting for {names}",
+      "walkover": "Walkover",
+      "cancelled": "Voided",
+      "played": "Played",
+      "toPlay": "To play"
     },
     "goodToKnow": {
       "title": "Good to know",
