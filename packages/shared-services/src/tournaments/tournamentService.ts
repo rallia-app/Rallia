@@ -1676,6 +1676,50 @@ export async function overrideTournamentMatchScore(
 }
 
 /**
+ * Whether a pairing still carries an automated decision this caller can undo.
+ * `decided` goes false once a restore has been applied, so the control stops
+ * offering itself; `restorable` additionally requires the caller to be the
+ * organizer and the bracket not to have moved past the pairing.
+ */
+export interface MatchRestoreState {
+  decided: boolean;
+  restorable: boolean;
+  rule?: string;
+  windowOpen?: boolean;
+  isOrganizer?: boolean;
+}
+
+export async function getMatchRestoreState(tournamentMatchId: string): Promise<MatchRestoreState> {
+  const { data, error } = await supabase.rpc('lt_match_restore_state', {
+    p_tournament_match_id: tournamentMatchId,
+  });
+  if (error) throw new Error(error.message);
+  const row = (data ?? {}) as Record<string, unknown>;
+  return {
+    decided: row.decided === true,
+    restorable: row.restorable === true,
+    rule: typeof row.rule === 'string' ? row.rule : undefined,
+    windowOpen: row.window_open === true,
+    isOrganizer: row.is_organizer === true,
+  };
+}
+
+/**
+ * Undo an automated decision: the pairing returns to pending, whoever it
+ * advanced comes back out of the next slot, and the reputation events it wrote
+ * are deleted rather than offset, because they recorded a judgement that turned
+ * out to be wrong. Organizer or admin only, and only while the bracket has not
+ * moved past the pairing.
+ */
+export async function restoreTournamentMatch(tournamentMatchId: string): Promise<TournamentMatch> {
+  const { data, error } = await supabase.rpc('lt_restore_tournament_match', {
+    p_tournament_match_id: tournamentMatchId,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentMatch;
+}
+
+/**
  * Organizer cancels a tournament (any non-terminal state). Pending and
  * in-progress matches are also cancelled.
  */

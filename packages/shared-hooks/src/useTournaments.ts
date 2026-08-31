@@ -58,7 +58,10 @@ import {
   listLinkableMatchesForSlot,
   attachMatchToTournamentSlot,
   overrideTournamentMatchScore,
+  getMatchRestoreState,
+  restoreTournamentMatch,
   type TournamentMatchOutcome,
+  type MatchRestoreState,
   cancelTournament,
   archiveTournament,
   unarchiveTournament,
@@ -497,6 +500,50 @@ export function useAttachMatchToTournamentSlot(options: MutationOptions<Tourname
       }
       options.onError?.(e);
     },
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Whether this pairing still carries an undoable automated decision. Only
+ * asked for settled pairings, since a pending one can never have one.
+ */
+export function useMatchRestoreState(tournamentMatchId?: string, enabled = true) {
+  const query = useQuery<MatchRestoreState>({
+    queryKey: [...tournamentKeys.all, 'restoreState', tournamentMatchId ?? ''],
+    queryFn: () => getMatchRestoreState(tournamentMatchId as string),
+    enabled: !!tournamentMatchId && enabled,
+    staleTime: 30_000,
+  });
+  return { state: query.data, isLoading: query.isLoading };
+}
+
+/**
+ * Undo an automated decision on a pairing, putting it back to unplayed. This
+ * is the misfire path: it says the machine got it wrong, where an override
+ * says what actually happened.
+ */
+export function useRestoreTournamentMatch(options: MutationOptions<TournamentMatch> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    TournamentMatch,
+    Error,
+    { tournamentMatchId: string; tournamentId: string }
+  >({
+    mutationFn: ({ tournamentMatchId }) => restoreTournamentMatch(tournamentMatchId),
+    onSuccess: (tm, vars) => {
+      invalidate(vars.tournamentId);
+      qc.invalidateQueries({
+        queryKey: [...tournamentKeys.all, 'restoreState', vars.tournamentMatchId],
+      });
+      options.onSuccess?.(tm);
+    },
+    onError: e => options.onError?.(e),
   });
   return {
     mutate: mutation.mutate,

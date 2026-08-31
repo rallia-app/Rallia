@@ -27,7 +27,7 @@ import {
 } from 'react-native';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Button } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -47,7 +47,11 @@ import {
   setTargetFor,
   type SetScore,
 } from '@rallia/shared-utils';
-import { useOverrideTournamentMatchScore } from '@rallia/shared-hooks';
+import {
+  useOverrideTournamentMatchScore,
+  useMatchRestoreState,
+  useRestoreTournamentMatch,
+} from '@rallia/shared-hooks';
 import type { TournamentMatchOutcome } from '@rallia/shared-services';
 
 import { ScoreEntrySets } from '#/components/ScoreEntrySets';
@@ -169,6 +173,39 @@ export function TournamentRecordScoreActionSheet({
       setError(t(overrideErrorKey(e.message || '')));
     },
   });
+
+  // A pairing the ladder decided at the deadline can be put back to unplayed,
+  // which is a different claim from an override: this one says the machine got
+  // it wrong. Organizers only, and only while the bracket has not moved on, so
+  // the server is asked rather than guessed at.
+  const { state: restoreState } = useMatchRestoreState(tournamentMatchId, !isParticipant);
+  const restore = useRestoreTournamentMatch({
+    onSuccess: () => {
+      successHaptic();
+      didSubmitRef.current = true;
+      SheetManager.hide('tournament-record-score');
+      onSuccess?.();
+    },
+    onError: e => {
+      warningHaptic();
+      setError(e.message || t('tournamentDetail.restore.errorGeneric'));
+    },
+  });
+
+  const handleRestore = useCallback(() => {
+    lightHaptic();
+    Alert.alert(
+      t('tournamentDetail.restore.confirmTitle'),
+      t('tournamentDetail.restore.confirmBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('tournamentDetail.restore.confirmCta'),
+          onPress: () => restore.mutate({ tournamentMatchId, tournamentId }),
+        },
+      ]
+    );
+  }, [restore, tournamentMatchId, tournamentId, t]);
 
   // What each outcome needs before it can be written: a score for a real
   // result, a named winner for the two walkover-shaped ones, nothing at all
@@ -342,6 +379,43 @@ export function TournamentRecordScoreActionSheet({
                 : 'tournamentDetail.override.subtitle'
             )}
           </Text>
+
+          {/* The app decided this one. Offered before the outcome picker
+              because undoing a misfire is not the same act as recording a
+              result, and an organizer who sees only the picker will reach for
+              an override to correct the app, which writes a new outcome
+              instead of admitting the old one was wrong. */}
+          {restoreState?.decided ? (
+            <View style={[styles.restoreBanner, { borderColor: colors.border }]}>
+              <Text size="sm" weight="semibold" color={colors.text}>
+                {t('tournamentDetail.restore.title')}
+              </Text>
+              <Text size="sm" color={colors.textMuted} style={styles.restoreBody}>
+                {t(
+                  `tournamentDetail.restore.rule.${restoreState.rule ?? 'generic'}` as TranslationKey
+                )}
+              </Text>
+              {restoreState.restorable ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onPress={handleRestore}
+                  loading={restore.isPending}
+                  style={styles.restoreButton}
+                >
+                  {t('tournamentDetail.restore.cta')}
+                </Button>
+              ) : (
+                <Text size="sm" color={colors.textMuted} style={styles.restoreBody}>
+                  {t(
+                    restoreState.isOrganizer
+                      ? 'tournamentDetail.restore.windowClosed'
+                      : 'tournamentDetail.restore.organizerOnly'
+                  )}
+                </Text>
+              )}
+            </View>
+          ) : null}
 
           {/* What happened. Naming it is the whole point: without these the
               only way to settle an unplayed pairing was to invent a score.
@@ -542,6 +616,20 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: spacingPixels[3],
+  },
+  restoreBanner: {
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[4],
+    marginBottom: spacingPixels[4],
+    gap: spacingPixels[2],
+  },
+  restoreBody: {
+    lineHeight: 20,
+  },
+  restoreButton: {
+    marginTop: spacingPixels[2],
+    alignSelf: 'flex-start',
   },
   outcomeRow: {
     flexDirection: 'row',

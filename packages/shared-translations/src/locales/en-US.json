@@ -5921,6 +5921,25 @@
         "matchAlreadyLinked": "A game is already linked to this matchup. Enter the score in that game instead."
       }
     },
+    "restore": {
+      "title": "This game was settled automatically",
+      "cta": "Put the game back to unplayed",
+      "confirmTitle": "Undo this decision?",
+      "confirmBody": "The pairing goes back to unplayed, whoever it advanced comes back out of the next round, and the reputation hit it caused is removed. Use this when the app got it wrong, not to record a result.",
+      "confirmCta": "Undo it",
+      "windowClosed": "Too late to undo it here: the draw has moved past this pairing. Record the result instead.",
+      "organizerOnly": "Only the organizer can undo an automatic decision.",
+      "errorGeneric": "Could not undo this decision. Try again.",
+      "rule": {
+        "no_show": "One side checked in for the agreed game and the other did not, so the walkover went against the absent side.",
+        "cancel_forfeit": "One side cancelled the agreed game and it was not rescheduled before the deadline.",
+        "one_sided": "One side gave their availability before the deadline and the other did nothing.",
+        "gap_rule": "Both sides tried, but one clearly did more to get the game organized.",
+        "no_effort": "Neither side followed up before the deadline, so nobody advanced.",
+        "stalemate": "Both sides did their part and it did not come together, so the game was cancelled with nobody at fault.",
+        "generic": "The app settled this pairing when the round deadline passed."
+      }
+    },
     "generateBracketErrors": {
       "insufficientParticipants": "At least 2 players must be registered.",
       "alreadyGenerated": "The bracket already exists.",

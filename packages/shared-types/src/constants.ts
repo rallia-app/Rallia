@@ -357,6 +357,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   tournament_round_deadline_soon: 'alarm-outline',
   tournament_deadline_extended: 'time-outline',
   tournament_match_walkover: 'flag-outline',
+  tournament_match_cancelled: 'remove-circle-outline',
   tournament_dispute_escalated: 'alert-circle-outline',
   tournament_updated: 'create-outline',
   tournament_cancelled: 'close-circle-outline',
@@ -479,6 +480,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   tournament_round_deadline_soon: '#E8863A', // Orange
   tournament_deadline_extended: '#4DB8A8', // Teal
   tournament_match_walkover: '#E8863A', // Orange
+  tournament_match_cancelled: '#8A8F98', // Neutral: nobody is at fault
   tournament_dispute_escalated: '#D9534F', // Red
   tournament_updated: '#FF9800', // Orange — details changed
   tournament_cancelled: '#F44336', // Red
@@ -597,6 +599,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   tournament_round_deadline_soon: 'Deadline Soon',
   tournament_deadline_extended: 'Deadline Extended',
   tournament_match_walkover: 'Walkover',
+  tournament_match_cancelled: 'Game Cancelled',
   tournament_dispute_escalated: 'Dispute',
   tournament_updated: 'Tournament Updated',
   tournament_cancelled: 'Tournament Cancelled',
@@ -725,6 +728,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   tournament_round_deadline_soon: 'leagues',
   tournament_deadline_extended: 'leagues',
   tournament_match_walkover: 'leagues',
+  tournament_match_cancelled: 'leagues',
   tournament_dispute_escalated: 'leagues',
   tournament_updated: 'leagues',
   tournament_cancelled: 'leagues',
@@ -895,6 +899,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   tournament_round_deadline_soon: { email: false, push: true, sms: false },
   tournament_deadline_extended: { email: false, push: true, sms: false },
   tournament_match_walkover: { email: false, push: true, sms: false },
+  tournament_match_cancelled: { email: false, push: true, sms: false },
   tournament_dispute_escalated: { email: false, push: true, sms: false },
   tournament_updated: { email: false, push: true, sms: false },
   tournament_cancelled: { email: true, push: true, sms: false },
@@ -987,6 +992,7 @@ export const TOURNAMENT_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnu
   'tournament_round_deadline_soon',
   'tournament_deadline_extended',
   'tournament_match_walkover',
+  'tournament_match_cancelled',
   'tournament_dispute_escalated',
   'tournament_updated',
   'tournament_cancelled',

@@ -13317,6 +13317,10 @@ export type Database = {
         Returns: boolean
       }
       lt_lift_expired_suspensions: { Args: never; Returns: number }
+      lt_match_restore_state: {
+        Args: { p_tournament_match_id: string }
+        Returns: Json
+      }
       lt_min_rating_level_multiplier: {
         Args: { p_min_rating: number; p_sport_id: string }
         Returns: number
@@ -13333,6 +13337,10 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: undefined
       }
+      lt_notify_tournament_cancelled: {
+        Args: { p_rule?: string; p_tm_id: string }
+        Returns: undefined
+      }
       lt_notify_tournament_deadline_changed: {
         Args: {
           p_bracket_side: string
@@ -13346,7 +13354,12 @@ export type Database = {
         Returns: undefined
       }
       lt_notify_tournament_walkover: {
-        Args: { p_double: boolean; p_tm_id: string; p_winner: string }
+        Args: {
+          p_double: boolean
+          p_rule?: string
+          p_tm_id: string
+          p_winner: string
+        }
         Returns: undefined
       }
       lt_nudge_tournament_gates: { Args: never; Returns: number }
@@ -16970,6 +16983,7 @@ export type Database = {
         | "tournament_action_required"
         | "tournament_registration_closing_soon"
         | "recurring_court_opened"
+        | "tournament_match_cancelled"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -17668,6 +17682,7 @@ export const Constants = {
         "tournament_action_required",
         "tournament_registration_closing_soon",
         "recurring_court_opened",
+        "tournament_match_cancelled",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],

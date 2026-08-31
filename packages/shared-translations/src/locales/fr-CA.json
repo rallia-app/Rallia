@@ -5921,6 +5921,25 @@
         "matchAlreadyLinked": "Une partie est déjà liée à ce duel. Entre le score dans cette partie."
       }
     },
+    "restore": {
+      "title": "L'app a réglé cette partie toute seule",
+      "cta": "Remettre la partie à jouer",
+      "confirmTitle": "Défaire cette décision?",
+      "confirmBody": "Le pairage redevient à jouer, la personne qui avait avancé ressort du tour suivant, et l'impact sur sa réputation est effacé. À utiliser quand l'app s'est trompée, pas pour inscrire un résultat.",
+      "confirmCta": "Défaire",
+      "windowClosed": "Trop tard pour défaire ici: le tableau a avancé au-delà de ce pairage. Inscris plutôt le résultat.",
+      "organizerOnly": "Seul l'organisateur peut défaire une décision automatique.",
+      "errorGeneric": "Impossible de défaire cette décision. Réessaie.",
+      "rule": {
+        "no_show": "Une des deux personnes a fait son check-in à la partie convenue, l'autre non: le forfait est allé du côté de l'absente.",
+        "cancel_forfeit": "Une des deux a annulé la partie convenue et elle n'a pas été reprise avant l'échéance.",
+        "one_sided": "Une des deux a donné ses dispos avant l'échéance, l'autre n'a rien fait.",
+        "gap_rule": "Les deux ont essayé, mais une des deux en a nettement fait plus pour organiser la partie.",
+        "no_effort": "Ni l'une ni l'autre n'a donné suite avant l'échéance, donc personne n'avance.",
+        "stalemate": "Les deux ont fait leur part et ça n'a pas adonné: la partie a été annulée, sans faute de personne.",
+        "generic": "L'app a réglé ce pairage quand l'échéance de la ronde est passée."
+      }
+    },
     "generateBracketErrors": {
       "insufficientParticipants": "Au moins 2 joueurs doivent être inscrits.",
       "alreadyGenerated": "Le tableau existe déjà.",
