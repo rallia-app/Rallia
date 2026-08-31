@@ -555,6 +555,46 @@ export const SessionDetail: React.FC = () => {
   // nothing left to link: the score arrives through that game's confirmation.
   const canLink = useCallback((m: SessionMatch) => canOrganize(m) && !m.match_id, [canOrganize]);
 
+  const openScoreEntry = useCallback(
+    (m: SessionMatch) => {
+      lightHaptic();
+      void SheetManager.show('session-record-score', {
+        payload: {
+          sessionMatchId: m.id,
+          sessionId,
+          seasonId,
+          versionWas: m.version,
+          teamAName: teamLabel(m.team_a_user_ids),
+          teamBName: teamLabel(m.team_b_user_ids),
+          isPickleball: isPickleballLeague,
+          matchFormat: sess?.match_format,
+          pointsPerGame: sess?.points_per_game,
+          isEdit: isScored(m),
+          isDecider: isSessionDecider(m),
+          mode: isOrganizer ? 'organizer' : 'participant',
+          onSuccess: () => {
+            toast.success(t('sessionDetail.score.saved'));
+            Analytics.sessionScoreSubmittedAnalytics({ sessionId });
+            invalidate();
+          },
+        },
+      });
+    },
+    [
+      sessionId,
+      seasonId,
+      nameOf,
+      isPickleballLeague,
+      sess?.match_format,
+      isScored,
+      isSessionDecider,
+      isOrganizer,
+      toast,
+      t,
+      invalidate,
+    ]
+  );
+
   const openLinkMatch = useCallback(
     (m: SessionMatch) => {
       if (!league) return;
@@ -568,11 +608,14 @@ export const SessionDetail: React.FC = () => {
           entryFormat: m.format,
           team1UserIds: m.team_a_user_ids,
           team2UserIds: m.team_b_user_ids,
+          // No game was ever created for this pairing: the participant can
+          // record the agreed score directly (server enforces the guards).
+          onManualEntry: () => openScoreEntry(m),
           onSuccess: () => invalidate(),
         },
       });
     },
-    [league, sessionId, seasonId, invalidate]
+    [league, sessionId, seasonId, invalidate, openScoreEntry]
   );
 
   // Substitution. The server takes any player sitting on the named row, so the
@@ -618,44 +661,6 @@ export const SessionDetail: React.FC = () => {
       });
     },
     [openPairingChat, navigation, league?.name, toast, t]
-  );
-
-  const openScoreEntry = useCallback(
-    (m: SessionMatch) => {
-      lightHaptic();
-      void SheetManager.show('session-record-score', {
-        payload: {
-          sessionMatchId: m.id,
-          sessionId,
-          seasonId,
-          versionWas: m.version,
-          teamAName: teamLabel(m.team_a_user_ids),
-          teamBName: teamLabel(m.team_b_user_ids),
-          isPickleball: isPickleballLeague,
-          matchFormat: sess?.match_format,
-          pointsPerGame: sess?.points_per_game,
-          isEdit: isScored(m),
-          isDecider: isSessionDecider(m),
-          onSuccess: () => {
-            toast.success(t('sessionDetail.score.saved'));
-            Analytics.sessionScoreSubmittedAnalytics({ sessionId });
-            invalidate();
-          },
-        },
-      });
-    },
-    [
-      sessionId,
-      seasonId,
-      nameOf,
-      isPickleballLeague,
-      sess?.match_format,
-      isScored,
-      isSessionDecider,
-      toast,
-      t,
-      invalidate,
-    ]
   );
 
   const handleConfirm = useCallback(

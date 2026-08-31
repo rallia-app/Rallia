@@ -5,7 +5,9 @@
 -- tournament_override_score (20260527000100 + correction 20260622120300).
 -- The Jest suite mocks Supabase, so it only proves the client forwards the RPC
 -- args — it never exercises the authz gate. This file does:
---   * a registered PARTICIPANT cannot override a score  -> NOT_ORGANIZER
+--   * a registered player NOT in the match cannot score it -> NOT_ORGANIZER
+--     (participants of the match itself CAN since 20260830120000; that path is
+--     covered in lt_participant_score_entry_test.sql)
 --   * an unrelated OUTSIDER cannot override a score      -> NOT_ORGANIZER
 --   * a CO-ORGANIZER can override (gate uses is_tournament_organizer)
 --   * declaring a winner who isn't in the match          -> WINNER_NOT_IN_MATCH
@@ -102,30 +104,39 @@ BEGIN
 END $$;
 
 -- --------------------------------------------------------------------------
--- 1. a registered PARTICIPANT cannot override a score -> NOT_ORGANIZER
+-- 1. a registered player NOT in this match cannot score it -> NOT_ORGANIZER
+--    (since 20260830120000 a participant OF the match can self-report, so the
+--    negative case is a tournament player from a different pairing)
 -- --------------------------------------------------------------------------
 DO $$
 DECLARE
     v_org uuid; v_players uuid[]; v_tid uuid; v_mid uuid;
-    v_tm tournament_matches; v_ok boolean := false;
+    v_tm tournament_matches; v_other uuid; v_ok boolean := false;
 BEGIN
     SELECT o_org, o_players, o_tid, o_match_id
       INTO v_org, v_players, v_tid, v_mid
-      FROM pg_temp.mk_live_tournament('Override Authz — participant');
+      FROM pg_temp.mk_live_tournament('Override Authz — non-match player');
     SELECT * INTO v_tm FROM tournament_matches WHERE id = v_mid;
 
-    -- Player 2 is a genuine participant, not the organizer.
-    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[2]::text)::text, true);
+    -- A player registered in the tournament but in a DIFFERENT pairing.
+    SELECT tr.user_id INTO v_other
+      FROM tournament_registrations tr
+     WHERE tr.tournament_id = v_tid
+       AND tr.id NOT IN (v_tm.player1_registration_id, v_tm.player2_registration_id)
+     LIMIT 1;
+    ASSERT v_other IS NOT NULL, 'expected a registered player outside this match';
+
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_other::text)::text, true);
     BEGIN
         PERFORM tournament_override_score(v_mid, v_tm.player1_registration_id, '6-0 6-0');
     EXCEPTION WHEN OTHERS THEN v_ok := (SQLERRM = 'NOT_ORGANIZER'); END;
-    ASSERT v_ok, 'a participant must not be able to override a score';
+    ASSERT v_ok, 'a player from another pairing must not be able to score this match';
 
     -- And the match is untouched.
     SELECT * INTO v_tm FROM tournament_matches WHERE id = v_mid;
     ASSERT v_tm.winner_registration_id IS NULL, 'match must stay unresolved after a rejected override';
 
-    RAISE NOTICE 'PASS 1: participant override rejected (NOT_ORGANIZER), match unchanged';
+    RAISE NOTICE 'PASS 1: non-match player rejected (NOT_ORGANIZER), match unchanged';
 END $$;
 
 -- --------------------------------------------------------------------------

@@ -1746,12 +1746,53 @@ export const TournamentDetail: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
   const heroHeightRef = useRef(0);
 
+  // Structured set-entry sheet on a bracket match. Organizers record an
+  // authoritative result (override path, outcome picker included); a
+  // participant self-reports a played score on their own pairing when no game
+  // was ever created for it (server-enforced).
+  const openRecordScore = useCallback(
+    (
+      tournamentMatchId: string,
+      p1RegId: string,
+      p2RegId: string,
+      mode: 'organizer' | 'participant'
+    ) => {
+      if (!tournament) return;
+      lightHaptic();
+      const sportName = sports.find(s => s.id === tournament.sport_id)?.name;
+      const match = matches.find(m => m.id === tournamentMatchId);
+      SheetManager.show('tournament-record-score', {
+        payload: {
+          tournamentMatchId,
+          tournamentId: tournament.id,
+          player1RegId: p1RegId,
+          player2RegId: p2RegId,
+          player1Name: nameByRegId.get(p1RegId) ?? seedFallbackLabel(seedByRegId.get(p1RegId), t),
+          player2Name: nameByRegId.get(p2RegId) ?? seedFallbackLabel(seedByRegId.get(p2RegId), t),
+          isPickleball: sportName === 'pickleball',
+          matchFormat: tournament.match_format,
+          pointsPerGame: tournament.points_per_game,
+          isFinal:
+            !!totalRounds && match?.bracket_side === 'main' && match?.round_number === totalRounds,
+          // A pool row can be cancelled outright; a bracket slot cannot.
+          isPoolMatch: match?.pool_number != null,
+          mode,
+          onSuccess: () => {
+            successHaptic();
+          },
+        },
+      });
+    },
+    [tournament, sports, matches, totalRounds, nameByRegId, seedByRegId, t]
+  );
+
   const handleBracketMatchTap = useCallback(
     (tournamentMatchId: string, p1RegId: string, p2RegId: string) => {
       const team1 = membersByRegId.get(p1RegId);
       const team2 = membersByRegId.get(p2RegId);
       if (!team1?.length || !team2?.length || !tournament) return;
       lightHaptic();
+      const match = matches.find(m => m.id === tournamentMatchId);
       SheetManager.show('tournament-link-match', {
         payload: {
           tournamentMatchId,
@@ -1760,10 +1801,17 @@ export const TournamentDetail: React.FC = () => {
           entryFormat: tournament.entry_format,
           team1UserIds: team1,
           team2UserIds: team2,
+          // A pairing with no game behind it can be settled by entering the
+          // agreed score directly; one bound to a game keeps that game as the
+          // single score path.
+          onManualEntry:
+            match && !match.match_id
+              ? () => openRecordScore(tournamentMatchId, p1RegId, p2RegId, 'participant')
+              : undefined,
         },
       });
     },
-    [membersByRegId, tournament]
+    [membersByRegId, tournament, matches, openRecordScore]
   );
 
   // Open (get-or-create) the per-pairing round chat and drop the caller in, so
@@ -1792,32 +1840,9 @@ export const TournamentDetail: React.FC = () => {
   // bracket match via the structured set-entry sheet.
   const handleOrganizerOverride = useCallback(
     (tournamentMatchId: string, p1RegId: string, p2RegId: string) => {
-      if (!tournament) return;
-      lightHaptic();
-      const sportName = sports.find(s => s.id === tournament.sport_id)?.name;
-      const match = matches.find(m => m.id === tournamentMatchId);
-      SheetManager.show('tournament-record-score', {
-        payload: {
-          tournamentMatchId,
-          tournamentId: tournament.id,
-          player1RegId: p1RegId,
-          player2RegId: p2RegId,
-          player1Name: nameByRegId.get(p1RegId) ?? seedFallbackLabel(seedByRegId.get(p1RegId), t),
-          player2Name: nameByRegId.get(p2RegId) ?? seedFallbackLabel(seedByRegId.get(p2RegId), t),
-          isPickleball: sportName === 'pickleball',
-          matchFormat: tournament.match_format,
-          pointsPerGame: tournament.points_per_game,
-          isFinal:
-            !!totalRounds && match?.bracket_side === 'main' && match?.round_number === totalRounds,
-          // A pool row can be cancelled outright; a bracket slot cannot.
-          isPoolMatch: match?.pool_number != null,
-          onSuccess: () => {
-            successHaptic();
-          },
-        },
-      });
+      openRecordScore(tournamentMatchId, p1RegId, p2RegId, 'organizer');
     },
-    [tournament, sports, matches, totalRounds, nameByRegId, seedByRegId, t]
+    [openRecordScore]
   );
 
   const themeColors = isDark ? darkTheme : lightTheme;

@@ -5032,11 +5032,15 @@
       "confirmLast": {
         "title": "Fermer la séance?",
         "message": "C'est le dernier résultat. L'enregistrer ferme la séance et met à jour le classement. Tu peux encore corriger n'importe quel score pendant 24 heures.",
-        "cta": "Enregistrer et fermer"
+        "cta": "Enregistrer et fermer",
+        "selfMessage": "C'est le dernier résultat de la séance. L'enregistrer ferme la séance et met à jour le classement."
       },
       "errors": {
-        "correctionWindowClosed": "La période de 24 heures pour corriger cette séance est terminée. Demande l'aide d'un admin."
-      }
+        "correctionWindowClosed": "La période de 24 heures pour corriger cette séance est terminée. Demande l'aide d'un admin.",
+        "alreadyScored": "Ce duel a déjà un résultat.",
+        "matchAlreadyLinked": "Une partie est déjà liée à ce duel. Entre le score dans cette partie."
+      },
+      "selfSubtitle": "Entre le score final convenu avec ton adversaire. Il compte tout de suite au classement. L'organisateur peut corriger au besoin."
     },
     "rpcErrors": {
       "startPassed": "L'heure de début de la séance est déjà passée.",
@@ -5067,7 +5071,8 @@
         "matchAlreadyLinked": "Cette partie est déjà liée à un autre résultat.",
         "matchNotVerified": "Le pointage de cette partie n'est pas encore confirmé.",
         "participantsMismatch": "Les joueurs de cette partie ne correspondent pas à ce duel."
-      }
+      },
+      "manualCta": "Entrer le score manuellement"
     },
     "pairingChat": {
       "organize": "Organise ta partie",
@@ -5820,7 +5825,8 @@
         "matchAlreadyLinked": "Cette partie est déjà liée à un autre résultat.",
         "matchNotVerified": "Le pointage de cette partie n'est pas encore confirmé.",
         "participantsMismatch": "Les joueurs de cette partie ne correspondent pas à ce duel."
-      }
+      },
+      "manualCta": "Entrer le score manuellement"
     },
     "partner": {
       "title": "Choisis ton partenaire",
@@ -5871,7 +5877,8 @@
         "correctionWindowClosed": "La période de 24 heures pour corriger ce résultat est terminée. Demande l'aide d'un admin.",
         "generic": "Impossible d'enregistrer le résultat. Réessaie.",
         "cancelNeedsBracketOutcome": "Une partie du tableau ne peut pas être annulée: quelqu'un doit passer au tour suivant. Déclare plutôt un forfait.",
-        "winnerRequired": "Choisis qui passe."
+        "winnerRequired": "Choisis qui passe.",
+        "matchAlreadyLinked": "Une partie est déjà liée à ce duel. Entre le score dans cette partie."
       }
     },
     "generateBracketErrors": {
@@ -5998,6 +6005,10 @@
       "courts": "Le temps de terrain n'est pas inclus. Tu réserves ton terrain et tu partages le coût avec ton adversaire.",
       "scheduling": "Une fois le tableau sorti, ton adversaire et toi vous entendez sur quand et où jouer, avant la date limite de la ronde.",
       "cancelRefund": "Si l'organisateur annule le tournoi, tes frais d'inscription sont remboursés automatiquement."
+    },
+    "selfReport": {
+      "title": "Entrer ton résultat",
+      "subtitle": "Entre le score final convenu avec ton adversaire. Il compte tout de suite et fait avancer le tableau. L'organisateur peut corriger au besoin."
     }
   },
   "tournamentCreation": {
