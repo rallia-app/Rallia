@@ -268,25 +268,30 @@ determinate pairing, which then asks for that round's hours.
 | unplayed-match-resolution § 4.2 / § 4.3            | Ack := gate answer; the reactivity cap is load-bearing here (see § 6)                                                                                                                                                                                                                                                                                                              |
 | poules-puis-éliminatoires § 12                     | "Partie de poule prête à organiser" fires when both sides have answered, with the slot count                                                                                                                                                                                                                                                                                       |
 
-## 11. Build status (2026-08-29)
+## 11. Build status (2026-08-31)
 
-Server and the first screens are on dev; the funnel stays behind
-`tournaments.scheduling_funnel_enabled`, default false, so no live event runs
-it yet.
+The funnel is built end to end and the resolver is live, but only where the
+funnel is on: `tournaments.scheduling_funnel_enabled` still defaults false, and
+the ladder refuses to act on an event without it, because such an event has no
+gate answers and every side would score U. No live event runs the funnel yet.
 
-| Piece                                                         | State                                                              |
-| ------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Phase availability gate (RPC + snapshot)                      | Shipped, 20260826200000                                            |
-| Pairing rooms wait for both gate answers                      | Shipped, 20260826210000                                            |
-| Pool room, membership, composer lock                          | Shipped, 20260826230000                                            |
-| Gate sheet, docked CTA, reopen to adjust                      | Shipped, mobile                                                    |
-| Pool room UI: board, locked composer, welcome, inbox naming   | Shipped, mobile + 20260829170000                                   |
-| Options come from the phase snapshots                         | Shipped, 20260829180000                                            |
-| One-tap booking of a mutual slot, tentative 24 h, "ça marche" | Shipped server-side, 20260829190000                                |
-| Card UI for the one tap and the tentative state               | Not built                                                          |
-| "Proposer un autre moment" inside the window                  | Not built (§ 5.4; the per-side counter is settled with the screen) |
-| Two-tap forfeit, the ping                                     | Not built                                                          |
-| Pool evening card                                             | Roadmap (decision 6)                                               |
+| Piece                                                         | State                                    |
+| ------------------------------------------------------------- | ---------------------------------------- |
+| Phase availability gate (RPC + snapshot)                      | Shipped, 20260826200000                  |
+| Pairing rooms wait for both gate answers                      | Shipped, 20260826210000                  |
+| Pool room, membership, composer lock                          | Shipped, 20260826230000                  |
+| Gate sheet, docked CTA, reopen to adjust                      | Shipped, mobile                          |
+| Pool room UI: board, locked composer, welcome, inbox naming   | Shipped, mobile + 20260829170000         |
+| Options come from the phase snapshots                         | Shipped, 20260829180000                  |
+| One-tap booking of a mutual slot, tentative 24 h, "ça marche" | Shipped server-side, 20260829190000      |
+| Card UI: one tap, tentative band, counter-offer               | Shipped, mobile                          |
+| "Proposer un autre moment" (one per side per pairing)         | Shipped, 20260829210000                  |
+| Two-tap forfeit, the nudge                                    | Shipped, 20260829230000                  |
+| Evidence model: S, E/P/U, the reactivity cap                  | Shipped, 20260831120000                  |
+| Ladder R0..R6 on it; resolver LIVE, funnel events only        | Shipped, 20260831130000 / 20260831140000 |
+| One-way score registration (§ 3, S4)                          | Not built: still mutual confirm/rebuttal |
+| Restore a late result over an automated decision (§ 9)        | Not built: organizer override only       |
+| Pool evening card                                             | Roadmap (decision 6)                     |
 
 ## 11. Decisions
 
