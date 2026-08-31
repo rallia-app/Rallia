@@ -10,6 +10,8 @@ import {
   bookMutualOption,
   acceptPairingBooking,
   reproposePairingSlot,
+  declarePairingForfeit,
+  pingPairingOpponent,
   getPairingBooking,
   type PairingBooking,
   getMatchOrganizerOptions,
@@ -28,6 +30,7 @@ import {
 } from '@rallia/shared-services';
 
 import { chatKeys } from './useChat';
+import { tournamentKeys } from './useTournaments';
 
 // ============================================================================
 // QUERY KEYS
@@ -339,5 +342,29 @@ export function useReproposePairingSlot() {
         queryClient.invalidateQueries({ queryKey: chatKeys.messages(variables.conversationId) });
       }
     },
+  });
+}
+
+/** Concede one pairing: the opponent takes the walkover at once. */
+export function useDeclarePairingForfeit() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tournamentMatchId }: { tournamentMatchId: string; conversationId?: string }) =>
+      declarePairingForfeit(tournamentMatchId),
+    onSuccess: (_v, variables) => {
+      queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
+      if (variables.conversationId) {
+        queryClient.invalidateQueries({ queryKey: chatKeys.messages(variables.conversationId) });
+      }
+    },
+  });
+}
+
+/** Nudge an opponent who has not answered the phase gate. */
+export function usePingPairingOpponent() {
+  return useMutation({
+    mutationFn: ({ tournamentMatchId }: { tournamentMatchId: string }) =>
+      pingPairingOpponent(tournamentMatchId),
   });
 }

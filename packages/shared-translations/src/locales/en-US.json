@@ -3378,7 +3378,11 @@
       "tentativeWaiting": "Waiting for {name} to confirm. Without an answer it stands in 24 h.",
       "tentativeAsk": "{name} created this game. Confirm it, or propose another time.",
       "tentativeAccept": "Works for me",
-      "tentativeRepropose": "Propose another time"
+      "tentativeRepropose": "Propose another time",
+      "forfeitCta": "I have to forfeit",
+      "forfeitConfirmTitle": "Forfeit this game?",
+      "forfeitConfirmBody": "Your opponent wins by forfeit and the result is final. Do this only if you truly cannot play.",
+      "forfeitConfirm": "Forfeit"
     },
     "banner": {
       "title": "Organize a game",
@@ -6016,7 +6020,13 @@
       "walkover": "Walkover",
       "cancelled": "Voided",
       "played": "Played",
-      "toPlay": "To play"
+      "toPlay": "To play",
+      "ping": "Remind",
+      "pingSentShort": "Reminded",
+      "pingSent": "Reminder sent.",
+      "pingTooSoon": "You already reminded them recently. Give it a day or two.",
+      "pingNobody": "Everyone has given their availability.",
+      "pingError": "Could not send the reminder. Try again."
     },
     "goodToKnow": {
       "title": "Good to know",

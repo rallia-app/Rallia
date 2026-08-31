@@ -102,6 +102,8 @@ export {
   bookMutualOption,
   acceptPairingBooking,
   reproposePairingSlot,
+  declarePairingForfeit,
+  pingPairingOpponent,
   getPairingBooking,
   type PairingBooking,
   getTournamentMatchSportId,

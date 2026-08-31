@@ -3378,7 +3378,11 @@
       "tentativeWaiting": "En attente de la confirmation de {name}. Sans réponse, elle tient dans 24 h.",
       "tentativeAsk": "{name} a créé cette partie. Confirme, ou propose un autre moment.",
       "tentativeAccept": "Ça marche",
-      "tentativeRepropose": "Proposer un autre moment"
+      "tentativeRepropose": "Proposer un autre moment",
+      "forfeitCta": "Je dois déclarer forfait",
+      "forfeitConfirmTitle": "Déclarer forfait?",
+      "forfeitConfirmBody": "Ton adversaire gagne par forfait et le résultat est final. À faire seulement si tu ne peux vraiment pas jouer.",
+      "forfeitConfirm": "Déclarer forfait"
     },
     "banner": {
       "title": "Organiser une partie",
@@ -6016,7 +6020,13 @@
       "walkover": "Forfait",
       "cancelled": "Annulée",
       "played": "Jouée",
-      "toPlay": "À jouer"
+      "toPlay": "À jouer",
+      "ping": "Rappeler",
+      "pingSentShort": "Rappelé",
+      "pingSent": "Rappel envoyé.",
+      "pingTooSoon": "Tu l'as déjà relancé récemment. Laisse passer un jour ou deux.",
+      "pingNobody": "Tout le monde a donné ses dispos.",
+      "pingError": "Impossible d'envoyer le rappel. Réessaie."
     },
     "goodToKnow": {
       "title": "Bon à savoir",

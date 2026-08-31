@@ -13,7 +13,7 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, View, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
 import { Button, Text } from '@rallia/shared-components';
@@ -36,6 +36,7 @@ import {
   usePairingBooking,
   useBookMutualOption,
   useAcceptPairingBooking,
+  useDeclarePairingForfeit,
   useToggleMatchTimeVote,
   useCreateCasualMatch,
   useProfilesByIds,
@@ -107,6 +108,7 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
   const { data: booking } = usePairingBooking(pairingId ?? undefined, funnelEnabled);
   const bookOption = useBookMutualOption();
   const acceptBooking = useAcceptPairingBooking();
+  const declareForfeit = useDeclarePairingForfeit();
 
   // Players read the list like a calendar, so it is shown chronologically. The
   // true array index rides along because votes are stored positionally
@@ -288,6 +290,31 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
       void warningHaptic();
     }
   }, [pairingId, acceptBooking, message.conversation_id]);
+
+  // Two taps, and the second is a real confirmation: conceding hands the
+  // opponent the win with the format's forfeit score and cannot be undone by
+  // the player who declared it.
+  const handleDeclareForfeit = useCallback(() => {
+    if (!pairingId || declareForfeit.isPending) return;
+    void lightHaptic();
+    Alert.alert(
+      t('matchOrganizer.card.forfeitConfirmTitle'),
+      t('matchOrganizer.card.forfeitConfirmBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('matchOrganizer.card.forfeitConfirm'),
+          style: 'destructive',
+          onPress: () => {
+            declareForfeit.mutate(
+              { tournamentMatchId: pairingId, conversationId: message.conversation_id },
+              { onSuccess: () => void successHaptic(), onError: () => void warningHaptic() }
+            );
+          },
+        },
+      ]
+    );
+  }, [pairingId, declareForfeit, message.conversation_id, t]);
 
   const handleOpenMatch = useCallback(async () => {
     if (!createdMatchId || isOpening) return;
@@ -749,6 +776,22 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
             </Button>
           </View>
         ) : null}
+
+        {/* Conceding is the honest exit, so it stays reachable, and quiet. */}
+        {funnelEnabled && isParticipant && (
+          <View style={styles.forfeitRow}>
+            <Button
+              variant="ghost"
+              size="sm"
+              fullWidth
+              onPress={handleDeclareForfeit}
+              disabled={declareForfeit.isPending}
+              testID="pairing-declare-forfeit"
+            >
+              {t('matchOrganizer.card.forfeitCta')}
+            </Button>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -757,6 +800,10 @@ export function MatchOrganizerCard({ message }: MatchOrganizerCardProps) {
 export default MatchOrganizerCard;
 
 const styles = StyleSheet.create({
+  forfeitRow: {
+    paddingHorizontal: spacingPixels[3],
+    paddingBottom: spacingPixels[2],
+  },
   tentativeBand: {
     gap: spacingPixels[2],
     paddingHorizontal: spacingPixels[4],

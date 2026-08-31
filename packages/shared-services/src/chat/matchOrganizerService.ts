@@ -535,3 +535,36 @@ export async function reproposePairingSlot(params: {
 
   return data as string;
 }
+
+/**
+ * Concede one pairing (scheduling-funnel.md § 3). The opponent takes the
+ * walkover at once with the format's forfeit score; the declaring side takes
+ * the forfeit reputation event, not the unresponsive one.
+ */
+export async function declarePairingForfeit(tournamentMatchId: string): Promise<void> {
+  const { error } = await supabase.rpc('lt_funnel_declare_forfeit', {
+    p_tournament_match_id: tournamentMatchId,
+  });
+
+  if (error) {
+    console.error('Error declaring a forfeit:', error);
+    throw error;
+  }
+}
+
+/**
+ * Nudge the side of a pairing that has not answered the phase gate. One per
+ * opponent per 48 h. Returns how many were nudged.
+ */
+export async function pingPairingOpponent(tournamentMatchId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('lt_funnel_ping_opponent', {
+    p_tournament_match_id: tournamentMatchId,
+  });
+
+  if (error) {
+    console.error('Error nudging an opponent:', error);
+    throw error;
+  }
+
+  return (data as number) ?? 0;
+}

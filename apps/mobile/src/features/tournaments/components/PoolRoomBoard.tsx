@@ -11,7 +11,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Badge } from '@rallia/shared-components';
+import { Text, Badge, Button, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { getHumanName, getInitialName } from '@rallia/shared-utils';
 import {
@@ -21,9 +21,11 @@ import {
   useTournamentRoundDeadlines,
   useTournamentPhaseAvailability,
   useProfilesByIds,
+  usePingPairingOpponent,
 } from '@rallia/shared-hooks';
 
-import { useThemeStyles, useTranslation } from '#/hooks';
+import { useAuth, useThemeStyles, useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { useLocale } from '#/context';
 
 interface PoolRoomBoardProps {
@@ -33,9 +35,36 @@ interface PoolRoomBoardProps {
 
 export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) {
   const { colors } = useThemeStyles();
+  const { session } = useAuth();
+  const viewerId = session?.user?.id;
   const { t } = useTranslation();
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
+  const toast = useToast();
+  const ping = usePingPairingOpponent();
+  const [pinged, setPinged] = useState<Set<string>>(new Set());
+
+  // The board is where an unanswered opponent is visible, so the nudge lives
+  // here rather than in a pairing room that has not opened yet.
+  const handlePing = (tournamentMatchId: string) => {
+    if (ping.isPending) return;
+    ping.mutate(
+      { tournamentMatchId },
+      {
+        onSuccess: () => {
+          setPinged(prev => new Set(prev).add(tournamentMatchId));
+          toast.success(t('tournamentDetail.poolRoom.pingSent'));
+        },
+        onError: error =>
+          toast.error(
+            rpcErrorMessage(error, t, 'tournamentDetail.poolRoom.pingError', {
+              PING_TOO_SOON: 'tournamentDetail.poolRoom.pingTooSoon',
+              NOBODY_TO_PING: 'tournamentDetail.poolRoom.pingNobody',
+            })
+          ),
+      }
+    );
+  };
 
   const { data: tournament } = useTournament(tournamentId);
   const { data: matches = [] } = useTournamentMatches(tournamentId);
@@ -96,6 +125,14 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
     };
   }, [regById, answeredUsers]);
 
+  const isMySide = useMemo(() => {
+    return (regId: string | null): boolean => {
+      const r = regId ? regById.get(regId) : undefined;
+      if (!r || !viewerId) return false;
+      return r.user_id === viewerId || r.partner_user_id === viewerId;
+    };
+  }, [regById, viewerId]);
+
   const deadlineAt = useMemo(
     () => deadlines.find(d => d.bracket_side === 'pool')?.deadline_at ?? null,
     [deadlines]
@@ -147,6 +184,20 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
           {poolMatches.map(m => {
             const label = `${nameOf(m.player1_registration_id)} – ${nameOf(m.player2_registration_id)}`;
             let badge: React.ReactNode;
+            // Only worth nudging when the silent side is not the viewer: their
+            // own missing answer is the gate's job, not a nudge's.
+            const waitingSides = funnelEnabled
+              ? [m.player1_registration_id, m.player2_registration_id].filter(
+                  reg => !sideAnswered(reg)
+                )
+              : [];
+            // Only on a pairing the viewer actually plays: nudging a pool-mate
+            // about someone else's game is not theirs to do, and the RPC
+            // refuses it anyway.
+            const iPlayThis =
+              isMySide(m.player1_registration_id) || isMySide(m.player2_registration_id);
+            const waitingOnOthers =
+              iPlayThis && waitingSides.length > 0 && waitingSides.every(reg => !isMySide(reg));
             if (m.status === 'completed' || m.status === 'retired') {
               badge = (
                 <Badge variant="success">{m.score ?? t('tournamentDetail.poolRoom.played')}</Badge>
@@ -179,6 +230,23 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
                   {label}
                 </Text>
                 <View style={styles.rowBadge}>{badge}</View>
+                {waitingOnOthers && (
+                  <View style={styles.rowBadge}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onPress={() => handlePing(m.id)}
+                      disabled={ping.isPending || pinged.has(m.id)}
+                      testID="pool-board-ping"
+                    >
+                      {t(
+                        pinged.has(m.id)
+                          ? 'tournamentDetail.poolRoom.pingSentShort'
+                          : 'tournamentDetail.poolRoom.ping'
+                      )}
+                    </Button>
+                  </View>
+                )}
               </View>
             );
           })}

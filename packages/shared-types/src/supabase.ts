@@ -13171,6 +13171,47 @@ export type Database = {
         Args: { p_message_id: string; p_option_index: number }
         Returns: string
       }
+      lt_funnel_declare_forfeit: {
+        Args: { p_tournament_match_id: string }
+        Returns: {
+          bracket_side: string
+          court_id: string | null
+          created_at: string
+          deadline_nudge12_at: string | null
+          deadline_nudge48_at: string | null
+          deadline_override_at: string | null
+          id: string
+          loser_next_match_id: string | null
+          match_id: string | null
+          match_position: number
+          next_match_id: string | null
+          next_match_slot: number | null
+          played_at: string | null
+          player1_is_bye: boolean
+          player1_registration_id: string | null
+          player2_is_bye: boolean
+          player2_registration_id: string | null
+          pool_number: number | null
+          round_number: number
+          scheduled_at: string | null
+          score: string | null
+          status: Database["public"]["Enums"]["tournament_match_status"]
+          tournament_id: string
+          updated_at: string
+          version: number
+          winner_registration_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tournament_matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      lt_funnel_ping_opponent: {
+        Args: { p_tournament_match_id: string }
+        Returns: number
+      }
       lt_funnel_repropose_slot: {
         Args: {
           p_facility_id?: string
