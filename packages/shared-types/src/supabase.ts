@@ -1281,6 +1281,13 @@ export type Database = {
             foreignKeyName: "delivery_attempt_notification_id_fkey"
             columns: ["notification_id"]
             isOneToOne: false
+            referencedRelation: "discovery_push_outcome"
+            referencedColumns: ["notification_id"]
+          },
+          {
+            foreignKeyName: "delivery_attempt_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
             referencedRelation: "notification"
             referencedColumns: ["id"]
           },
@@ -10332,6 +10339,32 @@ export type Database = {
           status: Database["public"]["Enums"]["delivery_status_enum"] | null
         }
         Relationships: []
+      }
+      discovery_push_outcome: {
+        Row: {
+          acted_at: string | null
+          converted: boolean | null
+          match_id: string | null
+          notification_id: string | null
+          opened: boolean | null
+          participant_status:
+            | Database["public"]["Enums"]["match_participant_status_enum"]
+            | null
+          push_type:
+            | Database["public"]["Enums"]["notification_type_enum"]
+            | null
+          pushed_at: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       qualifying_played_game: {
         Row: {
