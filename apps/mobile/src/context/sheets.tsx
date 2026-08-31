@@ -42,6 +42,7 @@ import { TournamentInvitePlayersActionSheet } from '#/features/tournaments/compo
 import { TournamentCoOrganizerActionSheet } from '#/features/tournaments/components/TournamentCoOrganizerSheet';
 import { TournamentDeadlinesActionSheet } from '#/features/tournaments/components/TournamentDeadlinesSheet';
 import { TournamentAvailabilityGateSheet } from '#/features/tournaments/components/TournamentAvailabilityGateSheet';
+import { TournamentRulesActionSheet } from '#/features/tournaments/components/TournamentRulesSheet';
 import { LeagueInvitePlayersActionSheet } from '#/features/leagues/components/LeagueInvitePlayersSheet';
 import { LeagueInviteSheet } from '#/features/leagues/components/LeagueInviteSheet';
 import { LeagueEditActionSheet } from '#/features/leagues/components/LeagueFormSheets';
@@ -520,6 +521,9 @@ declare module 'react-native-actions-sheet' {
         initialCells?: string[];
       };
     }>;
+    /** What the app does at a round deadline. Takes no payload: the rules are
+        the same for every event. */
+    'tournament-rules': SheetDefinition<{ payload?: Record<string, never> }>;
     'league-invite': SheetDefinition<{
       payload: {
         leagueId: string;
@@ -1071,6 +1075,7 @@ export const Sheets = () => {
         'tournament-co-organizers': TournamentCoOrganizerActionSheet,
         'tournament-deadlines': TournamentDeadlinesActionSheet,
         'tournament-availability-gate': TournamentAvailabilityGateSheet,
+        'tournament-rules': TournamentRulesActionSheet,
         'league-invite': LeagueInviteSheet,
         'league-invite-players': LeagueInvitePlayersActionSheet,
         'league-edit': LeagueEditActionSheet,

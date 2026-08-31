@@ -5940,6 +5940,31 @@
         "generic": "L'app a réglé ce pairage quand l'échéance de la ronde est passée."
       }
     },
+    "rules": {
+      "title": "Comment marche l'échéance",
+      "intro": "Chaque ronde a une date à laquelle la partie doit être jouée. Sinon, l'app tranche au lieu de laisser traîner. Voici exactement comment, pour que rien ne te surprenne.",
+      "deadline": {
+        "title": "L'échéance ne bouge pas",
+        "body": "Quand elle passe, le pairage se règle d'une façon ou d'une autre et la ronde avance. Rien n'est prolongé automatiquement, et une partie réservée après l'échéance ne compte pas."
+      },
+      "trying": {
+        "title": "Ce qui compte comme un effort",
+        "body": "Donner tes dispos, réserver un des moments que vous avez en commun, et répondre quand ton adversaire propose quelque chose. Seulement ça. Les messages dans le clavardage ne comptent pas, volontairement: l'app ne peut pas juger une conversation équitablement, mais elle peut voir une heure que tu as déclarée libre."
+      },
+      "bothTried": {
+        "title": "Si vous avez essayé tous les deux sans réussir à jouer",
+        "body": "Personne n'est blâmé. Si une des deux personnes en a clairement fait plus (répondu plus vite, donné plus d'heures, réagi aux propositions), c'est elle qui avance. Si c'est serré, la partie est annulée et ne compte pour ni l'un ni l'autre."
+      },
+      "neither": {
+        "title": "Si une des deux n'a rien fait",
+        "body": "Celle qui a essayé avance par forfait. Si ni l'une ni l'autre n'a rien fait, personne n'avance. Tu reçois deux rappels avant ça, 48 heures et 12 heures d'avance."
+      },
+      "cost": {
+        "title": "Ce que coûte un forfait",
+        "body": "Ça compte comme une défaite au classement, et c'est tout. Ça ne touche jamais ta cote, et ça ne change pas tes points Rallia. Ne pas répondre du tout peut affecter ta réputation, mais seulement si on t'a vraiment rejoint avant."
+      },
+      "footnote": "L'organisateur peut déplacer une échéance tant qu'elle est devant, et peut défaire une décision que l'app a mal jugée. Si quelque chose cloche, dis-le-lui."
+    },
     "generateBracketErrors": {
       "insufficientParticipants": "Au moins 2 joueurs doivent être inscrits.",
       "alreadyGenerated": "Le tableau existe déjà.",
@@ -6062,7 +6087,9 @@
       "errorWindowClosed": "L'échéance de cette phase est passée.",
       "errorNotParticipant": "Seuls les joueurs inscrits peuvent répondre.",
       "errorNotInProgress": "Le tournoi n'est pas en cours.",
-      "errorGeneric": "Impossible d'enregistrer tes dispos. Réessaie."
+      "errorGeneric": "Impossible d'enregistrer tes dispos. Réessaie.",
+      "stakes": "Si tu ne donnes pas d'heures et que ton adversaire en donne, la partie peut être déclarée forfait contre toi à l'échéance.",
+      "rulesLink": "Comment marche l'échéance"
     },
     "poolRoom": {
       "title": "Poule {n}",
@@ -6088,7 +6115,9 @@
       "title": "Bon à savoir",
       "courts": "Le temps de terrain n'est pas inclus. Tu réserves ton terrain et tu partages le coût avec ton adversaire.",
       "scheduling": "Une fois le tableau sorti, ton adversaire et toi vous entendez sur quand et où jouer, avant la date limite de la ronde.",
-      "cancelRefund": "Si l'organisateur annule le tournoi, tes frais d'inscription sont remboursés automatiquement."
+      "cancelRefund": "Si l'organisateur annule le tournoi, tes frais d'inscription sont remboursés automatiquement.",
+      "deadlineRule": "Si l'échéance de la ronde passe sans que la partie soit jouée, l'app règle le pairage: la personne qui a essayé de l'organiser avance. Un forfait compte au classement mais ne touche jamais ta cote.",
+      "availabilityRule": "Donner tes dispos, c'est ce qui débloque tes parties et ce qui prouve que tu as essayé. Les messages dans le clavardage ne comptent pas."
     },
     "selfReport": {
       "title": "Entrer ton résultat",

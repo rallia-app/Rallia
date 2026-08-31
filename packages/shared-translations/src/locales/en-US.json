@@ -5940,6 +5940,31 @@
         "generic": "The app settled this pairing when the round deadline passed."
       }
     },
+    "rules": {
+      "title": "How the deadline works",
+      "intro": "Every round has a date by which the game has to be played. If it is not, the app decides the pairing rather than letting it hang. Here is exactly how, so nothing comes as a surprise.",
+      "deadline": {
+        "title": "The deadline is firm",
+        "body": "When it passes, the pairing is settled one way or another and the round moves on. Nothing is extended automatically, and a game booked after the deadline does not count."
+      },
+      "trying": {
+        "title": "What counts as trying",
+        "body": "Giving your availability, booking one of the times you have in common, and answering when your opponent proposes something. Only these count. Messages in the chat do not, on purpose: the app cannot fairly judge a conversation, but it can see an hour you declared free."
+      },
+      "bothTried": {
+        "title": "If you both tried and still could not play",
+        "body": "Nobody is blamed. If one of you clearly did more (answered sooner, gave more hours, replied to proposals), that person advances. If it is close, the game is cancelled and counts for neither of you."
+      },
+      "neither": {
+        "title": "If one of you did nothing",
+        "body": "The one who tried advances by walkover. If neither of you did anything, nobody advances. You get two reminders before that, 48 hours and 12 hours out."
+      },
+      "cost": {
+        "title": "What a walkover costs",
+        "body": "It counts as a loss in the standings, and that is all. It never touches your rating, and it does not change your Rallia points. Not answering at all can affect your reputation score, but only if we actually reached you first."
+      },
+      "footnote": "Organizers can move a deadline while it is still ahead, and can undo a decision the app got wrong. If something looks off, tell the organizer."
+    },
     "generateBracketErrors": {
       "insufficientParticipants": "At least 2 players must be registered.",
       "alreadyGenerated": "The bracket already exists.",
@@ -6062,7 +6087,9 @@
       "errorWindowClosed": "This phase's deadline has passed.",
       "errorNotParticipant": "Only registered players can answer.",
       "errorNotInProgress": "The tournament is not live.",
-      "errorGeneric": "Could not save your availability. Try again."
+      "errorGeneric": "Could not save your availability. Try again.",
+      "stakes": "If you do not give hours and your opponent does, the game can be forfeited against you at the deadline.",
+      "rulesLink": "How the deadline works"
     },
     "poolRoom": {
       "title": "Pool {n}",
@@ -6088,7 +6115,9 @@
       "title": "Good to know",
       "courts": "Court time isn't included. You book your court and split the cost with your opponent.",
       "scheduling": "Once the draw is out, you and your opponent agree on when and where to play, before the round deadline.",
-      "cancelRefund": "If the organizer cancels the tournament, your entry fee is refunded automatically."
+      "cancelRefund": "If the organizer cancels the tournament, your entry fee is refunded automatically.",
+      "deadlineRule": "If the round deadline passes without the game being played, the app settles the pairing: whoever tried to organize it advances. A walkover counts in the standings but never touches your rating.",
+      "availabilityRule": "Giving your availability is what unlocks your games and what proves you tried. Messages in the chat do not count."
     },
     "selfReport": {
       "title": "Enter your result",

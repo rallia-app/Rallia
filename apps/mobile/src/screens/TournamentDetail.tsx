@@ -2625,11 +2625,17 @@ export const TournamentDetail: React.FC = () => {
       : null;
 
   // Expectations the spec sheet leaves implicit and a registrant pays to find
-  // out otherwise: courts aren't included, games are self-scheduled, and a
-  // cancelled event refunds every paid entry (lt-settle-event-payments).
+  // out otherwise: courts aren't included, games are self-scheduled, what the
+  // deadline does if they are not, and that a cancelled event refunds every
+  // paid entry (lt-settle-event-payments). The deadline lines are here rather
+  // than only in the funnel because this is the screen someone reads BEFORE
+  // registering, and losing a game you never played is the thing most worth
+  // knowing in advance.
   const goodToKnowLines = [
     t('tournamentDetail.goodToKnow.courts'),
     t('tournamentDetail.goodToKnow.scheduling'),
+    t('tournamentDetail.goodToKnow.availabilityRule'),
+    t('tournamentDetail.goodToKnow.deadlineRule'),
     isPaidTournament ? t('tournamentDetail.goodToKnow.cancelRefund') : null,
   ].filter((l): l is string => !!l);
 

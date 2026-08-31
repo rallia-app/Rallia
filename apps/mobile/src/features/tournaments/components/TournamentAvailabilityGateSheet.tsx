@@ -191,6 +191,22 @@ export function TournamentAvailabilityGateSheet({
           </Text>
         )}
 
+        {/* The consequence, at the moment the player decides whether to bother.
+            Skipping is the single act most likely to lose them their games, and
+            until now the only place that said so was the notification after it
+            had already happened. */}
+        <Text size="sm" style={[styles.stakes, { color: colors.text }]}>
+          {t('tournamentDetail.availabilityGate.stakes')}
+        </Text>
+        <TouchableOpacity
+          onPress={() => void SheetManager.show('tournament-rules')}
+          testID="gate-rules-link"
+        >
+          <Text size="sm" weight="semibold" style={{ color: colors.primary }}>
+            {t('tournamentDetail.availabilityGate.rulesLink')}
+          </Text>
+        </TouchableOpacity>
+
         {selection !== null && (
           <>
             <HourlyAvailabilityPresets
@@ -234,6 +250,9 @@ const styles = StyleSheet.create({
   },
   gridWrapper: {
     marginTop: spacingPixels[1],
+  },
+  stakes: {
+    lineHeight: 20,
   },
   minHint: {
     textAlign: 'center',
