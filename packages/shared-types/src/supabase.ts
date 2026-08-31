@@ -11075,6 +11075,16 @@ export type Database = {
           total_conversations: number
         }[]
       }
+      get_discovery_fatigue: {
+        Args: { p_as_of?: string }
+        Returns: {
+          app_push_off: number
+          dose_bucket: string
+          muted_pct: number
+          muted_push: number
+          players: number
+        }[]
+      }
       get_effective_templates: {
         Args: { p_court_id: string; p_date: string }
         Returns: {
@@ -14987,6 +14997,10 @@ export type Database = {
       snapshot_acceptable_age: { Args: { slot_start: string }; Returns: string }
       snapshot_cleanup_expired: { Args: never; Returns: number }
       snapshot_compat_supply: { Args: never; Returns: number }
+      snapshot_discovery_fatigue: {
+        Args: { p_as_of?: string }
+        Returns: number
+      }
       snapshot_facilities_needing_refresh: {
         Args: { p_facility_ids: string[] }
         Returns: {
