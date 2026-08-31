@@ -91,6 +91,8 @@
     "db:seed:leagues:jdl-share": "psql \"$STAGING_DB_URL\" -1 -v ON_ERROR_STOP=1 -f scripts/leagues/seed-jdl-share-fixtures.sql",
     "// db:seed:leagues:jdl-share": "Seed staging with the [JDL v2] Partage leagues + pre-minted share links (prints the URLs to send Jean; requires STAGING_DB_URL)",
     "// db:seed:leagues:sessions": "Seed staging with [SEED-S] leagues covering the full session loop: publish, confirm, match sheet, score, ranking (requires STAGING_DB_URL)",
+    "db:seed:tournaments:jdl-v4": "psql \"$STAGING_DB_URL\" -1 -v ON_ERROR_STOP=1 -f scripts/tournaments/seed-jdl-v4-funnel.sql",
+    "// db:seed:tournaments:jdl-v4": "Seed staging with the [JDL v4] tournaments for the scheduling-funnel retest: the availability gate, one-tap booking and its tentative window, and the resolution ladder's real outcomes past a deadline (requires STAGING_DB_URL)",
     "db:seed:pse": "psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -v seed_email=\"${SEED_PSE_EMAIL:-lefrancmathis@gmail.com}\" -f scripts/tournaments/seed-participant-score-entry-local.sql",
     "// db:seed:pse": "Seed the LOCAL db with [PSE] tournaments for participant score entry: you are a plain player in an open singles, doubles and pool pairing, plus one already-scored control (optional: SEED_PSE_EMAIL=you@example.com)",
     "db:seed:tournaments:staging": "psql \"$STAGING_DB_URL\" -v ON_ERROR_STOP=1 -f scripts/tournaments/seed-tournaments-staging.sql",
