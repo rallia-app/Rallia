@@ -2371,6 +2371,11 @@
     "announcement": {
       "subtitle": "Annonces officielles",
       "readOnly": "Seul Rallia publie ici"
+    },
+    "pairingScore": {
+      "title": "Entrer le score",
+      "subtitle": "Déjà joué? Inscris le résultat ici",
+      "saved": "Résultat enregistré 🙌"
     }
   },
   "map": {

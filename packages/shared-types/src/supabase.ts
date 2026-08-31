@@ -13156,6 +13156,10 @@ export type Database = {
         Returns: string[]
       }
       lt_pairing_gate_ready: { Args: { p_tm_id: string }; Returns: boolean }
+      lt_pairing_score_context: {
+        Args: { p_session_match_id?: string; p_tournament_match_id?: string }
+        Returns: Json
+      }
       lt_parse_score: {
         Args: { p_score: string }
         Returns: Record<string, unknown>

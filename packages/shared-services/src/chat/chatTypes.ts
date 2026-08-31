@@ -4,6 +4,8 @@
  * @module chatTypes
  */
 
+import type { Enums } from '@rallia/shared-types';
+
 // ============================================================================
 // CORE TYPES
 // ============================================================================
@@ -514,3 +516,41 @@ export interface SearchMessageResult {
   sender_name: string;
   rank: number;
 }
+
+/**
+ * One pairing's score-entry context (lt_pairing_score_context), as read from a
+ * pairing chat. `can_self_score` mirrors the participant guards of the write
+ * RPCs; `reason` names why it is false, for copy.
+ */
+export type PairingScoreContext =
+  | {
+      kind: 'tournament';
+      can_self_score: boolean;
+      reason: string | null;
+      tournament_match_id: string;
+      tournament_id: string;
+      player1_registration_id: string;
+      player2_registration_id: string;
+      player1_name: string;
+      player2_name: string;
+      sport_name: string | null;
+      match_format: Enums<'match_format'> | null;
+      points_per_game: number | null;
+      is_final: boolean;
+      is_pool_match: boolean;
+    }
+  | {
+      kind: 'session';
+      can_self_score: boolean;
+      reason: string | null;
+      session_match_id: string;
+      session_id: string;
+      season_id: string;
+      version_was: number;
+      team_a_name: string;
+      team_b_name: string;
+      sport_name: string | null;
+      match_format: Enums<'match_format'> | null;
+      points_per_game: number | null;
+      is_decider: boolean;
+    };

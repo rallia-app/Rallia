@@ -18,6 +18,10 @@
 --   * a league member outside the pairing is refused      -> NOT_ORGANIZER
 --   * a participant cannot declare a walkover             -> INVALID_STATUS
 --
+-- And 20260830130000_lt_pairing_score_context, the single read behind the
+-- pairing-chat entry point: its can_self_score verdict must agree with the
+-- write guards above, and it must stay invisible to non-participants.
+--
 -- Run against a fresh local stack:
 --   npm run db:reset && npm run db:seed
 --   psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
@@ -363,6 +367,106 @@ BEGIN
     ASSERT v_ok, 'a participant walkover claim must be refused';
 
     RAISE NOTICE 'PASS 7: participant walkover rejected (INVALID_STATUS)';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 8. CONTEXT (tournament): a participant sees a scoreable pairing, with the
+--    payload the sheet needs; once scored the same read flips to false.
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_org uuid; v_players uuid[]; v_tid uuid; v_mid uuid;
+    v_tm tournament_matches; v_reporter uuid; v_ctx jsonb;
+BEGIN
+    SELECT o_org, o_players, o_tid, o_match_id
+      INTO v_org, v_players, v_tid, v_mid
+      FROM pg_temp.mk_live_tournament('Context — tournament');
+    SELECT * INTO v_tm FROM tournament_matches WHERE id = v_mid;
+
+    SELECT user_id INTO v_reporter FROM tournament_registrations
+     WHERE id = v_tm.player1_registration_id;
+    PERFORM pg_temp.as_user(v_reporter);
+
+    v_ctx := lt_pairing_score_context(p_tournament_match_id => v_mid);
+    ASSERT v_ctx IS NOT NULL, 'a participant must get a context';
+    ASSERT (v_ctx->>'kind') = 'tournament', 'kind should be tournament';
+    ASSERT (v_ctx->>'can_self_score')::boolean, 'an open pairing must be self-scoreable';
+    ASSERT (v_ctx->>'player1_registration_id')::uuid = v_tm.player1_registration_id,
+        'sides must be carried through for the sheet';
+    ASSERT COALESCE(v_ctx->>'player1_name', '') <> '', 'side names must be resolved';
+    ASSERT v_ctx ? 'match_format' AND v_ctx ? 'is_final', 'format and final flag must be present';
+
+    -- Record it, then read again: the entry point has to disappear.
+    PERFORM tournament_override_score(v_mid, v_tm.player1_registration_id, '6-3 6-4');
+    v_ctx := lt_pairing_score_context(p_tournament_match_id => v_mid);
+    ASSERT NOT (v_ctx->>'can_self_score')::boolean, 'a scored pairing is no longer self-scoreable';
+    ASSERT (v_ctx->>'reason') = 'ALREADY_SCORED', 'reason should be ALREADY_SCORED, got ' ||
+        COALESCE(v_ctx->>'reason', 'null');
+
+    RAISE NOTICE 'PASS 8: tournament context true then ALREADY_SCORED';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 9. CONTEXT (tournament): a player outside the pairing sees nothing at all
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_org uuid; v_players uuid[]; v_tid uuid; v_mid uuid;
+    v_tm tournament_matches; v_other uuid; v_ctx jsonb;
+BEGIN
+    SELECT o_org, o_players, o_tid, o_match_id
+      INTO v_org, v_players, v_tid, v_mid
+      FROM pg_temp.mk_live_tournament('Context — outsider');
+    SELECT * INTO v_tm FROM tournament_matches WHERE id = v_mid;
+
+    SELECT tr.user_id INTO v_other
+      FROM tournament_registrations tr
+     WHERE tr.tournament_id = v_tid
+       AND tr.id NOT IN (v_tm.player1_registration_id, v_tm.player2_registration_id)
+     LIMIT 1;
+    ASSERT v_other IS NOT NULL, 'expected a registered player outside this match';
+
+    PERFORM pg_temp.as_user(v_other);
+    v_ctx := lt_pairing_score_context(p_tournament_match_id => v_mid);
+    ASSERT v_ctx IS NULL, 'a player outside the pairing must get no context';
+
+    -- The organizer, who can always act on it, still gets one.
+    PERFORM pg_temp.as_user(v_org);
+    v_ctx := lt_pairing_score_context(p_tournament_match_id => v_mid);
+    ASSERT v_ctx IS NOT NULL, 'the organizer must get a context';
+
+    RAISE NOTICE 'PASS 9: context hidden from outsiders, visible to the organizer';
+END $$;
+
+-- --------------------------------------------------------------------------
+-- 10. CONTEXT (session): a participant gets the pairing payload, the decider
+--     flag, and the row version the write RPC needs.
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_org uuid; v_sid uuid; v_seaid uuid; v_mid uuid; v_ver int;
+    v_a uuid; v_b uuid; v_by uuid; v_ctx jsonb;
+BEGIN
+    SELECT o_org, o_sid, o_seaid, o_match_id, o_version, o_team_a, o_team_b, o_bystander
+      INTO v_org, v_sid, v_seaid, v_mid, v_ver, v_a, v_b, v_by
+      FROM pg_temp.mk_open_session('Context — session');
+
+    PERFORM pg_temp.as_user(v_a);
+    v_ctx := lt_pairing_score_context(p_session_match_id => v_mid);
+    ASSERT v_ctx IS NOT NULL, 'a pairing participant must get a context';
+    ASSERT (v_ctx->>'kind') = 'session', 'kind should be session';
+    ASSERT (v_ctx->>'can_self_score')::boolean, 'an open pairing must be self-scoreable';
+    ASSERT (v_ctx->>'version_was')::int = v_ver, 'the row version must be carried for the write';
+    ASSERT (v_ctx->>'season_id')::uuid = v_seaid, 'season must be carried for cache invalidation';
+    -- The sheet holds the only pairing, so scoring it closes the session.
+    ASSERT (v_ctx->>'is_decider')::boolean, 'the only open pairing is the decider';
+
+    -- A league member who is not on this pairing sees nothing.
+    PERFORM pg_temp.as_user(v_by);
+    ASSERT lt_pairing_score_context(p_session_match_id => v_mid) IS NULL,
+        'a bystander must get no context';
+
+    RAISE NOTICE 'PASS 10: session context carries version/season/decider, hidden from bystanders';
 END $$;
 
 ROLLBACK;
