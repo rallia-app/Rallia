@@ -2,7 +2,7 @@
 -- Tournaments — F4c: resolution ladder on PAID draws
 -- ============================================
 -- A paid single-elim draw of 4 with an expired round-1 deadline:
---   * semi 1: one side has effort → walkover; the silent loser PLAYED
+--   * semi 1: one side engaged at the gate → walkover; the passive loser PLAYED
 --     nothing but a single walkover is not the refund case → stays
 --     registered, no refund queued;
 --   * semi 2: both silent → double walkover; the zero-games refund is
@@ -43,6 +43,36 @@ RETURNS void LANGUAGE sql AS $$
     UPDATE tournament_registrations
        SET status = 'registered', version = version + 1, updated_at = now()
      WHERE id = p_reg;
+$$;
+
+-- The ladder reads gate answers now, not chat. These two helpers put a side
+-- into the state the assertions below are about.
+CREATE OR REPLACE FUNCTION pg_temp.engaged(p_t uuid, p_reg uuid) RETURNS void
+LANGUAGE sql AS $$
+  INSERT INTO tournament_phase_availability
+      (tournament_id, bracket_side, round_number, player_id, outcome,
+       responded_at, hours_in_window, grid_snapshot)
+  SELECT p_t, 'main', 1, u, 'edited',
+         (SELECT min(created_at) FROM tournament_matches
+           WHERE tournament_id = p_t AND bracket_side = 'main'),
+         12, '[{"day":"monday","hour":18}]'::jsonb
+    FROM unnest(public.lt_registration_users(p_reg)) u
+  ON CONFLICT (tournament_id, bracket_side, round_number, player_id) DO UPDATE
+    SET hours_in_window = 12, outcome = 'edited', responded_at = EXCLUDED.responded_at;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.passive(p_t uuid, p_reg uuid) RETURNS void
+LANGUAGE sql AS $$
+  INSERT INTO tournament_phase_availability
+      (tournament_id, bracket_side, round_number, player_id, outcome,
+       responded_at, hours_in_window, grid_snapshot)
+  SELECT p_t, 'main', 1, u, 'skipped',
+         (SELECT min(created_at) FROM tournament_matches
+           WHERE tournament_id = p_t AND bracket_side = 'main') + interval '5 days',
+         0, '[]'::jsonb
+    FROM unnest(public.lt_registration_users(p_reg)) u
+  ON CONFLICT (tournament_id, bracket_side, round_number, player_id) DO UPDATE
+    SET hours_in_window = 0, outcome = 'skipped', responded_at = EXCLUDED.responded_at;
 $$;
 
 CREATE OR REPLACE FUNCTION pg_temp.say(p_tm uuid, p_user uuid, p_text text)
@@ -124,9 +154,15 @@ BEGIN
     SELECT * INTO v_m2 FROM tournament_matches
      WHERE tournament_id = v_t.id AND round_number = 1 AND match_position = 2;
 
-    PERFORM pg_temp.say(v_m1.id,
-        (SELECT user_id FROM tournament_registrations WHERE id = v_m1.player1_registration_id),
-        'on joue quand?');
+    -- The ladder only acts on funnel events, and reads gate answers, so the
+    -- effort split is expressed there rather than in chat.
+    UPDATE tournaments SET scheduling_funnel_enabled = true WHERE id = v_t.id;
+    UPDATE tournament_matches
+       SET deadline_nudge48_at = now() - interval '2 days',
+           deadline_nudge12_at = now() - interval '12 hours'
+     WHERE tournament_id = v_t.id AND round_number = 1;
+    PERFORM pg_temp.engaged(v_t.id, v_m1.player1_registration_id);
+    PERFORM pg_temp.passive(v_t.id, v_m1.player2_registration_id);
 
     PERFORM public.lt_resolve_due_tournament_matches(false);
 

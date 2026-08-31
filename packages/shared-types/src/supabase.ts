@@ -13431,6 +13431,10 @@ export type Database = {
         Args: { p_tm_id: string; p_users: string[] }
         Returns: Json
       }
+      lt_side_signals: {
+        Args: { p_registration_id: string; p_tournament_match_id: string }
+        Returns: Json
+      }
       lt_snap_ranking_multiplier: { Args: { p_mult: number }; Returns: number }
       lt_sport_rating_system: { Args: { p_sport_id: string }; Returns: string }
       lt_tournament_ranking_multiplier: {
