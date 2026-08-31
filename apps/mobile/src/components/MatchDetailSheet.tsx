@@ -26,6 +26,7 @@ import {
   Animated as RNAnimated,
   Easing,
   Switch,
+  Alert,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import MapView, { Marker } from 'react-native-maps';
@@ -79,6 +80,8 @@ import {
   useReferral,
   useMatchActions,
   useConfirmMatchScore,
+  useMatchContestState,
+  useContestMatchResult,
   useAcceptRebuttalScore,
   useDisputeRebuttalScore,
 } from '@rallia/shared-hooks';
@@ -1250,6 +1253,37 @@ export const MatchDetailSheet: React.FC = () => {
       }
     }
   }, [playerId, selectedMatch, confirmMutation, toast, t, updateSelectedMatch]);
+
+  // A declared score is final the moment it is entered, so this window is the
+  // only counterweight the other side has. Contesting stops the resolution
+  // ladder on a tournament pairing and hands it to the organizer: a contested
+  // result is never decided by the machine.
+  const { state: contestState } = useMatchContestState(selectedMatch?.id);
+  const contestMutation = useContestMatchResult();
+
+  const handleContestScore = useCallback(() => {
+    if (!selectedMatch?.id) return;
+    mediumHaptic();
+    Alert.alert(t('matchDetail.contestScoreTitle'), t('matchDetail.contestScoreBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('matchDetail.contestScoreCta'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await contestMutation.mutateAsync({ matchId: selectedMatch.id });
+            successHaptic();
+            toast.success(t('matchDetail.contestScoreDone'));
+            const refreshed = await getMatchWithDetails(selectedMatch.id);
+            if (refreshed) updateSelectedMatch(refreshed as MatchDetailData);
+          } catch {
+            errorHaptic();
+            toast.error(t('matchDetail.contestScoreError'));
+          }
+        },
+      },
+    ]);
+  }, [selectedMatch, contestMutation, toast, t, updateSelectedMatch]);
 
   // Handle proposing a different score (rebuttal) - opens score sheet in rebuttal mode
   const handleProposeRebuttal = useCallback(async () => {
@@ -2452,6 +2486,22 @@ export const MatchDetailSheet: React.FC = () => {
 
       // Score confirmation / rebuttal actions (only when score exists and is unresolved)
       if (hasResult && match.result) {
+        if (contestState?.contestable) {
+          // One-way registration: there is nothing to confirm, the score already
+          // stands. What the other side gets is a window to say it is wrong.
+          actions.push(
+            <Button
+              key="contest-score"
+              variant="outline"
+              onPress={handleContestScore}
+              style={styles.actionButton}
+              loading={contestMutation.isPending}
+              leftIcon={<Ionicons name="flag-outline" size={18} color={colors.text} />}
+            >
+              {t('matchDetail.contestScore')}
+            </Button>
+          );
+        }
         if (scoreNeedsConfirmation) {
           actions.push(
             <Button

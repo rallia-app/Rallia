@@ -3627,7 +3627,13 @@
       "acceptSuccess": "Game rescheduled",
       "declineSuccess": "Suggestion declined",
       "errorMatchFull": "The match filled up while this was pending. Free up a spot or decline."
-    }
+    },
+    "contestScore": "Contest this score",
+    "contestScoreTitle": "Contest this score?",
+    "contestScoreBody": "The result is flagged and the organizer decides it instead of the app. Do this if the score is wrong, not because you would rather it had gone the other way.",
+    "contestScoreCta": "Contest it",
+    "contestScoreDone": "Contested. The organizer will settle it.",
+    "contestScoreError": "Could not contest this score. Try again."
   },
   "registerMatchScore": {
     "title": "Register score",

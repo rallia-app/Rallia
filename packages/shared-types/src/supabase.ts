@@ -13359,6 +13359,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      lt_notify_tournament_escalated: {
+        Args: { p_reason?: string; p_tm_id: string }
+        Returns: undefined
+      }
       lt_notify_tournament_match_ready: {
         Args: { p_tm_id: string }
         Returns: undefined
@@ -13464,6 +13468,10 @@ export type Database = {
           payment_id: string
           stripe_charge_id: string
         }[]
+      }
+      lt_reputation_targets: {
+        Args: { p_registration: string; p_tournament_match_id: string }
+        Returns: string[]
       }
       lt_resolve_due_tournament_matches: {
         Args: { p_dry_run?: boolean }
@@ -13588,6 +13596,10 @@ export type Database = {
           suggested_seed: number
         }[]
       }
+      lt_user_acted: {
+        Args: { p_tournament_match_id: string; p_user: string }
+        Returns: boolean
+      }
       lt_user_is_fr: { Args: { p_user_id: string }; Returns: boolean }
       mark_alert_read: {
         Args: { p_admin_id: string; p_alert_id: string }
@@ -13623,6 +13635,7 @@ export type Database = {
         Returns: undefined
       }
       mark_notifications_seen: { Args: never; Returns: undefined }
+      match_contest_state: { Args: { p_match_id: string }; Returns: Json }
       match_organizer_add_custom_option: {
         Args: {
           p_facility_id?: string
@@ -13669,6 +13682,10 @@ export type Database = {
       momentum_enabled_for: {
         Args: { p_key: string; p_user: string }
         Returns: boolean
+      }
+      notify_match_result_declared: {
+        Args: { p_result_id: string }
+        Returns: undefined
       }
       parse_match_duration_to_minutes: {
         Args: { p_duration: string }

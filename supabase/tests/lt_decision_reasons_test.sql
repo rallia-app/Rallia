@@ -113,12 +113,18 @@ BEGIN
     -- m1: one tried, one did not.
     PERFORM pg_temp.gate(v_t.id, v_m[1].player1_registration_id, 'engaged');
     PERFORM pg_temp.gate(v_t.id, v_m[1].player2_registration_id, 'passive');
-    -- m2: both tried, identically, so nothing separates them. A cancellation
-    -- advances nobody, which is what keeps m1's restore window open: m1 and m2
-    -- feed the same semi, and a double forfeit there would propagate a walkover
-    -- into it and close the window (correctly).
+    -- m2: both tried, identically, so nothing separates them. Both must also
+    -- have REACHED OUT, or this is the no-attempt case now and a knockout
+    -- pairing goes to the organizer instead of being cancelled.
+    -- A cancellation advances nobody, which is what keeps m1's restore window
+    -- open: m1 and m2 feed the same semi, and a double forfeit there would
+    -- propagate a walkover into it and close the window (correctly).
     PERFORM pg_temp.gate(v_t.id, v_m[2].player1_registration_id, 'engaged', 12);
     PERFORM pg_temp.gate(v_t.id, v_m[2].player2_registration_id, 'engaged', 12);
+    INSERT INTO leagues_tournaments_audit (scope, entity_id, action, actor_id, payload_after)
+    SELECT 'tournament_match', v_m[2].id, 'funnel_pinged', u, '{}'::jsonb
+      FROM unnest(public.lt_registration_users(v_m[2].player1_registration_id)
+               || public.lt_registration_users(v_m[2].player2_registration_id)) u;
     -- m3, in the other half: neither did anything, both aware.
     PERFORM pg_temp.gate(v_t.id, v_m[3].player1_registration_id, 'passive');
     PERFORM pg_temp.gate(v_t.id, v_m[3].player2_registration_id, 'passive');

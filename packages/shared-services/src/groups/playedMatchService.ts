@@ -412,6 +412,47 @@ export async function submitMatchResultForMatch(
 }
 
 /**
+ * Whether this viewer can still contest the declared score. A score is final
+ * the moment it is entered, so this window is the only counterweight: a
+ * participant who did not declare it, inside 48h, on a result nobody has
+ * contested yet.
+ */
+export interface MatchContestState {
+  hasResult: boolean;
+  contestable: boolean;
+  disputed: boolean;
+  isDeclarer: boolean;
+  deadline?: string | null;
+}
+
+export async function getMatchContestState(matchId: string): Promise<MatchContestState> {
+  const { data, error } = await supabase.rpc('match_contest_state', {
+    p_match_id: matchId,
+  });
+  if (error) throw new Error(error.message);
+  const row = (data ?? {}) as Record<string, unknown>;
+  return {
+    hasResult: row.hasResult === true,
+    contestable: row.contestable === true,
+    disputed: row.disputed === true,
+    isDeclarer: row.isDeclarer === true,
+    deadline: typeof row.deadline === 'string' ? row.deadline : null,
+  };
+}
+
+/**
+ * Contest a declared score. Flags the result as disputed, which stops the
+ * resolution ladder on a tournament pairing and hands it to the organizer:
+ * a contested result is never decided by the machine.
+ */
+export async function contestMatchResult(matchId: string): Promise<void> {
+  const { error } = await supabase.rpc('contest_match_result', {
+    p_match_id: matchId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/**
  * Confirm a match score
  */
 export async function confirmMatchScore(matchResultId: string, playerId: string): Promise<boolean> {

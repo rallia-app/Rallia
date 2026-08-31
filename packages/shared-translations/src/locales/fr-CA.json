@@ -3627,7 +3627,13 @@
       "acceptSuccess": "Partie reprogrammée",
       "declineSuccess": "Proposition refusée",
       "errorMatchFull": "La partie s'est remplie pendant l'attente. Libère une place ou refuse."
-    }
+    },
+    "contestScore": "Contester ce score",
+    "contestScoreTitle": "Contester ce score?",
+    "contestScoreBody": "Le résultat est signalé et c'est l'organisateur qui tranche, pas l'app. À faire si le score est faux, pas parce que tu aurais préféré l'autre résultat.",
+    "contestScoreCta": "Contester",
+    "contestScoreDone": "Contesté. L'organisateur va trancher.",
+    "contestScoreError": "Impossible de contester ce score. Réessaie."
   },
   "registerMatchScore": {
     "title": "Enregistrer le score",
