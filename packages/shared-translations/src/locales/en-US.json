@@ -5967,7 +5967,8 @@
       "knockoutTitle": "Knockout",
       "headerRecord": "W-L",
       "headerSets": "Sets",
-      "vs": "vs"
+      "vs": "vs",
+      "enterScore": "Enter score"
     },
     "deadlines": {
       "playBy": "play by {date}",
