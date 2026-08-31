@@ -2719,6 +2719,58 @@ export type Database = {
           },
         ]
       }
+      lt_pairing_booking: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          booked_at: string
+          booked_by: string
+          match_id: string
+          tentative_until: string
+          tournament_match_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          booked_at?: string
+          booked_by: string
+          match_id: string
+          tentative_until: string
+          tournament_match_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          booked_at?: string
+          booked_by?: string
+          match_id?: string
+          tentative_until?: string
+          tournament_match_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lt_pairing_booking_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "match"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lt_pairing_booking_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "qualifying_played_game"
+            referencedColumns: ["match_id"]
+          },
+          {
+            foreignKeyName: "lt_pairing_booking_tournament_match_id_fkey"
+            columns: ["tournament_match_id"]
+            isOneToOne: true
+            referencedRelation: "tournament_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lt_participation_terms: {
         Row: {
           published_at: string
@@ -13029,6 +13081,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      lt_booking_is_firm: {
+        Args: { p_tournament_match_id: string }
+        Returns: boolean
+      }
       lt_cancel_refund_candidates: {
         Args: never
         Returns: {
@@ -13093,6 +13149,28 @@ export type Database = {
         Returns: string
       }
       lt_format_date_fr: { Args: { p_ts: string }; Returns: string }
+      lt_funnel_accept_booking: {
+        Args: { p_tournament_match_id: string }
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          booked_at: string
+          booked_by: string
+          match_id: string
+          tentative_until: string
+          tournament_match_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lt_pairing_booking"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      lt_funnel_book_mutual_option: {
+        Args: { p_message_id: string; p_option_index: number }
+        Returns: string
+      }
       lt_get_or_create_session_pairing_chat_unchecked: {
         Args: { p_session_match_id: string }
         Returns: string
