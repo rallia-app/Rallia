@@ -27,16 +27,20 @@ BEGIN;
 -- --------------------------------------------------------------------------
 DO $$
 BEGIN
-    ASSERT public.discovery_ceiling(30, 2) = 5,
-      'a converter should earn headroom (5)';
+    -- Tiers sit at or under the measured fatigue inflection (~10/month, where
+    -- type-specific opt-out triples from 4.5% to 12%). See 20260901010000.
+    ASSERT public.discovery_ceiling(30, 2) = 3,
+      'a converter should earn headroom, but stay near the fatigue inflection (3)';
     ASSERT public.discovery_ceiling(25, 0) = 1,
       '20+ pushes and no joins should be throttled (1)';
-    ASSERT public.discovery_ceiling(5, 0) = 3,
-      'under the cold threshold should stay on the default (3)';
-    ASSERT public.discovery_ceiling(0, 0) = 3,
+    ASSERT public.discovery_ceiling(5, 0) = 2,
+      'under the cold threshold should stay on the default (2)';
+    ASSERT public.discovery_ceiling(0, 0) = 2,
       'a brand new player must not be treated as cold';
-    ASSERT public.discovery_ceiling(NULL, NULL) = 3,
+    ASSERT public.discovery_ceiling(NULL, NULL) = 2,
       'NULL counts must fall back to the default, not throttle';
+    ASSERT public.discovery_ceiling(30, 2) <= 3 AND public.discovery_ceiling(0, 0) <= 3,
+      'no tier may exceed 3/week: ~13/month is already past where opt-out triples';
     RAISE NOTICE 'ok 1 - discovery_ceiling tiers';
 END $$;
 
