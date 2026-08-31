@@ -597,6 +597,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   tournament_match_ready: 'Next Match',
   tournament_deadline_changed: 'Deadline Updated',
   tournament_round_deadline_soon: 'Deadline Soon',
+  // RETIRED 2026-08-31: the machine no longer extends anything. Kept so
+  // rows sent before the ladder rewrite still render. Do not send new ones.
   tournament_deadline_extended: 'Deadline Extended',
   tournament_match_walkover: 'Walkover',
   tournament_match_cancelled: 'Game Cancelled',

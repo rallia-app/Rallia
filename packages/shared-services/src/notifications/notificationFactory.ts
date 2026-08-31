@@ -581,7 +581,10 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   tournament_match_ready: 'Next match set',
   tournament_deadline_changed: 'Deadline updated',
   tournament_round_deadline_soon: 'Deadline soon',
-  tournament_deadline_extended: 'Automatic extension',
+  // RETIRED: nothing sends this. The copy is neutralised on purpose so it
+  // cannot be lifted into a new sender promising time the system no longer
+  // grants (unplayed-match-resolution.md, principle 7).
+  tournament_deadline_extended: 'Deadline updated',
   tournament_match_walkover: 'Game settled by walkover',
   tournament_match_cancelled: 'Game cancelled',
   tournament_dispute_escalated: 'Dispute needs a ruling',
@@ -736,7 +739,7 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   tournament_match_ready: '{tournamentName}: round {round} vs {opponentName}.',
   tournament_deadline_changed: '{tournamentName}: the deadline to play your game changed.',
   tournament_round_deadline_soon: '{tournamentName}: your game must be played before the deadline.',
-  tournament_deadline_extended: '{tournamentName}: one last extension to play your game.',
+  tournament_deadline_extended: '{tournamentName}: the deadline for your game changed.',
   tournament_match_walkover: '{tournamentName}: your game was settled by walkover.',
   tournament_match_cancelled: '{tournamentName}: your game was cancelled, with nobody at fault.',
   tournament_dispute_escalated: '{tournamentName}: a disputed game awaits your ruling.',

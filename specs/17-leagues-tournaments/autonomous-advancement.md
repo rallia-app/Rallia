@@ -17,16 +17,16 @@ otherwise, and every amendment traces to the measurement.
 
 ## What is already autonomous (do not rebuild)
 
-| Piece                                                                         | State                                                                                                                  |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Registration close                                                            | Cron `lt-close-due-tournament-registrations`                                                                           |
-| Round/phase deadlines, defaults at publish, per-match override                | Live (`20260810230000`); pool phase is one `('pool', 0)` row                                                           |
-| T-48h / T-12h player nudges                                                   | Live, stamped on `tournament_matches.deadline_nudge48_at/12_at`                                                        |
-| Resolution ladder (grace, extension, walkover, double walkover, dispute stop) | **Live, not dry-run**: `lt_resolve_due_tournament_matches(false)` every 15 min, paid draws included (`20260811100000`) |
-| Auto-posted organizer card at pairing-ready                                   | Live (`20260809160100`), incl. `no_overlap` variant                                                                    |
-| Participant custom time/place option                                          | Live (`20260812260000`)                                                                                                |
-| Bracket recompute, bye/phantom cascade, derived pool standings                | Live, pure functions over recorded state                                                                               |
-| Organizer nudges for the two manual gates                                     | Live (`20260811180100`), incl. `short_field` variant; **acts on nothing**                                              |
+| Piece                                                                           | State                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Registration close                                                              | Cron `lt-close-due-tournament-registrations`                                                                                                                                                    |
+| Round/phase deadlines, defaults at publish, per-match override                  | Live (`20260810230000`); pool phase is one `('pool', 0)` row                                                                                                                                    |
+| T-48h / T-12h player nudges                                                     | Live, stamped on `tournament_matches.deadline_nudge48_at/12_at`                                                                                                                                 |
+| Resolution ladder R0..R6 (walkover, double forfeit, cancellation, dispute stop) | **Live, not dry-run**: `lt_resolve_due_tournament_matches(false)` every 15 min, funnel events only (`20260831130000`). Grace and extension were removed 2026-08-31: the deadline is a hard stop |
+| Auto-posted organizer card at pairing-ready                                     | Live (`20260809160100`), incl. `no_overlap` variant                                                                                                                                             |
+| Participant custom time/place option                                            | Live (`20260812260000`)                                                                                                                                                                         |
+| Bracket recompute, bye/phantom cascade, derived pool standings                  | Live, pure functions over recorded state                                                                                                                                                        |
+| Organizer nudges for the two manual gates                                       | Live (`20260811180100`), incl. `short_field` variant; **acts on nothing**                                                                                                                       |
 
 The two structural gaps: the ladder's evidence model, and the two phase gates
 that still wait for a button.
@@ -85,7 +85,7 @@ a disguise.
 
 | Evidence                                      | Meaning                              | Exists today                                     |
 | --------------------------------------------- | ------------------------------------ | ------------------------------------------------ |
-| Attached game (`tournament_matches.match_id`) | Mutual agreement; Step 0 grace       | Yes                                              |
+| Attached game (`tournament_matches.match_id`) | Mutual agreement. Buys no extra time | Yes                                              |
 | Declared score (final on entry, below)        | The game happened and is resolved    | No: today a score waits on opponent confirmation |
 | Declared forfeit                              | Self-resolution, cheapest of all     | Specced (`tournament_declare_forfeit`), unbuilt  |
 | Mutual "cancel this game" of an attached game | Back to the ladder, override cleared | Yes                                              |
@@ -197,15 +197,15 @@ else may create tournament-linked games.
 
 At the effective deadline, first pairing state that matches wins:
 
-| #   | State                                    | Resolution                                                                                                                                                             |
-| --- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0   | Disputed result                          | Stop. Escalate to organizer (unchanged).                                                                                                                               |
-| 1   | Attached game, not yet played            | Grace (unchanged Step 0). A declared score never reaches the ladder: it resolved the pairing on entry.                                                                 |
-| 2   | A declared forfeit                       | Walkover for the other side (unchanged mechanics).                                                                                                                     |
-| 3   | Both sides S >= 2                        | One automatic extension, then gap rule (unchanged from scheduling-arbitration).                                                                                        |
-| 4   | Exactly one side S >= 2                  | Walkover for that side. Reputation penalty on the silent side **only if** it acked or acted in-phase; otherwise advance without a reputation event.                    |
-| 5   | Neither side S >= 2, protocol complete   | **Knockout**: double walkover (unchanged cascade). **Pool**: game cancelled for both (below). Reputation per the same acked-or-acted bar, each side judged separately. |
-| 6   | Neither side S >= 2, protocol incomplete | **Knockout**: advance by unpenalized double walkover, audited `protocol_incomplete`. **Pool**: cancelled. Never a reputation event.                                    |
+| #   | State                                    | Resolution                                                                                                                                                                                                               |
+| --- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0   | Disputed result                          | Stop. Escalate to organizer (unchanged).                                                                                                                                                                                 |
+| 1   | Attached game, not yet played            | No grace: an agreement is the strongest scheduling act there is, so both sides are deemed engaged and fall to the gap rule at the deadline. A declared score never reaches the ladder: it resolved the pairing on entry. |
+| 2   | A declared forfeit                       | Walkover for the other side (unchanged mechanics).                                                                                                                                                                       |
+| 3   | Both sides S >= 2                        | Gap rule at the deadline, no extension: walkover if the gap clears Δgap (2 in a pool, 1 in a knockout), otherwise the game is cancelled with nobody at fault.                                                            |
+| 4   | Exactly one side S >= 2                  | Walkover for that side. Reputation penalty on the silent side **only if** it acked or acted in-phase; otherwise advance without a reputation event.                                                                      |
+| 5   | Neither side S >= 2, protocol complete   | **Knockout**: double walkover (unchanged cascade). **Pool**: game cancelled for both (below). Reputation per the same acked-or-acted bar, each side judged separately.                                                   |
+| 6   | Neither side S >= 2, protocol incomplete | **Knockout**: advance by unpenalized double walkover, audited `protocol_incomplete`. **Pool**: cancelled. Never a reputation event.                                                                                      |
 
 Rows 4-6 are where the Série 1 misfire lived; the acked-or-acted bar plus
 score-first entry is what removes it. A pair scheduling by text either enters
