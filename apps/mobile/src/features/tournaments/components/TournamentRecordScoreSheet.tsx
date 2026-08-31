@@ -84,6 +84,8 @@ function overrideErrorKey(message: string): TranslationKey {
   if (message.includes('CANCEL_NEEDS_BRACKET_OUTCOME'))
     return 'tournamentDetail.override.errors.cancelNeedsBracketOutcome';
   if (message.includes('WINNER_REQUIRED')) return 'tournamentDetail.override.errors.winnerRequired';
+  if (message.includes('MATCH_ALREADY_LINKED'))
+    return 'tournamentDetail.override.errors.matchAlreadyLinked';
   if (message.includes('NEXT_MATCH_ALREADY_PLAYED'))
     return 'tournamentDetail.override.errors.nextMatchPlayed';
   if (message.includes('MATCH_NOT_OVERRIDABLE'))
@@ -117,6 +119,9 @@ export function TournamentRecordScoreActionSheet({
   const pointsPerGame = payload?.pointsPerGame ?? null;
   const isFinal = payload?.isFinal ?? false;
   const isPoolMatch = payload?.isPoolMatch ?? false;
+  // Participants report a played score only: no outcome picker, and the server
+  // refuses anything but a fresh 'completed' result on their own pairing.
+  const isParticipant = payload?.mode === 'participant';
   const onSuccess = payload?.onSuccess;
   const onDismiss = payload?.onDismiss;
 
@@ -306,7 +311,11 @@ export function TournamentRecordScoreActionSheet({
             style={styles.headerTitle}
             numberOfLines={1}
           >
-            {t('tournamentDetail.override.title')}
+            {t(
+              isParticipant
+                ? 'tournamentDetail.selfReport.title'
+                : 'tournamentDetail.override.title'
+            )}
           </Text>
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -327,38 +336,45 @@ export function TournamentRecordScoreActionSheet({
           showsVerticalScrollIndicator={false}
         >
           <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
-            {t('tournamentDetail.override.subtitle')}
+            {t(
+              isParticipant
+                ? 'tournamentDetail.selfReport.subtitle'
+                : 'tournamentDetail.override.subtitle'
+            )}
           </Text>
 
           {/* What happened. Naming it is the whole point: without these the
-              only way to settle an unplayed pairing was to invent a score. */}
-          <View style={styles.outcomeRow}>
-            {OUTCOMES.filter(o => o !== 'cancelled' || isPoolMatch).map(o => (
-              <TouchableOpacity
-                key={o}
-                onPress={() => {
-                  lightHaptic();
-                  setOutcome(o);
-                  setError(null);
-                }}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: outcome === o }}
-                testID={`override-outcome-${o}`}
-                style={[
-                  styles.outcomeChip,
-                  { borderColor: outcome === o ? colors.buttonActive : colors.border },
-                ]}
-              >
-                <Text
-                  size="sm"
-                  weight="semibold"
-                  color={outcome === o ? colors.buttonActive : colors.text}
+              only way to settle an unplayed pairing was to invent a score.
+              Participants get no picker: self-reporting is a played score. */}
+          {!isParticipant ? (
+            <View style={styles.outcomeRow}>
+              {OUTCOMES.filter(o => o !== 'cancelled' || isPoolMatch).map(o => (
+                <TouchableOpacity
+                  key={o}
+                  onPress={() => {
+                    lightHaptic();
+                    setOutcome(o);
+                    setError(null);
+                  }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: outcome === o }}
+                  testID={`override-outcome-${o}`}
+                  style={[
+                    styles.outcomeChip,
+                    { borderColor: outcome === o ? colors.buttonActive : colors.border },
+                  ]}
                 >
-                  {t(`tournamentDetail.override.outcome.${o}` as TranslationKey)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <Text
+                    size="sm"
+                    weight="semibold"
+                    color={outcome === o ? colors.buttonActive : colors.text}
+                  >
+                    {t(`tournamentDetail.override.outcome.${o}` as TranslationKey)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
 
           {outcome === 'completed' ? (
             <ScoreEntrySets

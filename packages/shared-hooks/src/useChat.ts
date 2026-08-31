@@ -45,6 +45,7 @@ import {
   updatePlayerLastSeen,
   getPlayersOnlineStatus,
   searchMessagesInConversation,
+  getPairingScoreContext,
   type ConversationPreview,
   type ConversationWithDetails,
   type Message,
@@ -54,6 +55,7 @@ import {
   type ReactionSummary,
   type PlayerOnlineStatus,
   type SearchMessageResult,
+  type PairingScoreContext,
 } from '@rallia/shared-services';
 import type { ConversationFilter } from '@rallia/shared-types';
 
@@ -89,6 +91,13 @@ export const chatKeys = {
     [...chatKeys.all, 'onlineStatus', playerIds.join(',')] as const,
   searchMessages: (conversationId: string, query: string) =>
     [...chatKeys.all, 'searchMessages', conversationId, query] as const,
+  pairingScoreContext: (tournamentMatchId?: string | null, sessionMatchId?: string | null) =>
+    [
+      ...chatKeys.all,
+      'pairingScoreContext',
+      tournamentMatchId ?? '',
+      sessionMatchId ?? '',
+    ] as const,
 };
 
 // ============================================================================
@@ -208,6 +217,22 @@ export function useConversation(conversationId: string | undefined) {
     queryKey: chatKeys.conversation(conversationId || ''),
     queryFn: () => getConversation(conversationId!),
     enabled: !!conversationId,
+  });
+}
+
+/**
+ * Score-entry context for the pairing behind a round / pairing chat. Returns
+ * null (not an error) when the caller is not on the pairing, so the chat can
+ * ask unconditionally and just render nothing.
+ */
+export function usePairingScoreContext(
+  tournamentMatchId?: string | null,
+  sessionMatchId?: string | null
+) {
+  return useQuery<PairingScoreContext | null>({
+    queryKey: chatKeys.pairingScoreContext(tournamentMatchId, sessionMatchId),
+    queryFn: () => getPairingScoreContext({ tournamentMatchId, sessionMatchId }),
+    enabled: !!tournamentMatchId || !!sessionMatchId,
   });
 }
 

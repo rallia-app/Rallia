@@ -25,6 +25,7 @@ export {
   // New enhanced types
   type PlayerOnlineStatus,
   type SearchMessageResult,
+  type PairingScoreContext,
 
   // Helpers
   isGroupConversationType,
@@ -42,6 +43,7 @@ export {
   getTournamentChat,
   getOrCreateTournamentRoundChat,
   getOrCreateSessionPairingChat,
+  getPairingScoreContext,
   syncMatchConversationTitle,
   setActiveConversation,
   clearActiveConversation,

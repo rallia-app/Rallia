@@ -10,8 +10,8 @@ import { useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { Button, Text } from '@rallia/shared-components';
+import { spacingPixels, radiusPixels, base } from '@rallia/design-system';
 import type { PoolStandingRow, TournamentMatch } from '@rallia/shared-services';
 
 type Colors = {
@@ -19,6 +19,8 @@ type Colors = {
   textMuted: string;
   border: string;
   primary: string;
+  /** Tint behind the caller's own unplayed game, so the row reads as theirs. */
+  highlightBg: string;
   statusPositiveBg: string;
   statusPositiveText: string;
 };
@@ -185,6 +187,10 @@ export const PoolsSection: React.FC<{
                 (m.status === 'pending' || m.status === 'completed') &&
                 !!onOrganizerOverride;
               const tappable = canAttach || canOverride;
+              // The caller's own unplayed game is the one row here they can do
+              // something about. It used to look exactly like every other
+              // pending row (11px of tinted text), so it got missed.
+              const isMyTurn = canAttach && !settled;
               // A cancelled game is settled but carries no score, so it reads as
               // a status rather than a result.
               const noResult = m.status === 'cancelled';
@@ -196,21 +202,8 @@ export const PoolsSection: React.FC<{
                     ? t('tournamentDetail.pools.cancelled')
                     : (m.score ?? '—');
               const pendingAccent = tappable ? colors.primary : colors.textMuted;
-              return (
-                <TouchableOpacity
-                  key={m.id}
-                  disabled={!tappable}
-                  onPress={() =>
-                    (canAttach ? onMatchPress : onOrganizerOverride)?.(
-                      m.id,
-                      m.player1_registration_id!,
-                      m.player2_registration_id!
-                    )
-                  }
-                  activeOpacity={0.7}
-                  style={styles.matchRow}
-                  testID={`pool-match-${m.id}`}
-                >
+              const identity = (
+                <>
                   <Text size="xs" color={colors.text} numberOfLines={1} style={styles.matchPlayers}>
                     {p1}
                     <Text size="xs" color={colors.textMuted}>
@@ -238,7 +231,7 @@ export const PoolsSection: React.FC<{
                     >
                       {label}
                     </Text>
-                    {tappable && (
+                    {tappable && !isMyTurn && (
                       <Ionicons
                         name={settled ? 'create-outline' : 'chevron-forward'}
                         size={13}
@@ -246,6 +239,51 @@ export const PoolsSection: React.FC<{
                       />
                     )}
                   </View>
+                </>
+              );
+
+              // The caller's own game stacks: names and status keep the whole
+              // width, the CTA sits under them. Side by side, a long pair of
+              // doubles names and the button fought over the same row.
+              if (isMyTurn) {
+                return (
+                  <View
+                    key={m.id}
+                    style={[styles.matchRowMine, { backgroundColor: colors.highlightBg }]}
+                    testID={`pool-match-${m.id}`}
+                  >
+                    <View style={styles.matchRowIdentity}>{identity}</View>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      fullWidth
+                      onPress={() =>
+                        onMatchPress?.(m.id, m.player1_registration_id!, m.player2_registration_id!)
+                      }
+                      leftIcon={<Ionicons name="add-circle" size={16} color={base.white} />}
+                      testID="pool-match-cta"
+                    >
+                      {t('tournamentDetail.pools.enterScore')}
+                    </Button>
+                  </View>
+                );
+              }
+
+              return (
+                <TouchableOpacity
+                  key={m.id}
+                  disabled={!tappable}
+                  onPress={() =>
+                    (canAttach ? onMatchPress : onOrganizerOverride)?.(
+                      m.id,
+                      m.player1_registration_id!,
+                      m.player2_registration_id!
+                    )
+                  }
+                  activeOpacity={0.7}
+                  testID={`pool-match-${m.id}`}
+                >
+                  <View style={styles.matchRow}>{identity}</View>
                 </TouchableOpacity>
               );
             })}
@@ -292,6 +330,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[1.5],
+    gap: spacingPixels[2],
+  },
+  matchRowMine: {
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[2],
+    gap: spacingPixels[2],
+  },
+  matchRowIdentity: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: spacingPixels[2],
   },
   matchPlayers: { flexShrink: 1 },

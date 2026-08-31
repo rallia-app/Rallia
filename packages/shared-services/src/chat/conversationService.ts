@@ -14,6 +14,7 @@ import type {
   UpdateConversationInput,
   MessageStatus,
   MessageWithSender,
+  PairingScoreContext,
 } from './chatTypes';
 
 // This title is persisted and read by every participant, so it is pinned to
@@ -485,6 +486,29 @@ export async function getOrCreateSessionPairingChat(
   }
 
   return (data as string | null) ?? null;
+}
+
+/**
+ * Everything the record-score sheet needs for one pairing, plus whether the
+ * caller may self-report on it right now (the verdict mirrors the participant
+ * guards of the write RPCs, so the entry point can never offer a submit the
+ * server would refuse). Null when the caller is not on the pairing.
+ */
+export async function getPairingScoreContext(params: {
+  tournamentMatchId?: string | null;
+  sessionMatchId?: string | null;
+}): Promise<PairingScoreContext | null> {
+  const { data, error } = await supabase.rpc('lt_pairing_score_context', {
+    p_tournament_match_id: params.tournamentMatchId ?? undefined,
+    p_session_match_id: params.sessionMatchId ?? undefined,
+  });
+
+  if (error) {
+    console.error('Error fetching pairing score context:', error);
+    throw error;
+  }
+
+  return (data as PairingScoreContext | null) ?? null;
 }
 
 // ============================================================================

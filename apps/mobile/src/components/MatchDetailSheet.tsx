@@ -25,6 +25,7 @@ import {
   Platform,
   Animated as RNAnimated,
   Easing,
+  Switch,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import MapView, { Marker } from 'react-native-maps';
@@ -819,6 +820,9 @@ export const MatchDetailSheet: React.FC = () => {
   const [showKickModal, setShowKickModal] = useState(false);
   const [kickingParticipantId, setKickingParticipantId] = useState<string | null>(null);
   const [showStopRecurrenceModal, setShowStopRecurrenceModal] = useState(false);
+  // Cancel dialog: whether the host also wants the series to stop. Defaults off
+  // so cancelling one week keeps meaning "not this week".
+  const [stopSeriesOnCancel, setStopSeriesOnCancel] = useState(false);
   const [isStoppingRecurrence, setIsStoppingRecurrence] = useState(false);
   // Whether this game's series is still live. Only the series owner can read
   // the row, so a null result means "not the owner" or "no series".
@@ -1465,14 +1469,34 @@ export const MatchDetailSheet: React.FC = () => {
   const handleCancelMatch = useCallback(() => {
     if (!selectedMatch) return;
     mediumHaptic();
+    setStopSeriesOnCancel(false);
     setShowCancelModal(true);
   }, [selectedMatch]);
 
   // Confirm cancel match
-  const handleConfirmCancel = useCallback(() => {
+  const handleConfirmCancel = useCallback(async () => {
     if (!playerId) return;
+    const recurrenceId = selectedMatch?.recurrence_id;
+
+    // Stop the series BEFORE cancelling. If this fails we leave the game alone
+    // rather than land in the exact state this flow exists to prevent: game
+    // cancelled while next week's is still on its way.
+    if (stopSeriesOnCancel && recurrenceId) {
+      try {
+        await stopRecurrence(recurrenceId, playerId);
+        setIsSeriesLive(false);
+      } catch (error) {
+        Logger.error(
+          'MatchDetailSheet: stop recurrence during cancel failed',
+          error instanceof Error ? error : undefined
+        );
+        toast.error(t('matchDetail.recurring.stopError'));
+        return;
+      }
+    }
+
     cancelMatch(playerId);
-  }, [playerId, cancelMatch]);
+  }, [playerId, cancelMatch, selectedMatch, stopSeriesOnCancel, toast, t]);
 
   // Stop a recurring series. Games already created stay; no new ones appear.
   const handleConfirmStopRecurrence = useCallback(async () => {
@@ -5071,9 +5095,39 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
               })
             );
           }
+          // Spell out that cancelling one week is not the same as stopping the
+          // series, so the default choice is never a surprise.
+          if (isSeriesLive && !stopSeriesOnCancel) {
+            warnings.push(t('matchDetail.recurring.cancelKeepsRepeating'));
+          }
           return warnings.length > 0 ? warnings.join('\n\n') : undefined;
         })()}
-        confirmLabel={t('matches.cancelMatch')}
+        extraContent={
+          isSeriesLive ? (
+            <View style={[styles.recurringRow, { borderColor: colors.border }]}>
+              <View style={styles.recurringTextContainer}>
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {t('matchDetail.recurring.alsoStopTitle')}
+                </Text>
+                <Text size="xs" color={colors.textMuted}>
+                  {t('matchDetail.recurring.alsoStopSubtitle')}
+                </Text>
+              </View>
+              <Switch
+                value={stopSeriesOnCancel}
+                onValueChange={value => {
+                  lightHaptic();
+                  setStopSeriesOnCancel(value);
+                }}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={base.white}
+              />
+            </View>
+          ) : undefined
+        }
+        confirmLabel={
+          stopSeriesOnCancel ? t('matchDetail.recurring.cancelAndStop') : t('matches.cancelMatch')
+        }
         cancelLabel={t('common.goBack')}
         destructive
         isLoading={isCancelling}

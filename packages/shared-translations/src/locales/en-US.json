@@ -2377,6 +2377,11 @@
       "welcome": "Welcome to your pool. Give your availability to unlock your game conversations. What is written here does not count in the automatic decisions at the deadline.",
       "lockedNotice": "Reading is open to everyone. To write here and plan your games, give your availability first.",
       "lockedCta": "Give my availability"
+    },
+    "pairingScore": {
+      "title": "Enter the score",
+      "subtitle": "Already played? Record the result here",
+      "saved": "Result saved 🙌"
     }
   },
   "map": {
@@ -3452,7 +3457,11 @@
       "stopConfirmTitle": "Stop repeating this game?",
       "stopConfirmMessage": "Games already created stay on your schedule. No new ones will be created.",
       "stopSuccess": "This game no longer repeats.",
-      "stopError": "Could not stop the repeat. Try again."
+      "stopError": "Could not stop the repeat. Try again.",
+      "cancelKeepsRepeating": "Next week's game will still be created. Turn on the option below to stop the repeat as well.",
+      "alsoStopTitle": "Stop repeating too",
+      "alsoStopSubtitle": "No new games will be created after this one.",
+      "cancelAndStop": "Cancel and stop"
     },
     "title": "Game details",
     "preferences": "Preferences",
@@ -5050,11 +5059,15 @@
       "confirmLast": {
         "title": "Close the session?",
         "message": "This is the last result. Saving it closes the session and updates the standings. You can still fix any score for 24 hours.",
-        "cta": "Save and close"
+        "cta": "Save and close",
+        "selfMessage": "This is the last result of the session. Saving it closes the session and updates the standings."
       },
       "errors": {
-        "correctionWindowClosed": "The 24-hour window to correct this session has closed. Ask an admin for help."
-      }
+        "correctionWindowClosed": "The 24-hour window to correct this session has closed. Ask an admin for help.",
+        "alreadyScored": "This matchup already has a result.",
+        "matchAlreadyLinked": "A game is already linked to this matchup. Enter the score in that game instead."
+      },
+      "selfSubtitle": "Enter the final score you agreed on with your opponent. It counts right away in the standings. The organizer can fix mistakes."
     },
     "rpcErrors": {
       "startPassed": "The session start time has already passed.",
@@ -5085,7 +5098,8 @@
         "matchAlreadyLinked": "That game is already linked to another result.",
         "matchNotVerified": "That game's score isn't confirmed yet.",
         "participantsMismatch": "The players in that game don't match this matchup."
-      }
+      },
+      "manualCta": "Enter the score manually"
     },
     "pairingChat": {
       "organize": "Organize your game",
@@ -5838,7 +5852,8 @@
         "matchAlreadyLinked": "That game is already linked to another result.",
         "matchNotVerified": "That game's score isn't confirmed yet.",
         "participantsMismatch": "The players in that game don't match this matchup."
-      }
+      },
+      "manualCta": "Enter the score manually"
     },
     "partner": {
       "title": "Pick your partner",
@@ -5889,7 +5904,8 @@
         "correctionWindowClosed": "The 24-hour window to correct this result has closed. Ask an admin for help.",
         "generic": "Couldn't save the result. Please try again.",
         "cancelNeedsBracketOutcome": "A bracket game cannot be cancelled: somebody has to go through. Declare a walkover instead.",
-        "winnerRequired": "Pick who goes through."
+        "winnerRequired": "Pick who goes through.",
+        "matchAlreadyLinked": "A game is already linked to this matchup. Enter the score in that game instead."
       }
     },
     "generateBracketErrors": {
@@ -5969,7 +5985,8 @@
       "knockoutTitle": "Knockout",
       "headerRecord": "W-L",
       "headerSets": "Sets",
-      "vs": "vs"
+      "vs": "vs",
+      "enterScore": "Enter score"
     },
     "deadlines": {
       "playBy": "play by {date}",
@@ -6036,6 +6053,10 @@
       "courts": "Court time isn't included. You book your court and split the cost with your opponent.",
       "scheduling": "Once the draw is out, you and your opponent agree on when and where to play, before the round deadline.",
       "cancelRefund": "If the organizer cancels the tournament, your entry fee is refunded automatically."
+    },
+    "selfReport": {
+      "title": "Enter your result",
+      "subtitle": "Enter the final score you agreed on with your opponent. It counts right away and moves the bracket forward. The organizer can fix mistakes."
     }
   },
   "tournamentCreation": {

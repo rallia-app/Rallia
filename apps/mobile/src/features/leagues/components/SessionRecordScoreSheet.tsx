@@ -55,6 +55,7 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
   const pointsPerGame = payload?.pointsPerGame ?? null;
   const isEdit = payload?.isEdit ?? false;
   const isDecider = payload?.isDecider ?? false;
+  const isParticipant = payload?.mode === 'participant';
   const onSuccess = payload?.onSuccess;
   const onDismiss = payload?.onDismiss;
 
@@ -92,10 +93,15 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
     },
     onError: e => {
       warningHaptic();
+      const msg = e.message ?? '';
       setError(
-        e.message?.includes('CORRECTION_WINDOW_CLOSED')
+        msg.includes('CORRECTION_WINDOW_CLOSED')
           ? t('sessionDetail.score.errors.correctionWindowClosed')
-          : e.message || t('sessionDetail.errors.generic')
+          : msg.includes('ALREADY_SCORED')
+            ? t('sessionDetail.score.errors.alreadyScored')
+            : msg.includes('MATCH_ALREADY_LINKED')
+              ? t('sessionDetail.score.errors.matchAlreadyLinked')
+              : msg || t('sessionDetail.errors.generic')
       );
     },
   });
@@ -159,7 +165,11 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
     if (isDecider) {
       Alert.alert(
         t('sessionDetail.score.confirmLast.title'),
-        t('sessionDetail.score.confirmLast.message'),
+        t(
+          isParticipant
+            ? 'sessionDetail.score.confirmLast.selfMessage'
+            : 'sessionDetail.score.confirmLast.message'
+        ),
         [
           { text: t('common.cancel'), style: 'cancel' },
           { text: t('sessionDetail.score.confirmLast.cta'), onPress: submit },
@@ -174,6 +184,7 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
     winningSide,
     isPickleball,
     isDecider,
+    isParticipant,
     matchFormat,
     pointsPerGame,
     recordScore,
@@ -219,7 +230,7 @@ export function SessionRecordScoreActionSheet({ payload }: SheetProps<'session-r
           showsVerticalScrollIndicator={false}
         >
           <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
-            {t('sessionDetail.score.subtitle')}
+            {t(isParticipant ? 'sessionDetail.score.selfSubtitle' : 'sessionDetail.score.subtitle')}
           </Text>
 
           <ScoreEntrySets

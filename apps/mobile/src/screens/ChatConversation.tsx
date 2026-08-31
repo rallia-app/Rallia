@@ -27,10 +27,13 @@ import {
   useToggleMuteConversation,
   useBlockedStatus,
   useFavoriteStatus,
+  usePairingScoreContext,
   chatKeys,
   useTournament,
   useTournamentRoundDeadlines,
   useTournamentPhaseAvailability,
+  tournamentKeys,
+  leagueKeys,
 } from '@rallia/shared-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -50,6 +53,7 @@ import {
   MessageList,
   MessageInput,
   MatchOrganizerBanner,
+  ChatActionBanner,
   AnnouncementNotice,
   PoolRoomLockedNotice,
   ChatSearchBar,
@@ -473,6 +477,73 @@ export default function ChatConversationScreen() {
       },
     });
   }, [playerId, conversationId, participantIds, conversation]);
+
+  // A pairing chat is where the two players actually talk, so it is also where
+  // the score is easiest to reach: when they played without ever creating the
+  // game, the result would otherwise wait on the organizer. The verdict is the
+  // server's (guards mirrored in lt_pairing_score_context), so the entry point
+  // can never offer a submit the write RPC would refuse.
+  const { data: scoreContext } = usePairingScoreContext(
+    conversation?.tournament_match_id,
+    conversation?.session_match_id
+  );
+  const canEnterScore = !!scoreContext?.can_self_score;
+
+  const handleEnterScore = useCallback(() => {
+    if (!scoreContext?.can_self_score) return;
+    void lightHaptic();
+    const isPickleball = scoreContext.sport_name === 'pickleball';
+
+    if (scoreContext.kind === 'tournament') {
+      void SheetManager.show('tournament-record-score', {
+        payload: {
+          tournamentMatchId: scoreContext.tournament_match_id,
+          tournamentId: scoreContext.tournament_id,
+          player1RegId: scoreContext.player1_registration_id,
+          player2RegId: scoreContext.player2_registration_id,
+          player1Name: scoreContext.player1_name,
+          player2Name: scoreContext.player2_name,
+          isPickleball,
+          matchFormat: scoreContext.match_format ?? undefined,
+          pointsPerGame: scoreContext.points_per_game,
+          isFinal: scoreContext.is_final,
+          isPoolMatch: scoreContext.is_pool_match,
+          mode: 'participant',
+          onSuccess: () => {
+            toast.success(t('chat.pairingScore.saved'));
+            void queryClient.invalidateQueries({
+              queryKey: chatKeys.pairingScoreContext(scoreContext.tournament_match_id, null),
+            });
+            void queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
+          },
+        },
+      });
+      return;
+    }
+
+    void SheetManager.show('session-record-score', {
+      payload: {
+        sessionMatchId: scoreContext.session_match_id,
+        sessionId: scoreContext.session_id,
+        seasonId: scoreContext.season_id,
+        versionWas: scoreContext.version_was,
+        teamAName: scoreContext.team_a_name,
+        teamBName: scoreContext.team_b_name,
+        isPickleball,
+        matchFormat: scoreContext.match_format,
+        pointsPerGame: scoreContext.points_per_game,
+        isDecider: scoreContext.is_decider,
+        mode: 'participant',
+        onSuccess: () => {
+          toast.success(t('chat.pairingScore.saved'));
+          void queryClient.invalidateQueries({
+            queryKey: chatKeys.pairingScoreContext(null, scoreContext.session_match_id),
+          });
+          void queryClient.invalidateQueries({ queryKey: leagueKeys.all });
+        },
+      },
+    });
+  }, [scoreContext, queryClient, toast, t]);
 
   // Get the other user's ID for direct chats (used for blocking)
   const otherUserId = useMemo(() => {
@@ -904,6 +975,19 @@ export default function ChatConversationScreen() {
 
       {poolRoomTournamentId && poolNumber != null && (
         <PoolRoomBoard tournamentId={poolRoomTournamentId} poolNumber={poolNumber} />
+      )}
+
+      {/* The game already happened but was never created here: record it from
+          the chat rather than hunting for the pairing in the event screen. */}
+      {canEnterScore && (
+        <ChatActionBanner
+          icon="trophy"
+          title={t('chat.pairingScore.title')}
+          subtitle={t('chat.pairingScore.subtitle')}
+          onPress={handleEnterScore}
+          tone="accent"
+          testID="cta-pairing-score"
+        />
       )}
 
       <MessageList

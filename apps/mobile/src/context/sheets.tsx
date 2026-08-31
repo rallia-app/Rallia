@@ -376,6 +376,10 @@ declare module 'react-native-actions-sheet' {
         // A pool row can be cancelled outright; a bracket slot cannot, since
         // somebody still has to advance. Drives which outcomes are offered.
         isPoolMatch?: boolean;
+        // Participants self-report on their own pairing (fresh completed
+        // results only, server-enforced); organizers keep the override copy
+        // and the outcome picker.
+        mode?: 'organizer' | 'participant';
         onSuccess?: () => void;
         onDismiss?: () => void;
       };
@@ -388,6 +392,9 @@ declare module 'react-native-actions-sheet' {
         entryFormat: import('@rallia/shared-types').Enums<'entry_format'>;
         team1UserIds: string[];
         team2UserIds: string[];
+        // When set, the sheet offers manual score entry (no game was created
+        // for this matchup); it hides itself before invoking.
+        onManualEntry?: () => void;
         onSuccess?: () => void;
         onDismiss?: () => void;
       };
@@ -419,6 +426,9 @@ declare module 'react-native-actions-sheet' {
         entryFormat: import('@rallia/shared-types').Enums<'entry_format'>;
         team1UserIds: string[];
         team2UserIds: string[];
+        // When set, the sheet offers manual score entry (no game was created
+        // for this pairing); it hides itself before invoking.
+        onManualEntry?: () => void;
         onSuccess?: () => void;
         onDismiss?: () => void;
       };
@@ -438,6 +448,9 @@ declare module 'react-native-actions-sheet' {
         // True when this result leaves no playable match behind, so it closes
         // the session: the sheet confirms before writing it.
         isDecider?: boolean;
+        // Participants self-report on their own pairing (fresh results only,
+        // server-enforced); organizers keep the override/correction copy.
+        mode?: 'organizer' | 'participant';
         onSuccess?: () => void;
         onDismiss?: () => void;
       };
