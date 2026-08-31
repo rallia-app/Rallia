@@ -6026,7 +6026,10 @@
       "pingSent": "Rappel envoyé.",
       "pingTooSoon": "Tu l'as déjà relancé récemment. Laisse passer un jour ou deux.",
       "pingNobody": "Tout le monde a donné ses dispos.",
-      "pingError": "Impossible d'envoyer le rappel. Réessaie."
+      "pingError": "Impossible d'envoyer le rappel. Réessaie.",
+      "waitingForYou": "On attend tes dispos",
+      "giveMine": "Mes dispos",
+      "openRoom": "Ouvrir le clavardage de la partie"
     },
     "goodToKnow": {
       "title": "Bon à savoir",

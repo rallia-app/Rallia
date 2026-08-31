@@ -8,10 +8,13 @@
  * player learns who they face and by when.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Badge, useToast } from '@rallia/shared-components';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SheetManager } from 'react-native-actions-sheet';
+import { Text, Badge, Button, useToast } from '@rallia/shared-components';
 import {
   spacingPixels,
   radiusPixels,
@@ -21,6 +24,7 @@ import {
 import { getHumanName, getInitialName } from '@rallia/shared-utils';
 import {
   useTournament,
+  useOpenTournamentRoundChat,
   useTournamentMatches,
   useTournamentRegistrations,
   useTournamentRoundDeadlines,
@@ -30,6 +34,7 @@ import {
 } from '@rallia/shared-hooks';
 
 import { useAuth, useThemeStyles, useTranslation } from '#/hooks';
+import type { RootStackParamList } from '#/navigation/types';
 import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { useLocale } from '#/context';
 
@@ -46,6 +51,8 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const toast = useToast();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const openRoundChat = useOpenTournamentRoundChat();
   const ping = usePingPairingOpponent();
   const [pinged, setPinged] = useState<Set<string>>(new Set());
 
@@ -159,8 +166,13 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
         bg: colors.inputBackground,
         text: colors.textMuted,
       },
+      // The quiet ground under the viewer's own pairings.
+      mine: {
+        bg: isDark ? `${primary[500]}14` : `${primary[600]}0D`,
+        text: colors.text,
+      },
     }),
-    [isDark, colors.inputBackground, colors.textMuted]
+    [isDark, colors.inputBackground, colors.textMuted, colors.text]
   );
 
   const deadlineAt = useMemo(
@@ -171,6 +183,61 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
   const settled = poolMatches.filter(m =>
     ['completed', 'retired', 'walkover', 'cancelled'].includes(m.status)
   ).length;
+
+  // My unsettled pairings are why I opened the room: the board starts open
+  // when I have one, and those rows sort first and sit on a tinted ground.
+  const isPendingStatus = (st: string) =>
+    !['completed', 'retired', 'walkover', 'cancelled'].includes(st);
+  const orderedMatches = useMemo(() => {
+    const mine = (m: (typeof poolMatches)[number]) =>
+      isMySide(m.player1_registration_id) || isMySide(m.player2_registration_id);
+    return [...poolMatches].sort((a, b) => Number(mine(b)) - Number(mine(a)));
+  }, [poolMatches, isMySide]);
+
+  const iHavePending = useMemo(
+    () =>
+      poolMatches.some(
+        m =>
+          isPendingStatus(m.status) &&
+          (isMySide(m.player1_registration_id) || isMySide(m.player2_registration_id))
+      ),
+    [poolMatches, isMySide]
+  );
+  const autoExpanded = useRef(false);
+  useEffect(() => {
+    if (!autoExpanded.current && iHavePending) {
+      autoExpanded.current = true;
+      setExpanded(true);
+    }
+  }, [iHavePending]);
+
+  const hoursLeft = deadlineAt
+    ? Math.max(0, Math.round((new Date(deadlineAt).getTime() - Date.now()) / 3600000))
+    : null;
+  const deadlineUrgent = hoursLeft !== null && hoursLeft <= 48;
+
+  const openGate = () => {
+    void SheetManager.show('tournament-availability-gate', {
+      payload: {
+        tournamentId,
+        bracketSide: 'pool',
+        roundNumber: 0,
+        phaseLabel: t('tournamentDetail.availabilityGate.poolPhase'),
+        deadlineAt,
+        minHours: tournament?.min_availability_hours ?? null,
+      },
+    });
+  };
+
+  // Only once both sides have answered: before that the pairing room does not
+  // exist, and opening it early would undo the strict lock.
+  const openPairingRoom = (tournamentMatchId: string) => {
+    if (openRoundChat.isPending) return;
+    openRoundChat.mutate(tournamentMatchId, {
+      onSuccess: conversationId =>
+        navigation.push('ChatConversation', { conversationId, title: tournament?.name }),
+    });
+  };
 
   if (poolMatches.length === 0) return null;
 
@@ -194,11 +261,20 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
               .replace('{total}', String(poolMatches.length))}
           </Text>
           {deadlineAt && (
-            <Text size="xs" color={colors.textMuted}>
-              {t('tournamentDetail.poolRoom.deadline').replace(
-                '{date}',
-                new Date(deadlineAt).toLocaleDateString(locale, { day: 'numeric', month: 'long' })
-              )}
+            <Text
+              size="xs"
+              weight={deadlineUrgent ? 'semibold' : 'regular'}
+              color={deadlineUrgent ? colors.error : colors.textMuted}
+            >
+              {deadlineUrgent
+                ? t('tournamentDetail.deadlines.hoursLeft').replace('{hours}', String(hoursLeft))
+                : t('tournamentDetail.poolRoom.deadline').replace(
+                    '{date}',
+                    new Date(deadlineAt).toLocaleDateString(locale, {
+                      day: 'numeric',
+                      month: 'long',
+                    })
+                  )}
             </Text>
           )}
         </View>
@@ -211,12 +287,8 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
 
       {expanded && (
         <View style={styles.rows}>
-          {poolMatches.map((m, i) => {
+          {orderedMatches.map((m, i) => {
             const label = `${nameOf(m.player1_registration_id)} \u2013 ${nameOf(m.player2_registration_id)}`;
-            // Only worth nudging when the silent side is not the viewer: their
-            // own missing answer is the gate's job, not a nudge's. And only on
-            // a pairing the viewer actually plays: nudging a pool-mate about
-            // someone else's game is not theirs to do, and the RPC refuses it.
             const waiting = funnelEnabled
               ? [m.player1_registration_id, m.player2_registration_id].filter(
                   reg => !sideAnswered(reg)
@@ -224,90 +296,118 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
               : [];
             const iPlayThis =
               isMySide(m.player1_registration_id) || isMySide(m.player2_registration_id);
+            const iAmSilent = iPlayThis && waiting.some(reg => isMySide(reg));
             const canPing = iPlayThis && waiting.length > 0 && waiting.every(reg => !isMySide(reg));
-            const isPending = !['completed', 'retired', 'walkover', 'cancelled'].includes(m.status);
-            const isWaiting = isPending && funnelEnabled && waiting.length > 0;
+            const isPending = isPendingStatus(m.status);
+            const isReady = isPending && funnelEnabled && waiting.length === 0;
+            const othersWaiting = waiting.filter(reg => !isMySide(reg));
 
             let chip: { label: string; tone: keyof typeof tones } | null = null;
             if (m.status === 'completed' || m.status === 'retired') {
-              chip = {
-                label: m.score ?? t('tournamentDetail.poolRoom.played'),
-                tone: 'positive',
-              };
+              chip = { label: m.score ?? t('tournamentDetail.poolRoom.played'), tone: 'positive' };
             } else if (m.status === 'walkover') {
               chip = { label: t('tournamentDetail.poolRoom.walkover'), tone: 'warning' };
             } else if (m.status === 'cancelled') {
               chip = { label: t('tournamentDetail.poolRoom.cancelled'), tone: 'muted' };
             } else if (!funnelEnabled) {
               chip = { label: t('tournamentDetail.poolRoom.toPlay'), tone: 'muted' };
-            } else if (waiting.length === 0) {
+            } else if (isReady) {
               chip = { label: t('tournamentDetail.poolRoom.ready'), tone: 'active' };
             }
 
-            return (
-              <View
-                key={m.id}
-                style={[
-                  styles.row,
-                  i > 0 && [styles.rowDivider, { borderTopColor: colors.border }],
-                ]}
-              >
-                <View style={styles.rowMain}>
-                  <Text
-                    size="sm"
-                    weight="semibold"
-                    color={colors.text}
-                    numberOfLines={1}
-                    style={styles.rowLabel}
-                  >
+            // The right slot, centered on the row: one clear next step, never
+            // two. My missing dispos outrank everything; then the nudge; then
+            // the state chip.
+            let action: React.ReactNode = null;
+            if (iAmSilent) {
+              action = (
+                <Button size="sm" variant="secondary" onPress={openGate} testID="pool-board-gate">
+                  {t('tournamentDetail.poolRoom.giveMine')}
+                </Button>
+              );
+            } else if (canPing) {
+              action = (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => handlePing(m.id)}
+                  disabled={ping.isPending || pinged.has(m.id)}
+                  testID="pool-board-ping"
+                >
+                  {t(
+                    pinged.has(m.id)
+                      ? 'tournamentDetail.poolRoom.pingSentShort'
+                      : 'tournamentDetail.poolRoom.ping'
+                  )}
+                </Button>
+              );
+            } else if (chip) {
+              action = (
+                <Badge
+                  size="sm"
+                  backgroundColor={tones[chip.tone].bg}
+                  textColor={tones[chip.tone].text}
+                >
+                  {chip.label}
+                </Badge>
+              );
+            }
+
+            const rowInner = (
+              <>
+                <View style={styles.rowText}>
+                  <Text size="sm" weight="semibold" color={colors.text} numberOfLines={1}>
                     {label}
                   </Text>
-                  {chip && (
-                    <Badge
-                      size="sm"
-                      backgroundColor={tones[chip.tone].bg}
-                      textColor={tones[chip.tone].text}
-                    >
-                      {chip.label}
-                    </Badge>
-                  )}
-                  {canPing && (
-                    <TouchableOpacity
-                      onPress={() => handlePing(m.id)}
-                      disabled={ping.isPending || pinged.has(m.id)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      testID="pool-board-ping"
-                    >
-                      <Text
-                        size="sm"
-                        weight="semibold"
-                        color={pinged.has(m.id) ? colors.textMuted : colors.primary}
-                      >
-                        {t(
-                          pinged.has(m.id)
-                            ? 'tournamentDetail.poolRoom.pingSentShort'
-                            : 'tournamentDetail.poolRoom.ping'
-                        )}
+                  {isPending && funnelEnabled && waiting.length > 0 && (
+                    <View style={styles.waitingRow}>
+                      <Ionicons name="hourglass-outline" size={12} color={colors.textMuted} />
+                      <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+                        {iAmSilent
+                          ? t('tournamentDetail.poolRoom.waitingForYou')
+                          : t('tournamentDetail.poolRoom.waitingFor').replace(
+                              '{names}',
+                              othersWaiting.map(reg => nameOf(reg)).join(', ')
+                            )}
                       </Text>
-                    </TouchableOpacity>
+                    </View>
+                  )}
+                  {isReady && iPlayThis && (
+                    <View style={styles.waitingRow}>
+                      <Ionicons name="chatbubbles-outline" size={12} color={colors.primary} />
+                      <Text size="xs" color={colors.primary} numberOfLines={1}>
+                        {t('tournamentDetail.poolRoom.openRoom')}
+                      </Text>
+                    </View>
                   )}
                 </View>
-                {isWaiting && (
-                  <View style={styles.waitingRow}>
-                    <Ionicons name="hourglass-outline" size={12} color={colors.textMuted} />
-                    <Text
-                      size="xs"
-                      color={colors.textMuted}
-                      numberOfLines={1}
-                      style={styles.rowLabel}
-                    >
-                      {t('tournamentDetail.poolRoom.waitingFor').replace(
-                        '{names}',
-                        waiting.map(reg => nameOf(reg)).join(', ')
-                      )}
-                    </Text>
-                  </View>
-                )}
+                <View style={styles.rowAction}>{action}</View>
+              </>
+            );
+
+            const rowStyle = [
+              styles.row,
+              i > 0 && [styles.rowDivider, { borderTopColor: colors.border }],
+              iPlayThis && { backgroundColor: tones.mine.bg, borderRadius: radiusPixels.md },
+            ];
+
+            // A ready pairing of mine opens its room: the state IS the next
+            // step, so the row acts on it.
+            return isReady && iPlayThis ? (
+              <TouchableOpacity
+                key={m.id}
+                style={rowStyle}
+                onPress={() => openPairingRoom(m.id)}
+                disabled={openRoundChat.isPending}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                testID="pool-board-open-room"
+              >
+                {rowInner}
+              </TouchableOpacity>
+            ) : (
+              <View key={m.id} style={rowStyle}>
+                {rowInner}
               </View>
             );
           })}
@@ -341,19 +441,21 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[2],
   },
   row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
     paddingVertical: spacingPixels[2],
-    gap: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2],
   },
   rowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  rowMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-  },
-  rowLabel: {
+  rowText: {
     flex: 1,
+    gap: spacingPixels[1],
+  },
+  rowAction: {
+    justifyContent: 'center',
   },
   waitingRow: {
     flexDirection: 'row',

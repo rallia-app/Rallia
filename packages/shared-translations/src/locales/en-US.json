@@ -6026,7 +6026,10 @@
       "pingSent": "Reminder sent.",
       "pingTooSoon": "You already reminded them recently. Give it a day or two.",
       "pingNobody": "Everyone has given their availability.",
-      "pingError": "Could not send the reminder. Try again."
+      "pingError": "Could not send the reminder. Try again.",
+      "waitingForYou": "Waiting on your availability",
+      "giveMine": "My hours",
+      "openRoom": "Open the game chat"
     },
     "goodToKnow": {
       "title": "Good to know",
