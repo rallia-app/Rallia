@@ -42,15 +42,9 @@ export function ChatActionBanner({
   const { colors, isDark } = useThemeStyles();
   const isAccent = tone === 'accent';
 
-  // Gold is a light hue: it carries near-black text, where teal carries white.
-  // The opposite polarity is half of what tells the two bars apart at a glance.
-  const background = isAccent
-    ? isDark
-      ? accent[400]
-      : accent[500]
-    : isDark
-      ? primary[500]
-      : primary[600];
+  // Gold carries near-black text on either theme, so it needs no flip; teal
+  // carries white, and that opposite polarity is half of what tells them apart.
+  const background = isAccent ? accent[400] : isDark ? primary[500] : primary[600];
   const titleColor = isAccent ? neutral[950] : base.white;
   const subtitleColor = isAccent ? neutral[800] : 'rgba(255,255,255,0.88)';
   const bubbleColor = isAccent ? 'rgba(12,21,20,0.14)' : 'rgba(255,255,255,0.22)';
