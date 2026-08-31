@@ -11,8 +11,13 @@
 import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Badge, Button, useToast } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { Text, Badge, useToast } from '@rallia/shared-components';
+import {
+  spacingPixels,
+  radiusPixels,
+  primary,
+  status as statusColors,
+} from '@rallia/design-system';
 import { getHumanName, getInitialName } from '@rallia/shared-utils';
 import {
   useTournament,
@@ -34,7 +39,7 @@ interface PoolRoomBoardProps {
 }
 
 export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) {
-  const { colors } = useThemeStyles();
+  const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const viewerId = session?.user?.id;
   const { t } = useTranslation();
@@ -133,6 +138,31 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
     };
   }, [regById, viewerId]);
 
+  // Chip tones per theme. The shared Badge's variant colors are palette-fixed
+  // and unreadable on a dark card, so the board passes its own, using the same
+  // recipes the tournament screens build their status chips from.
+  const tones = useMemo(
+    () => ({
+      positive: {
+        bg: isDark ? `${statusColors.success.DEFAULT}30` : `${statusColors.success.DEFAULT}1A`,
+        text: isDark ? statusColors.success.light : statusColors.success.dark,
+      },
+      warning: {
+        bg: isDark ? `${statusColors.warning.DEFAULT}30` : `${statusColors.warning.DEFAULT}1A`,
+        text: isDark ? statusColors.warning.light : statusColors.warning.dark,
+      },
+      active: {
+        bg: isDark ? `${primary[500]}30` : `${primary[600]}20`,
+        text: isDark ? primary[300] : primary[700],
+      },
+      muted: {
+        bg: colors.inputBackground,
+        text: colors.textMuted,
+      },
+    }),
+    [isDark, colors.inputBackground, colors.textMuted]
+  );
+
   const deadlineAt = useMemo(
     () => deadlines.find(d => d.bracket_side === 'pool')?.deadline_at ?? null,
     [deadlines]
@@ -181,70 +211,101 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
 
       {expanded && (
         <View style={styles.rows}>
-          {poolMatches.map(m => {
-            const label = `${nameOf(m.player1_registration_id)} – ${nameOf(m.player2_registration_id)}`;
-            let badge: React.ReactNode;
+          {poolMatches.map((m, i) => {
+            const label = `${nameOf(m.player1_registration_id)} \u2013 ${nameOf(m.player2_registration_id)}`;
             // Only worth nudging when the silent side is not the viewer: their
-            // own missing answer is the gate's job, not a nudge's.
-            const waitingSides = funnelEnabled
+            // own missing answer is the gate's job, not a nudge's. And only on
+            // a pairing the viewer actually plays: nudging a pool-mate about
+            // someone else's game is not theirs to do, and the RPC refuses it.
+            const waiting = funnelEnabled
               ? [m.player1_registration_id, m.player2_registration_id].filter(
                   reg => !sideAnswered(reg)
                 )
               : [];
-            // Only on a pairing the viewer actually plays: nudging a pool-mate
-            // about someone else's game is not theirs to do, and the RPC
-            // refuses it anyway.
             const iPlayThis =
               isMySide(m.player1_registration_id) || isMySide(m.player2_registration_id);
-            const waitingOnOthers =
-              iPlayThis && waitingSides.length > 0 && waitingSides.every(reg => !isMySide(reg));
+            const canPing = iPlayThis && waiting.length > 0 && waiting.every(reg => !isMySide(reg));
+            const isPending = !['completed', 'retired', 'walkover', 'cancelled'].includes(m.status);
+            const isWaiting = isPending && funnelEnabled && waiting.length > 0;
+
+            let chip: { label: string; tone: keyof typeof tones } | null = null;
             if (m.status === 'completed' || m.status === 'retired') {
-              badge = (
-                <Badge variant="success">{m.score ?? t('tournamentDetail.poolRoom.played')}</Badge>
-              );
+              chip = {
+                label: m.score ?? t('tournamentDetail.poolRoom.played'),
+                tone: 'positive',
+              };
             } else if (m.status === 'walkover') {
-              badge = <Badge variant="warning">{t('tournamentDetail.poolRoom.walkover')}</Badge>;
+              chip = { label: t('tournamentDetail.poolRoom.walkover'), tone: 'warning' };
             } else if (m.status === 'cancelled') {
-              badge = <Badge variant="default">{t('tournamentDetail.poolRoom.cancelled')}</Badge>;
+              chip = { label: t('tournamentDetail.poolRoom.cancelled'), tone: 'muted' };
             } else if (!funnelEnabled) {
-              badge = <Badge variant="default">{t('tournamentDetail.poolRoom.toPlay')}</Badge>;
-            } else {
-              const waiting = [m.player1_registration_id, m.player2_registration_id]
-                .filter(reg => !sideAnswered(reg))
-                .map(reg => nameOf(reg));
-              badge =
-                waiting.length === 0 ? (
-                  <Badge variant="primary">{t('tournamentDetail.poolRoom.ready')}</Badge>
-                ) : (
-                  <Badge variant="default">
-                    {t('tournamentDetail.poolRoom.waitingFor').replace(
-                      '{names}',
-                      waiting.join(', ')
-                    )}
-                  </Badge>
-                );
+              chip = { label: t('tournamentDetail.poolRoom.toPlay'), tone: 'muted' };
+            } else if (waiting.length === 0) {
+              chip = { label: t('tournamentDetail.poolRoom.ready'), tone: 'active' };
             }
+
             return (
-              <View key={m.id} style={styles.row}>
-                <Text size="xs" weight="semibold" color={colors.text} numberOfLines={1}>
-                  {label}
-                </Text>
-                <View style={styles.rowBadge}>{badge}</View>
-                {waitingOnOthers && (
-                  <View style={styles.rowBadge}>
-                    <Button
-                      variant="ghost"
+              <View
+                key={m.id}
+                style={[
+                  styles.row,
+                  i > 0 && [styles.rowDivider, { borderTopColor: colors.border }],
+                ]}
+              >
+                <View style={styles.rowMain}>
+                  <Text
+                    size="sm"
+                    weight="semibold"
+                    color={colors.text}
+                    numberOfLines={1}
+                    style={styles.rowLabel}
+                  >
+                    {label}
+                  </Text>
+                  {chip && (
+                    <Badge
                       size="sm"
+                      backgroundColor={tones[chip.tone].bg}
+                      textColor={tones[chip.tone].text}
+                    >
+                      {chip.label}
+                    </Badge>
+                  )}
+                  {canPing && (
+                    <TouchableOpacity
                       onPress={() => handlePing(m.id)}
                       disabled={ping.isPending || pinged.has(m.id)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       testID="pool-board-ping"
                     >
-                      {t(
-                        pinged.has(m.id)
-                          ? 'tournamentDetail.poolRoom.pingSentShort'
-                          : 'tournamentDetail.poolRoom.ping'
+                      <Text
+                        size="sm"
+                        weight="semibold"
+                        color={pinged.has(m.id) ? colors.textMuted : colors.primary}
+                      >
+                        {t(
+                          pinged.has(m.id)
+                            ? 'tournamentDetail.poolRoom.pingSentShort'
+                            : 'tournamentDetail.poolRoom.ping'
+                        )}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {isWaiting && (
+                  <View style={styles.waitingRow}>
+                    <Ionicons name="hourglass-outline" size={12} color={colors.textMuted} />
+                    <Text
+                      size="xs"
+                      color={colors.textMuted}
+                      numberOfLines={1}
+                      style={styles.rowLabel}
+                    >
+                      {t('tournamentDetail.poolRoom.waitingFor').replace(
+                        '{names}',
+                        waiting.map(reg => nameOf(reg)).join(', ')
                       )}
-                    </Button>
+                    </Text>
                   </View>
                 )}
               </View>
@@ -265,7 +326,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacingPixels[3],
     marginTop: spacingPixels[2],
     paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
+    paddingVertical: spacingPixels[2.5],
   },
   headerRow: {
     flexDirection: 'row',
@@ -278,12 +339,25 @@ const styles = StyleSheet.create({
   },
   rows: {
     marginTop: spacingPixels[2],
-    gap: spacingPixels[1.5],
   },
   row: {
+    paddingVertical: spacingPixels[2],
     gap: spacingPixels[1],
   },
-  rowBadge: {
-    alignSelf: 'flex-start',
+  rowDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  rowMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  rowLabel: {
+    flex: 1,
+  },
+  waitingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
   },
 });
