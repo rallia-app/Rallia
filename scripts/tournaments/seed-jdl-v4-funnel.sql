@@ -27,6 +27,15 @@
 --                 Undoing a decision is an RPC only for now
 --                 (lt_restore_tournament_match), so it is not in the guide.
 --
+--   L'impasse     A KNOCKOUT whose deadline has passed, where one semi is the
+--                 case the pool fixtures cannot show: both players answered
+--                 the gate and NEITHER ever proposed a time. A pool cancels
+--                 that game, but a knockout slot has to send someone forward,
+--                 so the app refuses to pick on form quality and hands it to
+--                 the organizer. Jean organizes and also plays: his own semi
+--                 resolves normally, and the final cannot be run until he
+--                 settles the other one.
+--
 -- Every event has scheduling_funnel_enabled = true. Nothing else on staging
 -- does, and the ladder only acts where it is on, so these fixtures cannot
 -- affect any other event.
@@ -91,6 +100,58 @@ LANGUAGE sql SECURITY DEFINER AS $$
   DELETE FROM admin WHERE id = p;
 $$;
 
+-- A knockout event with the funnel on, its roster registered and drawn.
+CREATE OR REPLACE FUNCTION pg_temp.mk_ko_event(
+    p_org uuid, p_name text, p_roster uuid[], p_deadline timestamptz)
+RETURNS uuid LANGUAGE plpgsql AS $$
+DECLARE
+    v_t   tournaments;
+    v_ver integer;
+    v_u   uuid;
+BEGIN
+    PERFORM pg_temp.as_user(p_org);
+    PERFORM pg_temp.staff_on(p_org);
+    SELECT * INTO v_t FROM public.tournament_create(
+        p_name, (SELECT id FROM sport WHERE name = 'tennis'),
+        array_length(p_roster, 1)::smallint,
+        now() - interval '10 days', now() + interval '20 days');
+    PERFORM pg_temp.staff_off(p_org);
+
+    UPDATE tournaments
+       SET scheduling_funnel_enabled = true, min_availability_hours = 6
+     WHERE id = v_t.id;
+
+    SELECT version INTO v_ver FROM tournaments WHERE id = v_t.id;
+    PERFORM public.tournament_open_registration(v_t.id, v_ver);
+
+    FOREACH v_u IN ARRAY p_roster LOOP
+        PERFORM pg_temp.as_user(v_u);
+        PERFORM public.tournament_register(v_t.id, NULL);
+    END LOOP;
+
+    PERFORM pg_temp.as_user(p_org);
+    SELECT version INTO v_ver FROM tournaments WHERE id = v_t.id;
+    PERFORM public.tournament_close_registration(v_t.id, v_ver);
+    SELECT version INTO v_ver FROM tournaments WHERE id = v_t.id;
+    PERFORM public.tournament_generate_bracket(v_t.id, v_ver);
+
+    PERFORM public.tournament_set_round_deadlines(
+        v_t.id, jsonb_build_array(jsonb_build_object(
+            'bracket_side', 'main', 'round_number', 1,
+            'deadline_at', GREATEST(p_deadline, now() + interval '7 days'))));
+    UPDATE tournament_round_deadlines
+       SET deadline_at = p_deadline
+     WHERE tournament_id = v_t.id AND bracket_side = 'main' AND round_number = 1;
+
+    UPDATE tournament_matches
+       SET deadline_nudge48_at = now() - interval '3 days',
+           deadline_nudge12_at = now() - interval '2 days'
+     WHERE tournament_id = v_t.id AND bracket_side = 'main' AND round_number = 1;
+
+    RETURN v_t.id;
+END;
+$$;
+
 -- A pool event with the funnel on, its roster registered and its pools drawn.
 CREATE OR REPLACE FUNCTION pg_temp.mk_pool_event(
     p_org uuid, p_name text, p_roster uuid[], p_deadline timestamptz)
@@ -153,15 +214,16 @@ $$;
 --   'engaged' answered at once with a full grid
 --   'passive' skipped, and late: aware, but nothing offered
 --   (no call at all leaves the side unreached)
-CREATE OR REPLACE FUNCTION pg_temp.gate(p_t uuid, p_user uuid, p_state text)
+CREATE OR REPLACE FUNCTION pg_temp.gate(p_t uuid, p_user uuid, p_state text,
+                                        p_side text DEFAULT 'pool', p_round int DEFAULT 0)
 RETURNS void LANGUAGE sql AS $$
   INSERT INTO tournament_phase_availability
       (tournament_id, bracket_side, round_number, player_id, outcome,
        responded_at, hours_in_window, grid_snapshot)
-  SELECT p_t, 'pool', 0, p_user,
+  SELECT p_t, p_side, p_round, p_user,
          CASE WHEN p_state = 'engaged' THEN 'edited' ELSE 'skipped' END,
          (SELECT min(created_at) FROM tournament_matches
-           WHERE tournament_id = p_t AND bracket_side = 'pool')
+           WHERE tournament_id = p_t AND bracket_side = p_side)
            + CASE WHEN p_state = 'engaged' THEN interval '2 hours' ELSE interval '6 days' END,
          CASE WHEN p_state = 'engaged' THEN 14 ELSE 0 END,
          CASE WHEN p_state = 'engaged'
@@ -182,6 +244,7 @@ DECLARE
     v_a     uuid;
     v_b     uuid;
     v_c     uuid;
+    v_d     uuid;
     v_r     uuid[];
     v_tm    tournament_matches;
     v_match uuid;
@@ -320,7 +383,56 @@ BEGIN
     -- The real ladder, on the real evidence.
     PERFORM public.lt_resolve_due_tournament_matches(false);
 
-    RAISE NOTICE '[JDL v4] parcours=%  entente=%  echeance=%', v_a, v_b, v_c;
+    -- ===================================================== D. L'impasse
+    -- The case a pool cannot show. Both sides of one semi answer the gate and
+    -- neither ever proposes a time: a pool would simply cancel that game, but
+    -- a knockout slot has to send somebody forward, and separating them on how
+    -- generously they filled the grid is not what the app told them the
+    -- deadline decides. So it refuses, and asks the organizer.
+    -- Offset 40 rather than 84: the pool rosters run to 83 and there are only
+    -- ~85 fixture players, so anything higher silently returns a short roster
+    -- and tournament_create refuses the field size.
+    v_r := ARRAY[v_jdl] || pg_temp.fakes(40, 3);
+    v_d := pg_temp.mk_ko_event(v_jdl, '[JDL v4] L''impasse', v_r,
+                               now() - interval '3 hours');
+
+    -- Jean's own semi resolves the ordinary way, so the fixture shows the
+    -- normal path and the refusal side by side.
+    SELECT tm.* INTO v_tm
+      FROM tournament_matches tm
+      JOIN tournament_registrations r1 ON r1.id = tm.player1_registration_id
+      JOIN tournament_registrations r2 ON r2.id = tm.player2_registration_id
+     WHERE tm.tournament_id = v_d AND tm.round_number = 1
+       AND v_jdl IN (r1.user_id, r2.user_id)
+     LIMIT 1;
+    IF v_tm.id IS NULL THEN
+        RAISE EXCEPTION 'no semi found for Jean in the knockout fixture';
+    END IF;
+
+    FOR v_n IN 1..array_length(v_r, 1) LOOP
+        -- Everyone answers, so nobody is Unreached and every side is Engaged.
+        -- Jean answers generously, the rest thinly: enough of a gap that the
+        -- old code would have picked a winner in BOTH semis.
+        PERFORM pg_temp.gate(v_d, v_r[v_n],
+                             CASE WHEN v_r[v_n] = v_jdl THEN 'engaged' ELSE 'passive' END,
+                             'main', 1);
+    END LOOP;
+    -- ...except Jean's opponent, who is left passive so that semi is a plain
+    -- one-sided walkover rather than the refusal.
+    SELECT array_agg(u) INTO v_mates FROM (
+        SELECT DISTINCT r.user_id AS u
+          FROM tournament_matches tm2
+          JOIN tournament_registrations r
+            ON r.id IN (tm2.player1_registration_id, tm2.player2_registration_id)
+         WHERE tm2.tournament_id = v_d AND tm2.round_number = 1
+           AND tm2.id <> v_tm.id) s;
+    -- The other semi: both engaged, evenly, and neither ever reaches out.
+    PERFORM pg_temp.gate(v_d, v_mates[1], 'engaged', 'main', 1);
+    PERFORM pg_temp.gate(v_d, v_mates[2], 'engaged', 'main', 1);
+
+    PERFORM public.lt_resolve_due_tournament_matches(false);
+
+    RAISE NOTICE '[JDL v4] parcours=%  entente=%  echeance=%  impasse=%', v_a, v_b, v_c, v_d;
 END;
 $$;
 
@@ -331,6 +443,6 @@ SELECT t.name,
        count(*) FILTER (WHERE tm.status = 'cancelled') AS annulees,
        count(*) FILTER (WHERE tm.status = 'completed') AS jouees
   FROM tournaments t
-  JOIN tournament_matches tm ON tm.tournament_id = t.id AND tm.bracket_side = 'pool'
+  JOIN tournament_matches tm ON tm.tournament_id = t.id
  WHERE t.name LIKE '[JDL v4]%'
  GROUP BY t.name ORDER BY t.name;
