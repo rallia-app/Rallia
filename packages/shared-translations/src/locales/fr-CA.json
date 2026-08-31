@@ -4738,6 +4738,14 @@
       "submit": "Créer la séance",
       "creating": "Création...",
       "publish": "Publier",
+      "publishNamed": "Publier {name}",
+      "confirmSpot": "Confirme ta présence",
+      "createSessionCta": {
+        "description": "Les membres jouent seulement quand une séance est au calendrier."
+      },
+      "publishCta": {
+        "description": "Une séance en brouillon reste invisible. Publie-la pour que le monde réponde."
+      },
       "created": "Séance créée",
       "published": "Séance publiée",
       "seriesCreated": "{count} séances créées",
@@ -5554,7 +5562,8 @@
         "openDescription": "{count} places sur {max} sont prises.",
         "closedDescription": "{count} joueurs sont inscrits. Génère le tableau pour commencer.",
         "liveTitle": "Tournoi en cours",
-        "liveDescription": "{done} parties jouées sur {total}. Touche une partie en attente dans le tableau pour enregistrer son résultat."
+        "liveDescription": "{done} parties jouées sur {total}. Touche une partie en attente dans le tableau pour enregistrer son résultat.",
+        "deadlinesDescription": "Mets une date sur chaque tour pour que le monde sache quand jouer."
       },
       "registerCta": {
         "full": "Tournoi complet",
@@ -5669,6 +5678,7 @@
       "reopenRegistration": "Rouvrir les inscriptions",
       "shareInviteLink": "Partager le lien d'invitation",
       "setDeadlines": "Échéances des tours",
+      "setDeadlinesCta": "Fixer les échéances des tours",
       "register": "S'inscrire",
       "addMyself": "M'ajouter",
       "withdraw": "Se retirer",

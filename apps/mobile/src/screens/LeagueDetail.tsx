@@ -82,6 +82,7 @@ import {
   useWithdrawFromSeason,
   useRemoveSeasonMember,
   usePublishSession,
+  useMySessionPresence,
   useProfilesByIds,
   usePlayersRatingReputation,
   useMyPayoutAccount,
@@ -702,6 +703,25 @@ export const LeagueDetail: React.FC = () => {
   const draftSeasons = useMemo(() => seasons.filter(s => s.status === 'draft'), [seasons]);
 
   const { data: seasonSessions = [] } = useSeasonSessions(openSeasonId);
+
+  const draftSessions = useMemo(
+    () => seasonSessions.filter(s => s.status === 'draft'),
+    [seasonSessions]
+  );
+  // The session a member has to answer next: published, still ahead of us, and
+  // soonest first. Only that one is worth a docked CTA.
+  const nextPublishedSession = useMemo(() => {
+    const now = Date.now();
+    return (
+      seasonSessions
+        .filter(s => s.status === 'published' && new Date(s.scheduled_at).getTime() > now)
+        .sort(
+          (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+        )[0] ?? null
+    );
+  }, [seasonSessions]);
+  const { data: myNextSessionPresence, isSuccess: myNextSessionPresenceLoaded } =
+    useMySessionPresence(nextPublishedSession?.id, userId);
 
   const { data: mySeasonMembership } = useMySeasonMembership(openSeasonId, userId);
   const isEnrolledInSeason = mySeasonMembership?.status === 'enrolled';
@@ -1905,6 +1925,20 @@ export const LeagueDetail: React.FC = () => {
     testID: string;
   } | null = (() => {
     if (league.status === 'closed') return null;
+    // Paused: nobody can join and no session can be added, so resuming is the
+    // only move on the board. It used to hide in the quiet utilities list.
+    if (isOrganizer && league.status === 'paused') {
+      return {
+        label: isResuming
+          ? t('leagueDetail.lifecycle.resuming')
+          : t('leagueDetail.lifecycle.resume'),
+        icon: 'play-circle-outline',
+        onPress: handleResumeLeague,
+        disabled: isResuming,
+        hint: t('leagueDetail.lifecycle.pausedBanner'),
+        testID: 'cta-resume-league-docked',
+      };
+    }
     // Organizer-sent invite: accept is the conversion moment.
     if (!isOrganizer && myMembership?.status === 'pending' && myMembership.invited_by) {
       return {
@@ -2012,6 +2046,54 @@ export const LeagueDetail: React.FC = () => {
           testID: 'cta-open-season-docked',
         };
       }
+      if (openSeason) {
+        // A season with no session on the calendar produces no games at all,
+        // and a draft session is invisible to members until it is published.
+        // Both steps used to live only at the bottom of the Sessions tab.
+        if (seasonSessions.length === 0) {
+          return {
+            label: t('leagueDetail.sessions.submit'),
+            icon: 'calendar-outline',
+            onPress: handleOpenCreateSession,
+            disabled: false,
+            hint: t('leagueDetail.sessions.createSessionCta.description'),
+            testID: 'cta-create-session-docked',
+          };
+        }
+        if (draftSessions.length > 0) {
+          return {
+            label: t('leagueDetail.sessions.publishNamed').replace('{name}', draftSessions[0].name),
+            icon: 'megaphone-outline',
+            onPress: () => handlePublishSession(draftSessions[0].id, draftSessions[0].version),
+            disabled: isPublishingSession,
+            hint: t('leagueDetail.sessions.publishCta.description'),
+            testID: 'cta-publish-session-docked',
+          };
+        }
+      }
+    }
+    // Members: the next session only fills up if people answer it. Last in the
+    // chain, so joining or enrolling always wins the dock first.
+    if (
+      canParticipateInSeason &&
+      nextPublishedSession &&
+      // No row yet means "never answered"; undefined just means still loading,
+      // and treating that as unanswered flashes the CTA at a confirmed member.
+      myNextSessionPresenceLoaded &&
+      (!myNextSessionPresence || myNextSessionPresence.status === 'pending') &&
+      !(
+        nextPublishedSession.confirmation_deadline_at &&
+        new Date(nextPublishedSession.confirmation_deadline_at).getTime() < Date.now()
+      )
+    ) {
+      return {
+        label: t('leagueDetail.sessions.confirmSpot'),
+        icon: 'checkmark-circle-outline',
+        onPress: () => handleOpenSession(nextPublishedSession.id, nextPublishedSession.name),
+        disabled: false,
+        hint: `${nextPublishedSession.name} · ${sessionWhen(nextPublishedSession)}`,
+        testID: 'cta-confirm-session-docked',
+      };
     }
     return null;
   })();
@@ -2295,7 +2377,9 @@ export const LeagueDetail: React.FC = () => {
             testID={primaryAction.testID}
           >
             <Ionicons name={primaryAction.icon} size={20} color="#ffffff" />
-            <Text size="base" weight="semibold" color="#ffffff">
+            {/* A session name rides in the label, so it truncates rather than
+                wrapping the bar taller than the scroll padding allows for. */}
+            <Text size="base" weight="semibold" color="#ffffff" numberOfLines={1}>
               {primaryAction.label}
             </Text>
           </TouchableOpacity>

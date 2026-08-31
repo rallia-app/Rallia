@@ -4738,6 +4738,14 @@
       "submit": "Create session",
       "creating": "Creating...",
       "publish": "Publish",
+      "publishNamed": "Publish {name}",
+      "confirmSpot": "Confirm your spot",
+      "createSessionCta": {
+        "description": "Members only get games once a session is on the calendar."
+      },
+      "publishCta": {
+        "description": "A draft session stays invisible. Publish it so members can answer."
+      },
       "created": "Session created",
       "published": "Session published",
       "seriesCreated": "{count} sessions created",
@@ -5554,7 +5562,8 @@
         "openDescription": "{count} of {max} spots filled.",
         "closedDescription": "{count} players are in. Generate the bracket to start play.",
         "liveTitle": "Tournament in progress",
-        "liveDescription": "{done} of {total} games completed. Tap a pending game in the bracket to record its result."
+        "liveDescription": "{done} of {total} games completed. Tap a pending game in the bracket to record its result.",
+        "deadlinesDescription": "Set a date for each round so players know when to play by."
       },
       "registerCta": {
         "full": "Tournament full",
@@ -5669,6 +5678,7 @@
       "reopenRegistration": "Reopen registration",
       "shareInviteLink": "Share invite link",
       "setDeadlines": "Round deadlines",
+      "setDeadlinesCta": "Set the round deadlines",
       "register": "Register",
       "addMyself": "Add myself",
       "withdraw": "Withdraw",

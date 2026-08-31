@@ -78,8 +78,6 @@ interface OverviewTabProps {
   onWithdraw: () => void;
   withdraw: PendingOnly;
   refundRegistration: PendingOnly;
-  canPlayerShare: boolean;
-  onInviteFriends: () => void;
 
   // Organizer dashboard
   organizerName: string | null;
@@ -140,8 +138,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onWithdraw,
   withdraw,
   refundRegistration,
-  canPlayerShare,
-  onInviteFriends,
   organizerName,
   organizerRows,
   pendingRequestRows,
@@ -310,21 +306,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       />
     )}
 
-    {/* Registered players can pull friends in: their link redeems through the
-            normal rules, so it only shows where sharing is mintable. */}
-    {canPlayerShare && myActiveRegistration && (
-      <DashboardCtaCard
-        icon="share-social-outline"
-        title={t('tournamentDetail.dashboard.inviteFriendsCta.title')}
-        description={t('tournamentDetail.dashboard.inviteFriendsCta.description')}
-        buttonLabel={t('tournamentDetail.invite.shareCta')}
-        buttonIcon="share-outline"
-        onPress={onInviteFriends}
-        colors={colors}
-        testID="cta-invite-friends"
-      />
-    )}
-
     {/* Participant: my next game (also shown to organizers who play) */}
     {myBracketState && (
       <View style={styles.section}>
@@ -374,29 +355,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 )}
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.primary} />
-            </TouchableOpacity>
-
-            {/* Organize the game with your opponent in a shared round chat. */}
-            <TouchableOpacity
-              onPress={() => handleOpenRoundChat(myNextMatch.id)}
-              activeOpacity={0.7}
-              disabled={openRoundChat.isPending}
-              style={[
-                styles.primaryButton,
-                styles.roundChatBtn,
-                { backgroundColor: colors.primary },
-                openRoundChat.isPending && styles.buttonDisabled,
-              ]}
-              accessibilityRole="button"
-            >
-              {openRoundChat.isPending ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Ionicons name="chatbubbles-outline" size={20} color="#ffffff" />
-              )}
-              <Text size="base" weight="semibold" color="#ffffff">
-                {t('tournamentDetail.dashboard.myMatch.organize')}
-              </Text>
             </TouchableOpacity>
 
             {onEditAvailability && (

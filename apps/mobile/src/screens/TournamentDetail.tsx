@@ -1177,9 +1177,10 @@ export const TournamentDetail: React.FC = () => {
     generateKnockout.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
   }, [tournament, generateKnockout]);
 
-  const { data: roundDeadlines = [] } = useTournamentRoundDeadlines(
-    shouldFetchBracket && tournament?.status === 'in_progress' ? tournament?.id : undefined
-  );
+  const { data: roundDeadlines = [], isSuccess: roundDeadlinesLoaded } =
+    useTournamentRoundDeadlines(
+      shouldFetchBracket && tournament?.status === 'in_progress' ? tournament?.id : undefined
+    );
 
   // The phase the players are racing right now: the pool deadline while the
   // pool stage is live, else the earliest knockout round still unresolved.
@@ -2292,7 +2293,42 @@ export const TournamentDetail: React.FC = () => {
         testID: 'cta-availability-gate',
       };
     }
-    if (wasCancelled || isFinished || isLive) return null;
+    if (wasCancelled || isFinished) return null;
+    // Live phase, gate answered. The dock follows the scheduling funnel: the
+    // player's next step is the pairing room, the organizer's is the deadline
+    // that makes the funnel run at all.
+    if (isLive) {
+      // Knockout only: a pool player owes several games at once, so the pane
+      // lists the slate. One docked opponent would read as one game to play.
+      if (myNextMatch && myNextMatch.bracket_side !== 'pool' && myMatchP1 && myMatchP2) {
+        return {
+          label: t('tournamentDetail.dashboard.myMatch.organize'),
+          icon: 'chatbubbles-outline',
+          onPress: () => handleOpenRoundChat(myNextMatch.id),
+          disabled: openRoundChat.isPending,
+          hint: myNextMatchDeadline ? formatDeadline(myNextMatchDeadline) : null,
+          testID: 'cta-organize-my-game',
+        };
+      }
+      // Only once the query has answered: an empty array while it loads would
+      // flash this CTA at an organizer who already set every date.
+      if (
+        isOrganizer &&
+        adminActions.canSetDeadlines &&
+        roundDeadlinesLoaded &&
+        roundDeadlines.length === 0
+      ) {
+        return {
+          label: t('tournamentDetail.actions.setDeadlinesCta'),
+          icon: 'hourglass-outline',
+          onPress: handleSetDeadlines,
+          disabled: false,
+          hint: t('tournamentDetail.dashboard.nextStep.deadlinesDescription'),
+          testID: 'cta-set-deadlines-docked',
+        };
+      }
+      return null;
+    }
     const withFee = (base: string) => (feeTotalLabel ? `${base} · ${feeTotalLabel}` : base);
     const registerHint = [spotsLeftLabel, registerCloseHint, refundSummary]
       .filter(Boolean)
@@ -2391,6 +2427,20 @@ export const TournamentDetail: React.FC = () => {
           testID: 'cta-setup-bracket',
         };
       }
+    }
+    // Nothing left to convert: a registered player's remaining lever is filling
+    // the draw. Last on purpose, so it never outranks a lifecycle step.
+    if (canPlayerShare && myActiveRegistration) {
+      return {
+        label: t('tournamentDetail.invite.shareCta'),
+        icon: 'share-social-outline',
+        onPress: handleShareInviteLink,
+        disabled: false,
+        hint:
+          [spotsLeftLabel, registerCloseHint].filter(Boolean).join(' · ') ||
+          t('tournamentDetail.dashboard.inviteFriendsCta.description'),
+        testID: 'cta-invite-friends-docked',
+      };
     }
     return null;
   })();
@@ -2786,8 +2836,6 @@ export const TournamentDetail: React.FC = () => {
             onWithdraw={onWithdraw}
             withdraw={withdraw}
             refundRegistration={refundRegistration}
-            canPlayerShare={canPlayerShare}
-            onInviteFriends={handleShareInviteLink}
             organizerName={organizerName}
             organizerRows={organizerRows}
             pendingRequestRows={pendingRequestRows}
