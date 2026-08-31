@@ -166,13 +166,8 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
         bg: colors.inputBackground,
         text: colors.textMuted,
       },
-      // The quiet ground under the viewer's own pairings.
-      mine: {
-        bg: isDark ? `${primary[500]}14` : `${primary[600]}0D`,
-        text: colors.text,
-      },
     }),
-    [isDark, colors.inputBackground, colors.textMuted, colors.text]
+    [isDark, colors.inputBackground, colors.textMuted]
   );
 
   const deadlineAt = useMemo(
@@ -388,7 +383,6 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
             const rowStyle = [
               styles.row,
               i > 0 && [styles.rowDivider, { borderTopColor: colors.border }],
-              iPlayThis && { backgroundColor: tones.mine.bg, borderRadius: radiusPixels.md },
             ];
 
             // A ready pairing of mine opens its room: the state IS the next
