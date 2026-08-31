@@ -72,6 +72,7 @@ interface ConversationRPCRow {
   tournament_name: string | null;
   tournament_status: string | null;
   tournament_sport_name: string | null;
+  tournament_pool_number: number | null;
 }
 
 // ============================================================================
@@ -165,6 +166,7 @@ export async function getPlayerConversations(
         network_id: row.network_id,
         network_type: row.network_type,
         tournament_id: row.tournament_id,
+        tournament_pool_number: row.tournament_pool_number,
         tournament_info: tournamentInfo,
       };
     });
@@ -673,6 +675,7 @@ interface FilteredConversationRPCRow {
   tournament_name: string | null;
   tournament_status: string | null;
   tournament_sport_name: string | null;
+  tournament_pool_number: number | null;
 }
 
 /**
@@ -794,6 +797,7 @@ export async function getPlayerConversationsFiltered(
           network_id: row.network_id,
           network_type: row.network_type,
           tournament_id: row.tournament_id,
+          tournament_pool_number: row.tournament_pool_number,
           tournament_info: tournamentInfo,
         };
       }

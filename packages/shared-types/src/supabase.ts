@@ -11636,6 +11636,7 @@ export type Database = {
           title: string
           tournament_id: string
           tournament_name: string
+          tournament_pool_number: number
           tournament_sport_name: string
           tournament_status: string
           unread_count: number
@@ -11677,6 +11678,7 @@ export type Database = {
           title: string
           tournament_id: string
           tournament_name: string
+          tournament_pool_number: number
           tournament_sport_name: string
           tournament_status: string
           unread_count: number

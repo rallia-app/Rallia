@@ -69,7 +69,17 @@ export function getConversationDisplayName(
   }
 
   if (conversation.conversation_type === 'tournament') {
-    return conversation.tournament_info?.name || conversation.title || t('chat.filters.tournament');
+    const name =
+      conversation.tournament_info?.name || conversation.title || t('chat.filters.tournament');
+    // A pool room shares its tournament's title; the pool number is rendered
+    // per locale here rather than baked into the shared string.
+    if (conversation.tournament_pool_number != null) {
+      return `${name} · ${t('chat.poolRoom.subtitle').replace(
+        '{n}',
+        String(conversation.tournament_pool_number)
+      )}`;
+    }
+    return name;
   }
 
   return conversation.title || t('chat.conversation.groupChat');

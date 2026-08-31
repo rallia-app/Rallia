@@ -427,6 +427,8 @@ export interface ConversationPreview {
   network_type?: string | null; // 'friends', 'player_group', 'club', 'community', 'public', 'private'
   // Tournament-linked chat info
   tournament_id?: string | null;
+  /** Set on a pool room; the list renders "{name} · Poule {n}" from it. */
+  tournament_pool_number?: number | null;
   tournament_info?: {
     name: string;
     sport_name: string;
