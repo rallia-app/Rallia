@@ -930,7 +930,7 @@ export default function ChatConversationScreen() {
           title={t('chat.pairingScore.title')}
           subtitle={t('chat.pairingScore.subtitle')}
           onPress={handleEnterScore}
-          tone={canOrganizeMatch ? 'subtle' : 'primary'}
+          tone="accent"
           testID="cta-pairing-score"
         />
       )}

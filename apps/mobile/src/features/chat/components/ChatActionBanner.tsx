@@ -2,28 +2,30 @@
  * ChatActionBanner
  *
  * The pinned CTA bar at the top of a chat (below the header, above the
- * messages). One styling source for every such bar: MatchOrganizerBanner is the
- * 'primary' one, and the pairing score entry uses 'subtle' so the two can stack
- * in a round chat without shouting over each other.
+ * messages). One styling source for every such bar.
+ *
+ * Tone carries the meaning, not just the weight: 'primary' (teal) is the
+ * forward-looking action — organize the next game — and 'accent' (gold, the
+ * colour this app already uses for trophies and champions) is the result of
+ * one already played. Both are filled, so a chat that offers both shows two
+ * unmistakable bars that cannot be mistaken for each other.
  */
 
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { spacingPixels, primary } from '@rallia/design-system';
+import { spacingPixels, primary, accent, neutral, base } from '@rallia/design-system';
 
 import { useThemeStyles } from '#/hooks';
-
-const WHITE = '#ffffff';
 
 export interface ChatActionBannerProps {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   subtitle: string;
   onPress: () => void;
-  /** 'primary' fills with the brand colour; 'subtle' tints it. */
-  tone?: 'primary' | 'subtle';
+  /** 'primary' = organize a game (teal); 'accent' = a played result (gold). */
+  tone?: 'primary' | 'accent';
   accessibilityLabel?: string;
   testID?: string;
 }
@@ -38,14 +40,20 @@ export function ChatActionBanner({
   testID,
 }: ChatActionBannerProps) {
   const { colors, isDark } = useThemeStyles();
-  const accent = isDark ? primary[500] : primary[600];
-  const isSubtle = tone === 'subtle';
+  const isAccent = tone === 'accent';
 
-  const background = isSubtle ? (isDark ? primary[950] : primary[50]) : accent;
-  const titleColor = isSubtle ? colors.text : WHITE;
-  const subtitleColor = isSubtle ? colors.textMuted : 'rgba(255,255,255,0.88)';
-  const iconColor = isSubtle ? accent : WHITE;
-  const chevronColor = isSubtle ? accent : 'rgba(255,255,255,0.9)';
+  // Gold is a light hue: it carries near-black text, where teal carries white.
+  // The opposite polarity is half of what tells the two bars apart at a glance.
+  const background = isAccent
+    ? isDark
+      ? accent[400]
+      : accent[500]
+    : isDark
+      ? primary[500]
+      : primary[600];
+  const titleColor = isAccent ? neutral[950] : base.white;
+  const subtitleColor = isAccent ? neutral[800] : 'rgba(255,255,255,0.88)';
+  const bubbleColor = isAccent ? 'rgba(12,21,20,0.14)' : 'rgba(255,255,255,0.22)';
 
   return (
     <Pressable
@@ -59,23 +67,18 @@ export function ChatActionBanner({
       accessibilityLabel={accessibilityLabel ?? title}
       testID={testID}
     >
-      <View
-        style={[
-          styles.iconCircle,
-          { backgroundColor: isSubtle ? `${accent}20` : 'rgba(255,255,255,0.22)' },
-        ]}
-      >
-        <Ionicons name={icon} size={20} color={iconColor} />
+      <View style={[styles.iconCircle, { backgroundColor: bubbleColor }]}>
+        <Ionicons name={icon} size={20} color={titleColor} />
       </View>
       <View style={styles.textBlock}>
-        <Text size="sm" weight="bold" color={titleColor}>
+        <Text size="base" weight="bold" color={titleColor}>
           {title}
         </Text>
         <Text size="xs" color={subtitleColor} lineHeight="tight" style={styles.subtitle}>
           {subtitle}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={chevronColor} />
+      <Ionicons name="chevron-forward" size={20} color={titleColor} />
     </Pressable>
   );
 }
@@ -88,16 +91,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[3],
+    paddingVertical: spacingPixels[3.5],
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   pressed: {
     opacity: 0.9,
   },
   iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },
