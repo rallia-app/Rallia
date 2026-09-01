@@ -17,8 +17,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { SelectableChip, Text, useToast } from '@rallia/shared-components';
+import { base, spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   lightHaptic,
   selectionHaptic,
@@ -41,7 +41,7 @@ import { SearchBar } from '#/components/SearchBar';
 import RatingBadge from '#/components/RatingBadge';
 import ReputationBadge from '#/components/ReputationBadge';
 import ReasonBadge, { REASON_BADGE_CONFIG, type ReasonKey } from '#/components/ReasonBadge';
-import { FilterChip, FilterResetChip } from './MatchFiltersBar';
+import { FilterResetChip } from './MatchFiltersBar';
 import * as Analytics from '#/services/analytics';
 
 // =============================================================================
@@ -463,7 +463,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   });
 
   // Toggle a reason filter chip (multi-select, AND semantics server-side).
-  // FilterChip provides its own haptic + press animation.
+  // SelectableChip provides its own press animation; the haptic fires at the call site.
   const handleToggleReasonFilter = useCallback((key: ReasonKey) => {
     setReasonFilters(prev => (prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]));
   }, []);
@@ -768,17 +768,28 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
               isDark={isDark}
             />
           )}
-          {REASON_FILTER_OPTIONS.map(option => (
-            <FilterChip
-              key={option.key}
-              value={t(option.labelKey)}
-              isActive={reasonFilters.includes(option.key)}
-              onPress={() => handleToggleReasonFilter(option.key)}
-              isDark={isDark}
-              icon={REASON_BADGE_CONFIG[option.key].icon}
-              hasDropdown={false}
-            />
-          ))}
+          {REASON_FILTER_OPTIONS.map(option => {
+            const isActive = reasonFilters.includes(option.key);
+            return (
+              <SelectableChip
+                key={option.key}
+                label={t(option.labelKey)}
+                selected={isActive}
+                animateOnPress
+                icon={
+                  <Ionicons
+                    name={REASON_BADGE_CONFIG[option.key].icon}
+                    size={14}
+                    color={isActive ? base.white : colors.textMuted}
+                  />
+                }
+                onPress={() => {
+                  lightHaptic();
+                  handleToggleReasonFilter(option.key);
+                }}
+              />
+            );
+          })}
         </ScrollView>
       )}
 

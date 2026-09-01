@@ -15,7 +15,12 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Text, LocationSelector, type LocationMode } from '@rallia/shared-components';
+import {
+  Text,
+  LocationSelector,
+  SelectableChip,
+  type LocationMode,
+} from '@rallia/shared-components';
 import { useTheme, DISTANCE_OPTIONS, MATCH_TIER_OPTIONS } from '@rallia/shared-hooks';
 import type {
   RatingScoreOption,
@@ -37,10 +42,10 @@ import type {
 } from '@rallia/shared-hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
 import {
+  base,
   spacingPixels,
   radiusPixels,
   primary,
-  neutral,
   secondary,
   duration as animDuration,
   lightTheme,
@@ -116,75 +121,6 @@ const JOIN_MODE_OPTIONS: JoinModeFilter[] = ['all', 'direct', 'request'];
 const DURATION_OPTIONS_LIST: DurationFilter[] = ['all', '30', '60', '90', '120+'];
 const SPOTS_AVAILABLE_OPTIONS: SpotsAvailableFilter[] = ['all', 'any', '1', '2', '3'];
 const REPUTATION_OPTIONS: ReputationFilter[] = ['all', 'bronze', 'silver', 'gold', 'platinum'];
-
-// =============================================================================
-// FILTER CHIP COMPONENT
-// =============================================================================
-
-interface FilterChipProps {
-  value: string;
-  isActive: boolean;
-  onPress: () => void;
-  isDark: boolean;
-  hasDropdown?: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
-}
-
-export function FilterChip({
-  value,
-  isActive,
-  onPress,
-  isDark,
-  hasDropdown = true,
-  icon,
-}: FilterChipProps) {
-  const scaleAnim = useMemo(() => new Animated.Value(1), []);
-
-  const bgColor = isActive ? primary[500] : isDark ? neutral[800] : neutral[100];
-  const borderColor = isActive ? primary[400] : isDark ? neutral[700] : neutral[200];
-  const textColor = isActive ? '#ffffff' : isDark ? neutral[300] : neutral[600];
-
-  const handlePress = () => {
-    lightHaptic();
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    onPress();
-  };
-
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
-        style={[
-          styles.chip,
-          {
-            backgroundColor: bgColor,
-            borderColor: borderColor,
-          },
-        ]}
-        onPress={handlePress}
-        activeOpacity={0.85}
-      >
-        {icon && <Ionicons name={icon} size={14} color={textColor} style={styles.chipIcon} />}
-        <Text size="xs" weight={isActive ? 'semibold' : 'medium'} color={textColor}>
-          {value}
-        </Text>
-        {hasDropdown && (
-          <Ionicons name="chevron-down" size={12} color={textColor} style={styles.chipChevron} />
-        )}
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
 
 /** Secondary-tinted "reset" pill shown at the head of a filter row when any filter is active. */
 export function FilterResetChip({
@@ -1252,13 +1188,21 @@ export default function MatchFiltersBar({
 
         {/* "For you" preset — pinned ahead of the sorted chips so it never moves */}
         {showForYou && onForYouPress && (
-          <FilterChip
-            value={t('publicMatches.filters.forYou.label')}
-            isActive={forYouActive}
-            onPress={onForYouPress}
-            isDark={isDark}
-            icon={forYouActive ? 'sparkles' : 'sparkles-outline'}
-            hasDropdown={false}
+          <SelectableChip
+            label={t('publicMatches.filters.forYou.label')}
+            selected={forYouActive}
+            animateOnPress
+            icon={
+              <Ionicons
+                name={forYouActive ? 'sparkles' : 'sparkles-outline'}
+                size={14}
+                color={forYouActive ? base.white : colors.textMuted}
+              />
+            }
+            onPress={() => {
+              void lightHaptic();
+              onForYouPress();
+            }}
           />
         )}
 
@@ -1272,17 +1216,29 @@ export default function MatchFiltersBar({
         )}
 
         {/* Filter Chips — sorted with active filters first */}
-        {filterChips.map(chip => (
-          <FilterChip
-            key={chip.key}
-            value={chip.value}
-            isActive={chip.isActive}
-            onPress={chip.onPress}
-            isDark={isDark}
-            icon={chip.icon}
-            hasDropdown={chip.hasDropdown}
-          />
-        ))}
+        {filterChips.map(chip => {
+          const chipTint = chip.isActive ? base.white : colors.textMuted;
+          return (
+            <SelectableChip
+              key={chip.key}
+              label={chip.value}
+              selected={chip.isActive}
+              animateOnPress
+              icon={
+                chip.icon ? <Ionicons name={chip.icon} size={14} color={chipTint} /> : undefined
+              }
+              trailingIcon={
+                chip.hasDropdown === false ? undefined : (
+                  <Ionicons name="chevron-down" size={12} color={chipTint} />
+                )
+              }
+              onPress={() => {
+                void lightHaptic();
+                chip.onPress();
+              }}
+            />
+          );
+        })}
       </ScrollView>
 
       {/* =================================================================== */}
@@ -1585,21 +1541,6 @@ const styles = StyleSheet.create({
   },
   locationSelectorWrapper: {
     marginRight: spacingPixels[1],
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
-    gap: spacingPixels[1],
-  },
-  chipIcon: {
-    marginRight: 2,
-  },
-  chipChevron: {
-    marginLeft: 2,
   },
   resetChip: {
     flexDirection: 'row',

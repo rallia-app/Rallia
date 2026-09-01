@@ -5,17 +5,16 @@
  * Mirrors PlayerMatchFilterChips.
  */
 
-import React, { useCallback, useMemo } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { Text } from '@rallia/shared-components';
-import { useTheme } from '@rallia/shared-hooks';
+import React, { useCallback } from 'react';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import { SelectableChip } from '@rallia/shared-components';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { spacingPixels, radiusPixels, primary, neutral } from '@rallia/design-system';
+import { spacingPixels, base } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
 import type { UpcomingBookingFilter, PastBookingFilter } from '@rallia/shared-hooks';
 
 import { lightHaptic } from '#/utils/haptics';
-import { useTranslation } from '#/hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 
 // =============================================================================
 // TYPES
@@ -62,59 +61,6 @@ const PAST_OPTIONS: FilterOption<PastBookingFilter>[] = [
 ];
 
 // =============================================================================
-// FILTER CHIP COMPONENT
-// =============================================================================
-
-interface ChipProps {
-  label: string;
-  isActive: boolean;
-  onPress: () => void;
-  isDark: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
-  isFirst?: boolean;
-}
-
-function FilterChip({ label, isActive, onPress, isDark, icon, isFirst }: ChipProps) {
-  const scaleAnim = useMemo(() => new Animated.Value(1), []);
-
-  const bgColor = isActive ? primary[500] : isDark ? neutral[800] : neutral[100];
-  const borderColor = isActive ? primary[400] : isDark ? neutral[700] : neutral[200];
-  const textColor = isActive ? '#ffffff' : isDark ? neutral[300] : neutral[600];
-
-  const handlePress = () => {
-    lightHaptic();
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    onPress();
-  };
-
-  return (
-    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, isFirst && styles.firstChip]}>
-      <TouchableOpacity
-        style={[styles.chip, { backgroundColor: bgColor, borderColor }]}
-        onPress={handlePress}
-        activeOpacity={0.85}
-      >
-        {icon && <Ionicons name={icon} size={14} color={textColor} style={styles.chipIcon} />}
-        <Text size="xs" weight={isActive ? 'semibold' : 'medium'} color={textColor}>
-          {label}
-        </Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
-// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -125,9 +71,8 @@ export default function BookingFilterChips({
   onUpcomingFilterToggle,
   onPastFilterToggle,
 }: BookingFilterChipsProps) {
-  const { theme } = useTheme();
+  const { colors } = useThemeStyles();
   const { t } = useTranslation();
-  const isDark = theme === 'dark';
 
   const options = timeFilter === 'upcoming' ? UPCOMING_OPTIONS : PAST_OPTIONS;
   const currentFilter = timeFilter === 'upcoming' ? upcomingFilter : pastFilter;
@@ -145,17 +90,31 @@ export default function BookingFilterChips({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {options.map((option, index) => (
-          <FilterChip
-            key={option.value}
-            label={getLabel(option.labelKey)}
-            isActive={currentFilter === option.value}
-            onPress={() => onToggle(option.value)}
-            isDark={isDark}
-            icon={option.value !== 'all' ? option.icon : undefined}
-            isFirst={index === 0}
-          />
-        ))}
+        {options.map(option => {
+          const isActive = currentFilter === option.value;
+          const showIcon = option.value !== 'all' && option.icon;
+          return (
+            <SelectableChip
+              key={option.value}
+              label={getLabel(option.labelKey)}
+              selected={isActive}
+              animateOnPress
+              icon={
+                showIcon ? (
+                  <Ionicons
+                    name={option.icon as keyof typeof Ionicons.glyphMap}
+                    size={14}
+                    color={isActive ? base.white : colors.textMuted}
+                  />
+                ) : undefined
+              }
+              onPress={() => {
+                void lightHaptic();
+                onToggle(option.value);
+              }}
+            />
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -173,20 +132,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[2],
     alignItems: 'center',
-  },
-  firstChip: {
-    marginLeft: 0,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
-    gap: spacingPixels[1],
-  },
-  chipIcon: {
-    marginRight: 2,
   },
 });

@@ -5,11 +5,13 @@
 // Foundation Components
 export { Button } from './foundation/Button';
 export { IconButton } from './foundation/IconButton';
+export { SelectableChip } from './foundation/SelectableChip';
 export { Text } from './foundation/Text';
 export { Heading } from './foundation/Heading';
 
 export type { ButtonProps } from './foundation/Button';
 export type { IconButtonProps } from './foundation/IconButton';
+export type { SelectableChipProps } from './foundation/SelectableChip';
 export type { TextProps } from './foundation/Text';
 export type { HeadingProps } from './foundation/Heading';
 

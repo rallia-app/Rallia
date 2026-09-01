@@ -14,7 +14,7 @@ import {
   Animated,
   TextInput,
 } from 'react-native';
-import { Text } from '@rallia/shared-components';
+import { SelectableChip, Text } from '@rallia/shared-components';
 import {
   useTheme,
   type ReportStatus,
@@ -22,6 +22,7 @@ import {
   type ReportPriority,
 } from '@rallia/shared-hooks';
 import {
+  base,
   spacingPixels,
   radiusPixels,
   primary,
@@ -32,7 +33,7 @@ import {
 } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useTranslation, type TranslationKey } from '#/hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '#/hooks';
 import { lightHaptic, selectionHaptic } from '#/utils/haptics';
 
 // =============================================================================
@@ -107,82 +108,6 @@ const PRIORITY_LABEL_KEYS: Record<ReportPriority | '', TranslationKey> = {
   normal: 'admin.moderation.priority.normal',
   low: 'admin.moderation.priority.low',
 };
-
-// =============================================================================
-// FILTER CHIP COMPONENT
-// =============================================================================
-
-interface FilterChipProps {
-  label: string;
-  value: string;
-  isActive: boolean;
-  onPress: () => void;
-  isDark: boolean;
-  hasDropdown?: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
-}
-
-function FilterChip({
-  label,
-  value,
-  isActive,
-  onPress,
-  isDark,
-  hasDropdown = true,
-  icon,
-}: FilterChipProps) {
-  const scaleAnim = useMemo(() => new Animated.Value(1), []);
-
-  const bgColor = isActive ? primary[500] : isDark ? neutral[800] : neutral[100];
-  const borderColor = isActive ? primary[400] : isDark ? neutral[700] : neutral[200];
-  const textColor = isActive ? '#ffffff' : isDark ? neutral[300] : neutral[600];
-
-  const handlePress = () => {
-    lightHaptic();
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    onPress();
-  };
-
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
-        style={[
-          styles.chip,
-          {
-            backgroundColor: bgColor,
-            borderColor: borderColor,
-          },
-        ]}
-        onPress={handlePress}
-        activeOpacity={0.85}
-      >
-        {icon && <Ionicons name={icon} size={14} color={textColor} style={styles.chipIcon} />}
-        <Text size="xs" weight={isActive ? 'semibold' : 'medium'} color={textColor}>
-          {value || label}
-        </Text>
-        {hasDropdown && (
-          <Ionicons
-            name="chevron-down-outline"
-            size={12}
-            color={textColor}
-            style={styles.chipChevron}
-          />
-        )}
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
 
 // =============================================================================
 // SEARCH CHIP COMPONENT
@@ -409,6 +334,7 @@ export function ModerationFiltersBar({
   onReset,
 }: ModerationFiltersBarProps) {
   const { theme } = useTheme();
+  const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
 
@@ -484,6 +410,9 @@ export function ModerationFiltersBar({
       ? t('admin.moderation.filterPriority')
       : t(PRIORITY_LABEL_KEYS[filters.priority]);
 
+  /** Chip icons track the label colour the chip renders at. */
+  const chipTint = (selected: boolean) => (selected ? base.white : colors.textMuted);
+
   // Theme colors for reset chip
   const resetBgColor = isDark ? neutral[800] : neutral[100];
   const resetBorderColor = isDark ? neutral[700] : neutral[200];
@@ -507,33 +436,72 @@ export function ModerationFiltersBar({
         />
 
         {/* Status Filter */}
-        <FilterChip
-          label={t('admin.moderation.filterStatus')}
-          value={statusDisplay}
-          isActive={filters.status !== ''}
-          onPress={() => setShowStatusDropdown(true)}
-          isDark={isDark}
-          icon="flag-outline"
+        <SelectableChip
+          label={statusDisplay}
+          selected={filters.status !== ''}
+          animateOnPress
+          icon={<Ionicons name="flag-outline" size={14} color={chipTint(filters.status !== '')} />}
+          trailingIcon={
+            <Ionicons
+              name="chevron-down-outline"
+              size={12}
+              color={chipTint(filters.status !== '')}
+            />
+          }
+          onPress={() => {
+            void lightHaptic();
+            setShowStatusDropdown(true);
+          }}
         />
 
         {/* Report Type Filter */}
-        <FilterChip
-          label={t('admin.moderation.filterType')}
-          value={typeDisplay}
-          isActive={filters.reportType !== ''}
-          onPress={() => setShowTypeDropdown(true)}
-          isDark={isDark}
-          icon="warning-outline"
+        <SelectableChip
+          label={typeDisplay}
+          selected={filters.reportType !== ''}
+          animateOnPress
+          icon={
+            <Ionicons
+              name="warning-outline"
+              size={14}
+              color={chipTint(filters.reportType !== '')}
+            />
+          }
+          trailingIcon={
+            <Ionicons
+              name="chevron-down-outline"
+              size={12}
+              color={chipTint(filters.reportType !== '')}
+            />
+          }
+          onPress={() => {
+            void lightHaptic();
+            setShowTypeDropdown(true);
+          }}
         />
 
         {/* Priority Filter */}
-        <FilterChip
-          label={t('admin.moderation.filterPriority')}
-          value={priorityDisplay}
-          isActive={filters.priority !== ''}
-          onPress={() => setShowPriorityDropdown(true)}
-          isDark={isDark}
-          icon="alert-circle-outline"
+        <SelectableChip
+          label={priorityDisplay}
+          selected={filters.priority !== ''}
+          animateOnPress
+          icon={
+            <Ionicons
+              name="alert-circle-outline"
+              size={14}
+              color={chipTint(filters.priority !== '')}
+            />
+          }
+          trailingIcon={
+            <Ionicons
+              name="chevron-down-outline"
+              size={12}
+              color={chipTint(filters.priority !== '')}
+            />
+          }
+          onPress={() => {
+            void lightHaptic();
+            setShowPriorityDropdown(true);
+          }}
         />
 
         {/* Reset Button - only show when filters are active */}
@@ -606,21 +574,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[2],
     alignItems: 'center',
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
-    gap: spacingPixels[1],
-  },
-  chipIcon: {
-    marginRight: 2,
-  },
-  chipChevron: {
-    marginLeft: 2,
   },
   searchChip: {
     flexDirection: 'row',
