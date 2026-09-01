@@ -166,17 +166,17 @@
   </thead>
   <tbody>
     <tr>
-      <td><b>Jouée</b>, avec un vrai score</td>
+      <td>Jouée, avec un vrai score</td>
       <td>Vous avez joué. L'app ne touche à rien.</td>
     </tr>
     <tr>
-      <td><b>Forfait</b>, un seul a essayé</td>
+      <td>Forfait, un seul a essayé</td>
       <td>
         Un des deux a fait des gestes, l'autre non. Celui qui a essayé gagne.
       </td>
     </tr>
     <tr>
-      <td><b>Forfait</b>, les deux ont essayé</td>
+      <td>Forfait, les deux ont essayé</td>
       <td>
         Les deux ont donné leurs dispos et se sont relancés, mais une des deux personnes en a
         nettement fait plus: répondu plus vite, donné plus d'heures. C'est la règle la plus
@@ -185,13 +185,13 @@
       </td>
     </tr>
     <tr>
-      <td><b>Forfait</b> sans gagnant</td>
+      <td>Forfait sans gagnant</td>
       <td>
         Ni l'un ni l'autre n'a bougé alors que les deux ont été relancés. Personne n'avance.
       </td>
     </tr>
     <tr>
-      <td><b>Annulée</b></td>
+      <td>Annulée</td>
       <td>
         Les deux ont fait leur part, autant l'un que l'autre, et ça n'a pas adonné. Aucune faute,
         donc aucun perdant: la partie sort du classement au lieu d'être imputée à quelqu'un.
@@ -340,16 +340,15 @@
 <h2>Ce qui n'est pas à tester cette fois</h2>
 <ul>
   <li>
-    <b>Le no-show.</b> Quand une partie a été convenue, l'app sait distinguer qui s'est présenté:
-    les parties de tournoi reçoivent le rappel de check-in comme les autres. Ce qu'on n'a pas mis
-    en fixture, c'est le cas où ça bloque: le check-in exige d'être à moins de 500 m du terrain,
-    donc il est impossible sur une partie sans endroit précis, et il s'en crée quand aucun terrain
-    n'est suggéré ou quand quelqu'un propose un moment sans dire où.
+    <b>Le no-show.</b> Quand une partie a été convenue, l'app sait distinguer qui s'est présenté, et
+    les parties de tournoi reçoivent le rappel de check-in comme les autres. Le cas où ça bloquait,
+    une partie sans endroit précis, est réglé depuis: on peut maintenant s'y déclarer présent. Ça se
+    teste dans l'autre guide, section A3.
   </li>
   <li>
-    <b>Le double.</b> Les quatre tournois sont en simple. En double, la pénalité de réputation suit
-    maintenant la personne qui n'a rien fait au lieu de frapper les deux partenaires, mais il n'y a
-    pas de fixture pour te le montrer.
+    <b>Le double.</b> Les quatre tournois ici sont en simple. La pénalité de réputation suit
+    maintenant la personne qui n'a rien fait au lieu de frapper les deux partenaires, et ça se teste
+    dans l'autre guide, section A2.
   </li>
   <li>
     Les tournois payants, les inscriptions et les remboursements: rien n'a changé depuis ta dernière

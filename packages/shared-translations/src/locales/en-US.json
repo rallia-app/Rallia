@@ -262,6 +262,7 @@
       "reference_request_received": "Reference requested",
       "reference_request_accepted": "Reference accepted",
       "reference_request_declined": "Reference declined",
+      "reference_request_dismissed": "Reference passed on",
       "reminder": "Reminder",
       "payment": "Payment",
       "support": "Support",
@@ -465,6 +466,10 @@
         "title": "{playerName} declined your reference",
         "body": "{playerName} couldn't confirm your {sportName} rating. Tap to ask another player."
       },
+      "reference_request_dismissed": {
+        "title": "{playerName} passed on your request",
+        "body": "{playerName} didn't weigh in on your {sportName} level. Ask a player you've already played with."
+      },
       "match_spot_opened": {
         "title": "A spot opened in a {sportName} game",
         "body": "A spot just opened on {matchDate}{startTime}{locationName}. Tap to claim it before it's gone."
@@ -627,14 +632,18 @@
     "question": "Based on your experience playing with {name}, is this rating accurate?",
     "yesApprove": "Yes, Approve",
     "approveDescription": "This rating seems accurate",
-    "noDecline": "No, Decline",
+    "noDecline": "No, not accurate",
     "declineDescription": "This rating seems inaccurate",
+    "cantSay": "I can't say",
+    "cantSayDescription": "I have not played with this player",
+    "cantSayNote": "Nothing counts for or against their level.",
     "addMessage": "Add a message",
     "messagePlaceholder": "Add any feedback or context for the player...",
     "submitResponse": "Submit Response",
-    "selectResponse": "Please select approve or decline",
+    "selectResponse": "Please pick an answer",
     "responseSubmittedApprove": "Reference approved successfully!",
     "responseSubmittedDecline": "Reference declined",
+    "responseSubmittedCantSay": "Request closed. We let them know you passed.",
     "failedToSubmit": "Failed to submit response. Please try again.",
     "privacyNote": "Your response will be visible to the requesting player. Declined requests won't count towards their certification.",
     "badge": {
@@ -1180,6 +1189,7 @@
       "status": {
         "approved": "Approved",
         "contested": "Contested",
+        "passed": "Couldn't say",
         "pending": "Pending"
       },
       "filters": {
@@ -4018,16 +4028,16 @@
     "forSport": "Creating game for {sport}",
     "step": "Step {current} of {total}",
     "stepNames": {
-      "where": "Location",
+      "where": "Where",
       "when": "When",
-      "preferences": "Preferences"
+      "preferences": "Details"
     },
     "step1Title": "Where?",
-    "step1Description": "Select or enter your playing location",
+    "step1Description": "Pick where you'll play",
     "step2Title": "When?",
     "step2Description": "Choose when you want to play",
-    "step3Title": "Preferences",
-    "step3Description": "Set match format and preferences",
+    "step3Title": "Game details",
+    "step3Description": "Cost, format, and who can join",
     "next": "Next",
     "back": "Back",
     "createMatch": "Create game",
@@ -4104,10 +4114,14 @@
       "lockedFromBooking": "Date, time and duration locked from your court booking",
       "locationType": "Location Type",
       "locationTypeFacility": "Select Facility",
+      "locationTypeFacilityShort": "Facility",
+      "locationTypeRecommended": "Recommended",
       "locationTypeFacilityDescription": "Choose from available facilities",
       "locationTypeCustom": "Custom Location",
+      "locationTypeCustomShort": "Other place",
       "locationTypeCustomDescription": "Enter a custom address",
       "locationTypeTbd": "To Be Determined",
+      "locationTypeTbdShort": "Decide later",
       "locationTypeTbdDescription": "Decide later with participants",
       "gettingLocation": "Getting your location...",
       "searchingFacilities": "Searching facilities...",
@@ -4143,6 +4157,9 @@
       "callFacility": "Call",
       "emailFacility": "Email",
       "visitWebsite": "Website",
+      "courtCostSection": "Court cost",
+      "courtSection": "The court",
+      "courtSectionDescription": "Booking and cost",
       "isCourtFree": "Free Court",
       "isRecurring": "Repeat weekly",
       "isRecurringOn": "Next week's game is created as soon as this one ends, without a court. We tell you the moment courts open.",
@@ -4177,8 +4194,8 @@
       "joinModeDirectDescription": "Players join immediately",
       "joinModeRequest": "Request to Join",
       "joinModeRequestDescription": "You approve each player",
-      "opponentPreferences": "Opponent Preferences",
-      "opponentPreferencesDescription": "Optional filters for who can join",
+      "whoCanJoin": "Who can join",
+      "whoCanJoinDescription": "Choose who sees your game and who can join",
       "preferredGender": "Preferred Gender",
       "genderAny": "Any",
       "genderMale": "Male",
@@ -4249,7 +4266,7 @@
       "selectTimezone": "Select timezone for game location"
     },
     "nudges": {
-      "bookCourt": "Games with the court already booked fill about twice as often.",
+      "bookCourt": "Games with a booked court fill about twice as often.",
       "postEarly": "Posting a day ahead roughly doubles your chances of someone joining."
     },
     "booking": {
@@ -4262,7 +4279,7 @@
       "courtBookedDescription": "The court is marked as booked for this game.",
       "availableSlots": "Available slots",
       "noSlotsAvailable": "No upcoming slots available",
-      "firstComeFirstServe": "First come, first served — no reservation",
+      "firstComeFirstServe": "First come, first served, no reservation",
       "loadingSlots": "Loading availability...",
       "tapToBook": "Tap a slot to book",
       "externalBooking": "You'll be redirected to the booking site",
@@ -5059,8 +5076,8 @@
       "draftHint": "Regenerating reshuffles the unlocked pairings. Nothing reaches your members until you publish.",
       "publish": "Publish the sheet",
       "published": "Sheet published",
-      "stateDraft": "Draft",
-      "statePublished": "Published"
+      "stateDraft": "Sheet draft",
+      "statePublished": "Sheet published"
     },
     "score": {
       "title": "Enter score",
@@ -8143,6 +8160,85 @@
         "rejected": "Rejected"
       }
     },
+    "bugReports": {
+      "title": "Bug Reports",
+      "subtitle": "Bug reports submitted from the app. The status and notes you set here are shown back to players on the in-app board.",
+      "empty": "No bug reports match these filters.",
+      "loadError": "Bug reports could not be loaded.",
+      "noDetails": "No details provided",
+      "anonymous": "Anonymous",
+      "saveError": "The change could not be saved. Try again.",
+      "pagination": {
+        "showing": "Showing {start} to {end} of {total} bug reports",
+        "page": "Page {current} of {total}"
+      },
+      "status": {
+        "new": "New",
+        "reviewed": "Reviewed",
+        "in_progress": "In Progress",
+        "resolved": "Resolved",
+        "closed": "Closed"
+      },
+      "severity": {
+        "critical": "Critical",
+        "major": "Major",
+        "minor": "Minor"
+      },
+      "module": {
+        "profile_settings": "Profile & Settings",
+        "match_features": "Games",
+        "facilities": "Facilities",
+        "player_directory": "Player Directory",
+        "groups_communities": "Communities",
+        "notifications": "Notifications",
+        "performance": "Performance",
+        "other": "Other"
+      },
+      "table": {
+        "report": "Report",
+        "severity": "Severity",
+        "module": "Area",
+        "status": "Status",
+        "reporter": "Reporter",
+        "appVersion": "App Version",
+        "upvotes": "Upvotes",
+        "reportedOn": "Reported On"
+      },
+      "filters": {
+        "searchPlaceholder": "Search bug reports...",
+        "allStatuses": "Status",
+        "allSeverities": "Severity",
+        "allModules": "Area",
+        "allVisibilities": "Visibility",
+        "visible": "Visible",
+        "hidden": "Hidden",
+        "clearFilters": "Clear"
+      },
+      "detail": {
+        "title": "Bug Report",
+        "reportedOn": "Reported on {date}",
+        "hidden": "Hidden",
+        "steps": "Steps to Reproduce",
+        "expectedVsActual": "Expected vs Actual",
+        "screenshots": "Screenshots",
+        "screenshotAlt": "Screenshot {index}",
+        "reporter": "Reporter",
+        "appVersion": "App Version",
+        "device": "Device",
+        "trigger": "Trigger",
+        "lastUpdated": "Last Updated",
+        "updateStatus": "Status",
+        "adminNotes": "Admin Notes",
+        "notesPlaceholder": "Where does this report stand?",
+        "notesArePublic": "Notes are shown to players on the in-app board once the report is in progress or resolved.",
+        "visibleHint": "This report is visible to players on the in-app board.",
+        "hiddenHint": "This report is hidden from the in-app board.",
+        "hide": "Hide from players",
+        "unhide": "Show to players",
+        "close": "Close",
+        "save": "Save"
+      }
+    },
     "sidebar": {
       "brand": "Rallia Admin",
       "dashboard": "Dashboard",
@@ -8150,6 +8246,7 @@
       "users": "Users",
       "moderation": "Moderation",
       "ratingProofs": "Rating Proofs",
+      "bugReports": "Bug Reports",
       "activityLog": "Activity Log",
       "alerts": "Alerts",
       "networks": "Networks",
@@ -8458,7 +8555,7 @@
         "showEnabledOnly": "SMS-enabled only"
       },
       "categories": {
-        "match": "Match",
+        "match": "Game",
         "social": "Social / Community",
         "organization": "Organization",
         "system": "System",
@@ -8961,7 +9058,7 @@
       "anonymous": "Anonymous User",
       "noEmail": "No email",
       "sports": "sports",
-      "matches": "matches",
+      "matches": "games",
       "noSearchResults": "No users found matching your search",
       "noUsers": "No users found",
       "tryDifferentSearch": "Try a different search term",
@@ -9661,7 +9758,7 @@
       "lastUpdated": "Last updated",
       "overview": "Overview",
       "players": "Players",
-      "matches": "Matches",
+      "matches": "Games",
       "completed": "Completed",
       "views": "views",
       "sportStatistics": "Sport Statistics",
@@ -9745,7 +9842,7 @@
         "acquisition": "Acquisition",
         "invitations": "Invitations",
         "users": "Users",
-        "matches": "Matches",
+        "matches": "Games",
         "compatibility": "Compatibility"
       },
       "compat": {
@@ -9866,7 +9963,7 @@
       },
       "invitationType": {
         "referral": "Referral",
-        "match": "Match",
+        "match": "Game",
         "group": "Group",
         "community": "Community",
         "tournament": "Tournament",
@@ -11469,7 +11566,7 @@
     "tabs": {
       "info": "Info",
       "availability": "Availability",
-      "matches": "Matches"
+      "matches": "Games"
     },
     "about": "About",
     "accessBooking": {
@@ -11524,7 +11621,7 @@
     "loadingAvailability": "Loading available time slots...",
     "courtsAvailable": "{count} courts available",
     "paymentsNotAvailable": "This facility hasn't set up online payments yet. Please contact them directly to book paid slots.",
-    "firstComeFirstServe": "This facility operates on a first-come, first-served basis — no reservation required.",
+    "firstComeFirstServe": "This facility operates on a first-come, first-served basis, no reservation required.",
     "paidSlotsDisabled": "Some paid courts are unavailable for online booking. Contact the facility directly.",
     "contactFacilityToBook": "Contact facility to book",
     "unavailable": "Unavailable",
@@ -12664,7 +12761,7 @@
     "moduleLabel": "Where did it happen?",
     "modules": {
       "profile": "Profile",
-      "matches": "Matches",
+      "matches": "Games",
       "facilities": "Facilities",
       "playerDirectory": "Player Directory",
       "groupsCommunities": "Groups & Communities",
@@ -13161,6 +13258,60 @@
     },
     "systemNote": {
       "updated": "{name} updated their availability"
+    }
+  },
+  "quickGame": {
+    "banner": {
+      "title": "Post a game",
+      "subtitle": "Pick a day and a time, players ask to join here"
+    },
+    "sheet": {
+      "title": "Quick game",
+      "intro": "Everyone in {community} will see it and can ask to join.",
+      "sportLabel": "Sport",
+      "dayLabel": "Day",
+      "otherDay": "Other day",
+      "timeLabel": "Time",
+      "otherTime": "Other time",
+      "formatLabel": "Format",
+      "singles": "Singles",
+      "doubles": "Doubles",
+      "submit": "Post the game",
+      "whereLabel": "Where",
+      "placeTbd": "Decide later",
+      "durationLabel": "How long"
+    },
+    "summary": {
+      "anyStyle": "All game types",
+      "anyRating": "Any rating",
+      "anyGender": "Any gender",
+      "youApprove": "You approve each player"
+    },
+    "card": {
+      "title": "Open game",
+      "singles": "Singles",
+      "doubles": "Doubles",
+      "locationTbd": "Place TBD",
+      "spotsLeft": "{count} spots left",
+      "spotsLeft_one": "{count} spot left",
+      "full": "Full",
+      "cancelled": "Cancelled",
+      "past": "Already played",
+      "unavailable": "No longer available",
+      "youIn": "You're in",
+      "youHost": "You host",
+      "join": "Join",
+      "viewGame": "View game",
+      "joinFailed": "Couldn't join this game. Please try again.",
+      "loadingSpots": "Loading…",
+      "joinRequested": "Request sent to the host",
+      "askToJoin": "Ask to join",
+      "requestPending": "Request sent"
+    },
+    "error": {
+      "pastTitle": "That time has passed",
+      "pastBody": "We moved you to the next open slot. Pick another if you prefer.",
+      "createFailed": "Couldn't post the game. Please try again."
     }
   }
 }

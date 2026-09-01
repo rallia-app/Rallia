@@ -27,6 +27,7 @@ import { EditCommunityActionSheet } from '#/features/communities/components/Edit
 import { PendingRequestsActionSheet } from '#/features/communities/components/PendingRequestsSheet';
 // Matches components
 import { MatchTypeActionSheet } from '#/features/matches/components/MatchTypeModal';
+import { QuickMatchCreateActionSheet } from '#/features/matches/components/QuickMatchCreateSheet';
 import { ShareToFacebookActionSheet } from '#/features/matches/components/ShareToFacebookSheet';
 import { ScoreConfirmationActionSheet } from '#/features/matches/components/ScoreConfirmationModal';
 import { RegisterMatchScoreActionSheet } from '#/features/matches/components/RegisterMatchScoreSheet';
@@ -251,6 +252,17 @@ declare module 'react-native-actions-sheet' {
         /** Analytics context, threaded from the chat for card_posted props. */
         conversationType?: string;
         isRoundChat?: boolean;
+      };
+    }>;
+    /** Quick game from a community chat: when + format, everything else inferred. */
+    'quick-match-create': SheetDefinition<{
+      payload: {
+        /** The community chat the game is announced in. */
+        conversationId: string;
+        /** Community's sport when it is single-sport; null pins nothing. */
+        networkSportId?: string | null;
+        /** Community name, shown so the host knows where this is posted. */
+        networkName?: string | null;
       };
     }>;
     // Group sheets
@@ -794,7 +806,7 @@ declare module 'react-native-actions-sheet' {
           requester_id: string;
           player_rating_score_id: string;
           message: string | null;
-          status: 'pending' | 'completed' | 'declined' | 'expired' | 'cancelled';
+          status: 'pending' | 'completed' | 'declined' | 'dismissed' | 'expired' | 'cancelled';
           expires_at: string;
           created_at: string;
           requester: {
@@ -1048,6 +1060,7 @@ export const Sheets = () => {
         'add-members-to-chat': AddMembersToChatActionSheet,
         'create-group-chat': CreateGroupChatActionSheet,
         'match-organizer-setup': MatchOrganizerSetupActionSheet,
+        'quick-match-create': QuickMatchCreateActionSheet,
         'match-organizer-custom-slot': MatchOrganizerCustomSlotActionSheet,
         // Group sheets
         'member-options': MemberOptionsActionSheet,

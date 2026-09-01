@@ -21,7 +21,7 @@ jobs:
   production-submit:
     name: EAS Production Submit
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Checkout main
         uses: actions/checkout@v5
@@ -61,7 +61,7 @@ jobs:
           eas submit --platform ${{ inputs.platform }} --latest --non-interactive
 
       - name: Notify Discord
-        if: success() || failure()
+        if: always()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
@@ -72,6 +72,10 @@ jobs:
             COLOR=3066993
             TITLE="Production Submit Completed"
             DESCRIPTION="Latest \`${PLATFORM}\` build(s) submitted to the app store(s)"
+          elif [ "${{ steps.submit.outcome }}" = "cancelled" ]; then
+            COLOR=15105570
+            TITLE="Production Submit Timed Out"
+            DESCRIPTION="Latest \`${PLATFORM}\` build(s) were scheduled on EAS but the job timed out before they finished. Check the EAS submissions page, they may still complete. Do not re-run without checking."
           else
             COLOR=15158332
             TITLE="Production Submit Failed"

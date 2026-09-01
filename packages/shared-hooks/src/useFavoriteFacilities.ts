@@ -23,6 +23,8 @@ export interface FavoriteFacility {
     city: string | null;
     latitude: number | null;
     longitude: number | null;
+    /** IANA zone. Callers stamping a game's wall-clock need the COURT's zone. */
+    timezone: string | null;
   };
   displayOrder: number;
 }
@@ -98,7 +100,8 @@ export function useFavoriteFacilities(
             address,
             city,
             latitude,
-            longitude
+            longitude,
+            timezone
           )
         `
         )

@@ -54,7 +54,7 @@ type RatingReferencesRouteProp = RouteProp<
   'RatingReferences'
 >;
 
-type ReferenceStatus = 'pending' | 'completed' | 'declined' | 'expired' | 'cancelled';
+type ReferenceStatus = 'pending' | 'completed' | 'declined' | 'dismissed' | 'expired' | 'cancelled';
 
 interface RefereeRating {
   label: string | null;
@@ -97,7 +97,13 @@ function isApproved(r: ReferenceRow): boolean {
   return r.status === 'completed' && r.rating_supported === true;
 }
 function isContested(r: ReferenceRow): boolean {
-  return r.status === 'completed' && r.rating_supported === false;
+  // 'declined' is what the app writes for a negative verdict. The completed/unsupported
+  // pair only exists in rows predating the status enum fix (20260319000004).
+  return r.status === 'declined' || (r.status === 'completed' && r.rating_supported === false);
+}
+/** The referee closed the request without judging the level. Not a verdict, so never contested. */
+function isPassed(r: ReferenceRow): boolean {
+  return r.status === 'dismissed';
 }
 function isPending(r: ReferenceRow): boolean {
   return r.status === 'pending' && new Date(r.expires_at).getTime() > Date.now();
@@ -393,7 +399,9 @@ const RatingReferences: React.FC = () => {
         return references.filter(isPending);
       case 'all':
       default:
-        return references.filter(r => isApproved(r) || isContested(r) || isPending(r));
+        return references.filter(
+          r => isApproved(r) || isContested(r) || isPassed(r) || isPending(r)
+        );
     }
   }, [references, filter]);
 
@@ -410,6 +418,7 @@ const RatingReferences: React.FC = () => {
     const name = getRefereeFullName(item.referee, fallbackName);
     const approved = isApproved(item);
     const contested = isContested(item);
+    const passed = isPassed(item);
     const pending = isPending(item);
 
     const badge = approved
@@ -426,12 +435,19 @@ const RatingReferences: React.FC = () => {
             color: statusColors.error.DEFAULT,
             icon: 'alert-circle' as const,
           }
-        : {
-            key: 'pending',
-            label: t('profile.referencesManage.status.pending'),
-            color: statusColors.warning.DEFAULT,
-            icon: 'time-outline' as const,
-          };
+        : passed
+          ? {
+              key: 'passed',
+              label: t('profile.referencesManage.status.passed'),
+              color: colors.textMuted,
+              icon: 'help-circle' as const,
+            }
+          : {
+              key: 'pending',
+              label: t('profile.referencesManage.status.pending'),
+              color: statusColors.warning.DEFAULT,
+              icon: 'time-outline' as const,
+            };
 
     return (
       <View

@@ -63,6 +63,7 @@ export * from './useFeedbackBrowse';
 export * from './useCommunities';
 export * from './useChat';
 export * from './useMatchOrganizer';
+export * from './useQuickMatch';
 export * from './useConversationFilter';
 export * from './useBlockedStatus';
 export * from './useFavoriteStatus';

@@ -32,6 +32,7 @@ import { useThemeStyles, useTranslation } from '#/hooks';
 
 import { CourtSystemMessageCard } from './CourtSystemMessageCard';
 import { MatchOrganizerCard } from './MatchOrganizerCard';
+import { MatchShareCard } from './MatchShareCard';
 import { MessageBubble } from './MessageBubble';
 
 export interface MessageListRef {
@@ -273,6 +274,11 @@ function MessageListComponent(
         // Match Organizer card: votable time/place options, full-width.
         if (item.message.message_type === 'match_organizer') {
           return <MatchOrganizerCard message={item.message} />;
+        }
+
+        // A game announced into a network chat: joinable in one tap.
+        if (item.message.message_type === 'match_share') {
+          return <MatchShareCard message={item.message} />;
         }
 
         // Pool room welcome: a system post, not the organizer speaking. The

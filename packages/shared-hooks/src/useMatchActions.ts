@@ -500,7 +500,7 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
   const checkInMutation = useMutation<
     CheckInResult,
     Error,
-    { playerId: string; latitude: number; longitude: number }
+    { playerId: string; latitude?: number; longitude?: number }
   >({
     mutationFn: async ({ playerId, latitude, longitude }) => {
       if (!matchId) throw new Error('Match ID is required');

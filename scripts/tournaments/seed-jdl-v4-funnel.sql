@@ -206,6 +206,15 @@ BEGIN
            deadline_nudge12_at = now() - interval '2 days'
      WHERE tournament_id = v_t.id AND bracket_side = 'pool';
 
+    -- The pool rooms are created by a trigger on pool rows, and this script
+    -- runs in replica mode, which disables it. Without this no [JDL v4] event
+    -- has a pool room at all, and section 1 of the retest guide (the locked
+    -- composer, the board) has nothing to open.
+    PERFORM public.lt_ensure_pool_room(v_t.id, pn)
+      FROM (SELECT DISTINCT pool_number AS pn
+              FROM tournament_matches
+             WHERE tournament_id = v_t.id AND pool_number IS NOT NULL) p;
+
     RETURN v_t.id;
 END;
 $$;

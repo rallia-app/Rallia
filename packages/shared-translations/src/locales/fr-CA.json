@@ -262,6 +262,7 @@
       "reference_request_received": "Référence demandée",
       "reference_request_accepted": "Référence acceptée",
       "reference_request_declined": "Référence refusée",
+      "reference_request_dismissed": "Référence passée",
       "reminder": "Rappel",
       "payment": "Paiement",
       "support": "Support",
@@ -465,6 +466,10 @@
         "title": "{playerName} a refusé ta référence",
         "body": "{playerName} n'a pas pu confirmer ton niveau en {sportName}. Demande à un autre joueur."
       },
+      "reference_request_dismissed": {
+        "title": "{playerName} a passé son tour",
+        "body": "{playerName} ne s'est pas prononcé sur ton niveau en {sportName}. Demande à un joueur avec qui tu as déjà joué."
+      },
       "match_spot_opened": {
         "title": "Une place s'est libérée en {sportName}",
         "body": "Une place vient de se libérer le {matchDate}{startTime}{locationName}. Prends-la vite!"
@@ -627,14 +632,18 @@
     "question": "Selon votre expérience de jeu avec {name}, ce niveau est-il exact?",
     "yesApprove": "Oui, approuver",
     "approveDescription": "Ce niveau semble correct",
-    "noDecline": "Non, refuser",
+    "noDecline": "Non, pas exact",
     "declineDescription": "Ce niveau semble inexact",
+    "cantSay": "Je ne peux pas me prononcer",
+    "cantSayDescription": "Je n'ai jamais joué avec ce joueur",
+    "cantSayNote": "Rien ne compte pour ou contre son niveau.",
     "addMessage": "Ajouter un message",
     "messagePlaceholder": "Ajoutez des commentaires ou du contexte pour le joueur...",
     "submitResponse": "Soumettre la réponse",
-    "selectResponse": "Veuillez sélectionner approuver ou refuser",
+    "selectResponse": "Choisis une réponse",
     "responseSubmittedApprove": "Référence approuvée avec succès!",
     "responseSubmittedDecline": "Référence refusée",
+    "responseSubmittedCantSay": "Demande fermée. On lui a dit que tu as passé ton tour.",
     "failedToSubmit": "Échec de la soumission. Veuillez réessayer.",
     "privacyNote": "Votre réponse sera visible par le joueur demandeur. Les demandes refusées ne comptent pas pour leur certification.",
     "badge": {
@@ -1180,6 +1189,7 @@
       "status": {
         "approved": "Approuvée",
         "contested": "Contestée",
+        "passed": "Sans avis",
         "pending": "En attente"
       },
       "filters": {
@@ -4018,16 +4028,16 @@
     "forSport": "Création de partie pour {sport}",
     "step": "Étape {current} sur {total}",
     "stepNames": {
-      "where": "Lieu",
+      "where": "Où",
       "when": "Quand",
-      "preferences": "Préférences"
+      "preferences": "Détails"
     },
     "step1Title": "Où?",
-    "step1Description": "Sélectionnez ou entrez votre lieu de jeu",
+    "step1Description": "Choisissez où vous jouez",
     "step2Title": "Quand?",
     "step2Description": "Choisissez quand vous voulez jouer",
-    "step3Title": "Préférences",
-    "step3Description": "Définissez le format et les préférences du match",
+    "step3Title": "Détails de la partie",
+    "step3Description": "Coût, format et participants",
     "next": "Suivant",
     "back": "Retour",
     "createMatch": "Créer la partie",
@@ -4104,10 +4114,14 @@
       "lockedFromBooking": "Date, heure et durée verrouillées depuis votre réservation",
       "locationType": "Type de lieu",
       "locationTypeFacility": "Sélectionner un site de jeu",
+      "locationTypeFacilityShort": "Site de jeu",
+      "locationTypeRecommended": "Recommandé",
       "locationTypeFacilityDescription": "Choisir parmi les sites de jeu disponibles",
       "locationTypeCustom": "Lieu personnalisé",
+      "locationTypeCustomShort": "Autre lieu",
       "locationTypeCustomDescription": "Entrer une adresse personnalisée",
       "locationTypeTbd": "À déterminer",
+      "locationTypeTbdShort": "Plus tard",
       "locationTypeTbdDescription": "Décider plus tard avec les participants",
       "gettingLocation": "Obtention de votre localisation...",
       "searchingFacilities": "Recherche de sites de jeu...",
@@ -4143,6 +4157,9 @@
       "callFacility": "Appeler",
       "emailFacility": "Courriel",
       "visitWebsite": "Site web",
+      "courtCostSection": "Coût du terrain",
+      "courtSection": "Le terrain",
+      "courtSectionDescription": "Réservation et coût",
       "isCourtFree": "Terrain gratuit",
       "isRecurring": "Répéter chaque semaine",
       "isRecurringOn": "La partie de la semaine prochaine est créée dès que celle-ci se termine, sans terrain. On t'avertit dès que les terrains ouvrent.",
@@ -4177,8 +4194,8 @@
       "joinModeDirectDescription": "Les joueurs rejoignent immédiatement",
       "joinModeRequest": "Demande de participation",
       "joinModeRequestDescription": "Vous approuvez chaque joueur",
-      "opponentPreferences": "Préférences d'adversaire",
-      "opponentPreferencesDescription": "Filtres optionnels pour les participants",
+      "whoCanJoin": "Qui peut participer",
+      "whoCanJoinDescription": "Choisissez qui voit votre partie et qui peut participer",
       "preferredGender": "Genre préféré",
       "genderAny": "Tous",
       "genderMale": "Homme",
@@ -4249,7 +4266,7 @@
       "selectTimezone": "Sélectionner le fuseau horaire du lieu de la partie"
     },
     "nudges": {
-      "bookCourt": "Les parties avec un terrain déjà réservé trouvent un joueur environ deux fois plus souvent.",
+      "bookCourt": "Les parties avec terrain réservé se remplissent 2 fois plus souvent.",
       "postEarly": "Publier une journée d'avance double presque vos chances que quelqu'un embarque."
     },
     "booking": {
@@ -4262,7 +4279,7 @@
       "courtBookedDescription": "Le terrain est marqué comme réservé pour cette partie.",
       "availableSlots": "Créneaux disponibles",
       "noSlotsAvailable": "Aucun créneau à venir disponible",
-      "firstComeFirstServe": "Premier arrivé, premier servi — sans réservation",
+      "firstComeFirstServe": "Premier arrivé, premier servi, sans réservation",
       "loadingSlots": "Chargement des disponibilités...",
       "tapToBook": "Appuyez sur un créneau pour réserver",
       "externalBooking": "Vous serez redirigé vers le site de réservation",
@@ -5059,8 +5076,8 @@
       "draftHint": "Régénérer rebrasse les pairages non verrouillés. Rien ne se rend à tes membres tant que tu n'as pas publié.",
       "publish": "Publier la feuille",
       "published": "Feuille publiée",
-      "stateDraft": "Brouillon",
-      "statePublished": "Publiée"
+      "stateDraft": "Feuille brouillon",
+      "statePublished": "Feuille publiée"
     },
     "score": {
       "title": "Entrer le pointage",
@@ -8143,6 +8160,85 @@
         "rejected": "Rejetée"
       }
     },
+    "bugReports": {
+      "title": "Rapports de bogues",
+      "subtitle": "Les bogues signalés depuis l'app. Le statut et les notes que tu inscris ici sont affichés aux joueurs sur le tableau dans l'app.",
+      "empty": "Aucun rapport de bogue ne correspond à ces filtres.",
+      "loadError": "Impossible de charger les rapports de bogues.",
+      "noDetails": "Aucun détail fourni",
+      "anonymous": "Anonyme",
+      "saveError": "La modification n'a pas pu être enregistrée. Réessaie.",
+      "pagination": {
+        "showing": "Affichage de {start} à {end} sur {total} rapports",
+        "page": "Page {current} sur {total}"
+      },
+      "status": {
+        "new": "Nouveau",
+        "reviewed": "Examiné",
+        "in_progress": "En cours",
+        "resolved": "Résolu",
+        "closed": "Fermé"
+      },
+      "severity": {
+        "critical": "Critique",
+        "major": "Majeur",
+        "minor": "Mineur"
+      },
+      "module": {
+        "profile_settings": "Profil et réglages",
+        "match_features": "Parties",
+        "facilities": "Installations",
+        "player_directory": "Répertoire des joueurs",
+        "groups_communities": "Communautés",
+        "notifications": "Notifications",
+        "performance": "Performance",
+        "other": "Autre"
+      },
+      "table": {
+        "report": "Rapport",
+        "severity": "Gravité",
+        "module": "Section",
+        "status": "Statut",
+        "reporter": "Signalé par",
+        "appVersion": "Version de l'app",
+        "upvotes": "Votes",
+        "reportedOn": "Signalé le"
+      },
+      "filters": {
+        "searchPlaceholder": "Rechercher un rapport...",
+        "allStatuses": "Statut",
+        "allSeverities": "Gravité",
+        "allModules": "Section",
+        "allVisibilities": "Visibilité",
+        "visible": "Visible",
+        "hidden": "Masqué",
+        "clearFilters": "Effacer"
+      },
+      "detail": {
+        "title": "Rapport de bogue",
+        "reportedOn": "Signalé le {date}",
+        "hidden": "Masqué",
+        "steps": "Étapes pour reproduire",
+        "expectedVsActual": "Attendu vs observé",
+        "screenshots": "Captures d'écran",
+        "screenshotAlt": "Capture {index}",
+        "reporter": "Signalé par",
+        "appVersion": "Version de l'app",
+        "device": "Appareil",
+        "trigger": "Déclencheur",
+        "lastUpdated": "Dernière mise à jour",
+        "updateStatus": "Statut",
+        "adminNotes": "Notes admin",
+        "notesPlaceholder": "Où en est ce rapport?",
+        "notesArePublic": "Les notes sont affichées aux joueurs sur le tableau dans l'app dès que le rapport est en cours ou résolu.",
+        "visibleHint": "Ce rapport est visible par les joueurs sur le tableau dans l'app.",
+        "hiddenHint": "Ce rapport est masqué du tableau dans l'app.",
+        "hide": "Masquer aux joueurs",
+        "unhide": "Afficher aux joueurs",
+        "close": "Fermer",
+        "save": "Enregistrer"
+      }
+    },
     "sidebar": {
       "brand": "Rallia Admin",
       "dashboard": "Tableau de bord",
@@ -8150,6 +8246,7 @@
       "users": "Utilisateurs",
       "moderation": "Modération",
       "ratingProofs": "Preuves signalées",
+      "bugReports": "Rapports de bogues",
       "activityLog": "Journal d'activité",
       "alerts": "Alertes",
       "networks": "Réseaux",
@@ -9661,7 +9758,7 @@
       "lastUpdated": "Dernière mise à jour",
       "overview": "Aperçu",
       "players": "Joueurs",
-      "matches": "Matchs",
+      "matches": "Parties",
       "completed": "Terminées",
       "views": "vues",
       "sportStatistics": "Statistiques sportives",
@@ -9745,7 +9842,7 @@
         "acquisition": "Acquisition",
         "invitations": "Invitations",
         "users": "Utilisateurs",
-        "matches": "Matchs",
+        "matches": "Parties",
         "compatibility": "Compatibilité"
       },
       "compat": {
@@ -11524,7 +11621,7 @@
     "loadingAvailability": "Chargement des créneaux disponibles...",
     "courtsAvailable": "{count} terrains disponibles",
     "paymentsNotAvailable": "Cette site de jeu n'a pas encore configuré les paiements en ligne. Veuillez les contacter directement pour réserver des créneaux payants.",
-    "firstComeFirstServe": "Cet établissement fonctionne selon le principe du premier arrivé, premier servi — aucune réservation requise.",
+    "firstComeFirstServe": "Cet établissement fonctionne selon le principe du premier arrivé, premier servi, aucune réservation requise.",
     "paidSlotsDisabled": "Certains terrains payants ne sont pas disponibles pour la réservation en ligne. Contactez le site de jeu directement.",
     "contactFacilityToBook": "Contacter le site de jeu pour réserver",
     "unavailable": "Indisponible",
@@ -12664,7 +12761,7 @@
     "moduleLabel": "Où cela s'est-il produit ?",
     "modules": {
       "profile": "Profil",
-      "matches": "Matchs",
+      "matches": "Parties",
       "facilities": "Sites de jeu",
       "playerDirectory": "Répertoire des joueurs",
       "groupsCommunities": "Groupes et communautés",
@@ -13161,6 +13258,60 @@
     },
     "systemNote": {
       "updated": "{name} a mis à jour ses dispos"
+    }
+  },
+  "quickGame": {
+    "banner": {
+      "title": "Lance une partie",
+      "subtitle": "Choisis un jour et une heure, les autres demandent à embarquer"
+    },
+    "sheet": {
+      "title": "Partie rapide",
+      "intro": "Tout le monde dans {community} va la voir et pourra demander à embarquer.",
+      "sportLabel": "Sport",
+      "dayLabel": "Jour",
+      "otherDay": "Autre jour",
+      "timeLabel": "Heure",
+      "otherTime": "Autre heure",
+      "formatLabel": "Format",
+      "singles": "Simple",
+      "doubles": "Double",
+      "submit": "Lancer la partie",
+      "whereLabel": "Où",
+      "placeTbd": "À déterminer",
+      "durationLabel": "Durée"
+    },
+    "summary": {
+      "anyStyle": "Tous les types de partie",
+      "anyRating": "Tout classement",
+      "anyGender": "Tous les genres",
+      "youApprove": "Tu approuves chaque joueur"
+    },
+    "card": {
+      "title": "Partie ouverte",
+      "singles": "Simple",
+      "doubles": "Double",
+      "locationTbd": "Endroit à déterminer",
+      "spotsLeft": "{count} places libres",
+      "spotsLeft_one": "{count} place libre",
+      "full": "Complète",
+      "cancelled": "Annulée",
+      "past": "Déjà jouée",
+      "unavailable": "Plus disponible",
+      "youIn": "Tu embarques",
+      "youHost": "Tu organises",
+      "join": "Embarquer",
+      "viewGame": "Voir la partie",
+      "joinFailed": "Impossible d'embarquer dans cette partie. Réessaie.",
+      "loadingSpots": "Chargement…",
+      "joinRequested": "Demande envoyée à l'organisateur",
+      "askToJoin": "Demander à embarquer",
+      "requestPending": "Demande envoyée"
+    },
+    "error": {
+      "pastTitle": "Cette heure est passée",
+      "pastBody": "On t'a placé au prochain créneau. Choisis-en un autre si tu préfères.",
+      "createFailed": "Impossible de lancer la partie. Réessaie."
     }
   }
 }

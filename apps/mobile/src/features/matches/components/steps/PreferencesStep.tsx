@@ -2,7 +2,7 @@
  * Preferences Step
  *
  * Step 3 of the match creation wizard.
- * Handles court cost, visibility, join mode, and notes.
+ * Handles format, court cost, visibility, join mode, and notes.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   Switch,
   ActivityIndicator,
-  Linking,
   ScrollView,
   TextInput,
 } from 'react-native';
@@ -20,14 +19,21 @@ import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { UseFormReturn } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
-import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, accent, status } from '@rallia/design-system';
+import { Text, Callout } from '@rallia/shared-components';
+import { spacingPixels, radiusPixels, status } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
-import { useRatingScoresForSport, useFacilityReservationContact } from '@rallia/shared-hooks';
+import {
+  useRatingScoresForSport,
+  useFacilityDetail,
+  useFacilityReservationContact,
+} from '@rallia/shared-hooks';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
 
 import type { TranslationKey, TranslationOptions } from '#/hooks/useTranslation';
 import { useKeyboardAwareSheetScroll } from '#/hooks/useKeyboardAwareSheetScroll';
+
+import { OptionCard } from './OptionCard';
+import { ReservationContactAlert } from './ReservationContactAlert';
 
 // =============================================================================
 // TYPES
@@ -55,194 +61,26 @@ interface PreferencesStepProps {
   userId?: string;
 }
 
-interface OptionCardProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  description?: string;
-  selected: boolean;
-  onPress: () => void;
-  colors: PreferencesStepProps['colors'];
-  compact?: boolean;
-}
+/** Descriptions moved out of the cards and under each row of options */
+const COURT_STATUS_HINT_KEYS: Record<'to_book' | 'booked', TranslationKey> = {
+  to_book: 'matchCreation.fields.courtStatusToBookDescription',
+  booked: 'matchCreation.fields.courtStatusBookedDescription',
+};
 
-// =============================================================================
-// OPTION CARD COMPONENT
-// =============================================================================
+const EXPECTATION_HINT_KEYS: Record<'casual' | 'competitive' | 'both', TranslationKey> = {
+  casual: 'matchCreation.fields.playerExpectationCasualDescription',
+  competitive: 'matchCreation.fields.playerExpectationCompetitiveDescription',
+  both: 'matchCreation.fields.playerExpectationBothDescription',
+};
 
-const OptionCard: React.FC<OptionCardProps> = ({
-  icon,
-  title,
-  description,
-  selected,
-  onPress,
-  colors,
-  compact = false,
-}) => (
-  <TouchableOpacity
-    style={[
-      compact ? styles.optionCardCompact : styles.optionCard,
-      {
-        backgroundColor: selected ? `${colors.buttonActive}15` : colors.buttonInactive,
-        borderColor: selected ? colors.buttonActive : colors.border,
-      },
-    ]}
-    onPress={() => {
-      lightHaptic();
-      onPress();
-    }}
-    activeOpacity={0.7}
-  >
-    {compact ? (
-      // Compact layout: icon on top, title below
-      <View style={styles.optionContentCompact}>
-        <Ionicons name={icon} size={24} color={selected ? colors.buttonActive : colors.textMuted} />
-        {/* One line, always: four tiles across leaves "Homme"/"Femme" barely
-            enough room, so the label shrinks rather than breaking mid-word. */}
-        <Text
-          size="sm"
-          weight={selected ? 'semibold' : 'regular'}
-          color={selected ? colors.buttonActive : colors.text}
-          style={styles.compactTitle}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.75}
-        >
-          {title}
-        </Text>
-      </View>
-    ) : (
-      // Full layout: icon + text side by side
-      <>
-        <View style={styles.optionContent}>
-          <Ionicons
-            name={icon}
-            size={20}
-            color={selected ? colors.buttonActive : colors.textMuted}
-          />
-          <View style={styles.optionTextContainer}>
-            <Text
-              size="base"
-              weight={selected ? 'semibold' : 'regular'}
-              color={selected ? colors.buttonActive : colors.text}
-            >
-              {title}
-            </Text>
-            {description && (
-              <Text size="xs" color={colors.textMuted}>
-                {description}
-              </Text>
-            )}
-          </View>
-        </View>
-        {selected && <Ionicons name="checkmark-circle" size={20} color={colors.buttonActive} />}
-      </>
-    )}
-  </TouchableOpacity>
-);
+const VISIBILITY_HINT_KEYS: Record<'public' | 'private', TranslationKey> = {
+  public: 'matchCreation.fields.visibilityPublicDescription',
+  private: 'matchCreation.fields.visibilityPrivateDescription',
+};
 
-// =============================================================================
-// RESERVATION CONTACT ALERT COMPONENT
-// =============================================================================
-
-interface ReservationContactAlertProps {
-  phone: string | null;
-  email: string | null;
-  website: string | null;
-  colors: PreferencesStepProps['colors'];
-  t: (key: TranslationKey, options?: TranslationOptions) => string;
-  isDark: boolean;
-}
-
-const ReservationContactAlert: React.FC<ReservationContactAlertProps> = ({
-  phone,
-  email,
-  website,
-  colors,
-  t,
-  isDark,
-}) => {
-  // Use accent color (amber/gold) for distinct alert styling
-  const alertColor = isDark ? accent[400] : accent[600];
-  const alertBgColor = isDark ? `${accent[500]}15` : accent[50];
-  const alertTextColor = isDark ? accent[200] : accent[800];
-  const buttonBgColor = isDark ? accent[500] : accent[600];
-
-  const handleCall = () => {
-    if (phone) {
-      lightHaptic();
-      Linking.openURL(`tel:${phone}`);
-    }
-  };
-
-  const handleEmail = () => {
-    if (email) {
-      lightHaptic();
-      Linking.openURL(`mailto:${email}`);
-    }
-  };
-
-  const handleWebsite = () => {
-    if (website) {
-      lightHaptic();
-      // Ensure website has protocol
-      const url = website.startsWith('http') ? website : `https://${website}`;
-      Linking.openURL(url);
-    }
-  };
-
-  return (
-    <View
-      style={[styles.reservationAlert, { backgroundColor: alertBgColor, borderColor: alertColor }]}
-    >
-      <View style={styles.reservationAlertHeader}>
-        <Ionicons name="calendar-outline" size={20} color={alertColor} />
-        <Text size="base" weight="semibold" color={alertColor}>
-          {t('matchCreation.fields.reservationContactTitle')}
-        </Text>
-      </View>
-      <Text size="sm" color={alertTextColor} style={styles.reservationAlertDescription}>
-        {t('matchCreation.fields.reservationContactDescription')}
-      </Text>
-      <View style={styles.reservationAlertActions}>
-        {phone && (
-          <TouchableOpacity
-            style={[styles.reservationActionButton, { backgroundColor: buttonBgColor }]}
-            onPress={handleCall}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="call-outline" size={16} color={colors.buttonTextActive} />
-            <Text size="sm" weight="semibold" color={colors.buttonTextActive}>
-              {t('matchCreation.fields.callFacility')}
-            </Text>
-          </TouchableOpacity>
-        )}
-        {email && (
-          <TouchableOpacity
-            style={[styles.reservationActionButton, { backgroundColor: buttonBgColor }]}
-            onPress={handleEmail}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="mail-outline" size={16} color={colors.buttonTextActive} />
-            <Text size="sm" weight="semibold" color={colors.buttonTextActive}>
-              {t('matchCreation.fields.emailFacility')}
-            </Text>
-          </TouchableOpacity>
-        )}
-        {website && (
-          <TouchableOpacity
-            style={[styles.reservationActionButton, { backgroundColor: buttonBgColor }]}
-            onPress={handleWebsite}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="globe-outline" size={16} color={colors.buttonTextActive} />
-            <Text size="sm" weight="semibold" color={colors.buttonTextActive}>
-              {t('matchCreation.fields.visitWebsite')}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
+const JOIN_MODE_HINT_KEYS: Record<'direct' | 'request', TranslationKey> = {
+  direct: 'matchCreation.fields.joinModeDirectDescription',
+  request: 'matchCreation.fields.joinModeRequestDescription',
 };
 
 // =============================================================================
@@ -276,14 +114,34 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   const preferredOpponentGender = watch('preferredOpponentGender');
   const minRatingScoreId = watch('minRatingScoreId');
   const notes = watch('notes');
-  const courtStatus = watch('courtStatus');
   const locationType = watch('locationType');
   const facilityId = watch('facilityId');
   const locationName = watch('locationName');
+  const courtStatus = watch('courtStatus');
 
-  // Check if a location has been specified (facility selected or custom location entered)
+  // A location is set once a facility is picked or a custom place is entered
   const hasLocationSpecified =
     (locationType === 'facility' && !!facilityId) || (locationType === 'custom' && !!locationName);
+
+  // Nothing to reserve at a first-come facility, so neither the prompt to call
+  // nor the booked/not-booked question applies.
+  const { facility } = useFacilityDetail({
+    facilityId: facilityId ?? '',
+    sportId,
+    enabled: locationType === 'facility' && !!facilityId,
+  });
+  const isFirstComeFacility = locationType === 'facility' && !!facility?.is_first_come_first_serve;
+
+  const { contact: reservationContact, hasContact: hasReservationContact } =
+    useFacilityReservationContact(locationType === 'facility' ? facilityId : undefined, sportId);
+
+  // Only worth showing while the court still has to be reserved
+  const showReservationContactAlert =
+    locationType === 'facility' &&
+    !!facilityId &&
+    (courtStatus === 'to_book' || !courtStatus) &&
+    hasReservationContact &&
+    !isFirstComeFacility;
 
   // Fetch rating scores for the sport (also returns player's current rating)
   const {
@@ -293,21 +151,52 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
     playerRatingScoreId,
   } = useRatingScoresForSport(sportName, sportId, userId);
 
-  // Fetch reservation contact for the selected facility
-  const { contact: reservationContact, hasContact: hasReservationContact } =
-    useFacilityReservationContact(locationType === 'facility' ? facilityId : undefined, sportId);
-
-  // Determine if we should show the reservation contact alert
-  // Show only when: facility is selected, court status is 'to_book', and contact exists
-  const showReservationContactAlert =
-    locationType === 'facility' &&
-    !!facilityId &&
-    (courtStatus === 'to_book' || !courtStatus) &&
-    hasReservationContact;
-
   // Track if we've set the default rating to avoid overwriting user selection
   const hasSetDefaultRating = useRef(false);
   const { scrollProps, inputs } = useKeyboardAwareSheetScroll(['cost', 'notes']);
+
+  // The row shows labels only, so the detail lives underneath: what each
+  // player owes once an amount is known, the plain description before that.
+  const costSplitHint = (() => {
+    if (costSplitType !== 'equal') {
+      return t('matchCreation.fields.costSplitCreatorDescription');
+    }
+    if (typeof estimatedCost !== 'number') {
+      return t(
+        format === 'singles'
+          ? 'matchCreation.fields.costSplitEqualDescriptionSingles'
+          : 'matchCreation.fields.costSplitEqualDescriptionDoubles'
+      );
+    }
+    const playerCount = format === 'doubles' ? 4 : 2;
+    const perPerson = Math.ceil(estimatedCost / playerCount);
+    return format === 'singles'
+      ? t('matchCreation.fields.estimatedCostHelperSingles', { amount: perPerson })
+      : t('matchCreation.fields.estimatedCostHelperDoubles', {
+          amount: perPerson,
+          count: playerCount - 1,
+        });
+  })();
+
+  // The form stores a number, so a half-typed "12." parses back to 12 and the
+  // separator disappears under the cursor. Keep the raw text and let it win
+  // while it still represents the stored amount.
+  const [costText, setCostText] = useState<string | null>(null);
+  const costInputValue =
+    costText !== null &&
+    (parseFloat(costText) === estimatedCost || (costText === '' && estimatedCost === undefined))
+      ? costText
+      : (estimatedCost?.toString() ?? '');
+
+  const handleCostChange = (text: string) => {
+    // The French keyboard offers a comma; keep one separator and two decimals
+    const cleaned = text.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+    const [whole, ...rest] = cleaned.split('.');
+    const normalized = rest.length > 0 ? `${whole}.${rest.join('').slice(0, 2)}` : whole;
+    setCostText(normalized);
+    const parsed = parseFloat(normalized);
+    setValue('estimatedCost', isNaN(parsed) ? undefined : parsed, { shouldDirty: true });
+  };
 
   const ratingScrollRef = useRef<ScrollView>(null);
   const [ratingScrollViewWidth, setRatingScrollViewWidth] = useState(0);
@@ -319,13 +208,6 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       hasSetDefaultRating.current = true;
     }
   }, [playerRatingScoreId, setValue]);
-
-  // Set default court status to 'to_book' when location is specified and status is not set
-  useEffect(() => {
-    if (hasLocationSpecified && !courtStatus) {
-      setValue('courtStatus', 'to_book', { shouldDirty: false });
-    }
-  }, [hasLocationSpecified, courtStatus, setValue]);
 
   // Track measured positions of rating items for accurate scroll centering
   const ratingItemPositions = useRef<Map<number, { x: number; width: number }>>(new Map());
@@ -423,21 +305,20 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
           {t('matchCreation.fields.playerExpectation')}
         </Text>
-        <View style={styles.optionsColumn}>
+        <View style={styles.optionsRow}>
           <OptionCard
             icon="cafe-outline"
             title={t('matchCreation.fields.playerExpectationCasual')}
-            description={t('matchCreation.fields.playerExpectationCasualDescription')}
             selected={playerExpectation === 'casual'}
             onPress={() =>
               setValue('playerExpectation', 'casual', { shouldValidate: true, shouldDirty: true })
             }
             colors={colors}
+            compact
           />
           <OptionCard
             icon="trophy-outline"
             title={t('matchCreation.fields.playerExpectationCompetitive')}
-            description={t('matchCreation.fields.playerExpectationCompetitiveDescription')}
             selected={playerExpectation === 'competitive'}
             onPress={() =>
               setValue('playerExpectation', 'competitive', {
@@ -446,21 +327,37 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
               })
             }
             colors={colors}
+            compact
           />
           <OptionCard
             icon="hand-left-outline"
             title={t('matchCreation.fields.playerExpectationBoth')}
-            description={t('matchCreation.fields.playerExpectationBothDescription')}
             selected={playerExpectation === 'both'}
             onPress={() =>
               setValue('playerExpectation', 'both', { shouldValidate: true, shouldDirty: true })
             }
             colors={colors}
+            compact
           />
         </View>
+        <Text size="xs" color={colors.textMuted} style={styles.optionHint}>
+          {t(EXPECTATION_HINT_KEYS[playerExpectation])}
+        </Text>
       </View>
 
-      {/* Reservation contact alert (show when facility selected and court needs booking) */}
+      {/* The court: booking status first, then what it costs (hidden for TBD) */}
+      {locationType !== 'tbd' && (
+        <View style={styles.sectionHeader}>
+          <Text size="base" weight="bold" color={colors.text}>
+            {t('matchCreation.fields.courtSection')}
+          </Text>
+          <Text size="xs" color={colors.textMuted}>
+            {t('matchCreation.fields.courtSectionDescription')}
+          </Text>
+        </View>
+      )}
+
+      {/* Reservation contact: this facility still has to be booked directly */}
       {showReservationContactAlert && reservationContact && (
         <ReservationContactAlert
           phone={reservationContact.phone}
@@ -472,38 +369,50 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
         />
       )}
 
-      {/* Court booking status (only show if location is specified) */}
-      {hasLocationSpecified && (
+      {/* First-come courts cannot be reserved, so say so instead of asking */}
+      {isFirstComeFacility && (
+        <View style={styles.fieldGroup}>
+          <Callout message={t('matchCreation.booking.firstComeFirstServe')} />
+        </View>
+      )}
+
+      {/* Court booking status (only once a location is specified) */}
+      {hasLocationSpecified && !isFirstComeFacility && (
         <View style={styles.fieldGroup}>
           <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
             {t('matchCreation.fields.courtStatus')}
           </Text>
-          <View style={styles.optionsColumn}>
+          <View style={styles.optionsRow}>
             <OptionCard
               icon="calendar-outline"
               title={t('matchCreation.fields.courtStatusToBook')}
-              description={t('matchCreation.fields.courtStatusToBookDescription')}
               selected={courtStatus === 'to_book' || !courtStatus}
               onPress={() =>
                 setValue('courtStatus', 'to_book', { shouldValidate: true, shouldDirty: true })
               }
               colors={colors}
+              compact
+              titleLines={2}
             />
             <OptionCard
               icon="checkmark-circle-outline"
               title={t('matchCreation.fields.courtStatusBooked')}
-              description={t('matchCreation.fields.courtStatusBookedDescription')}
               selected={courtStatus === 'booked'}
               onPress={() =>
                 setValue('courtStatus', 'booked', { shouldValidate: true, shouldDirty: true })
               }
               colors={colors}
+              compact
+              titleLines={2}
             />
           </View>
+          <Text size="xs" color={colors.textMuted} style={styles.optionHint}>
+            {t(COURT_STATUS_HINT_KEYS[courtStatus === 'booked' ? 'booked' : 'to_book'])}
+          </Text>
         </View>
       )}
 
-      {/* Court cost toggle - hide for TBD locations */}
+      {/* Court cost toggle */}
       {locationType !== 'tbd' && (
         <View style={styles.fieldGroup}>
           <View style={[styles.toggleRow, { borderColor: colors.border }]}>
@@ -534,133 +443,121 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
         </View>
       )}
 
-      {/* Cost options (only if not free and not TBD location) */}
+      {/* Total court cost */}
       {!isCourtFree && locationType !== 'tbd' && (
-        <>
-          {/* Estimated cost input */}
-          <View style={styles.fieldGroup}>
-            <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-              {costSplitType === 'equal'
-                ? t('matchCreation.fields.estimatedCostTotalEqual')
-                : t('matchCreation.fields.estimatedCostTotalCreator')}
+        <View style={styles.fieldGroup}>
+          <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
+            {t('matchCreation.fields.estimatedCostTotal')}
+          </Text>
+          <View
+            style={[
+              styles.costInputContainer,
+              {
+                borderColor: errors.estimatedCost ? status.error.DEFAULT : colors.border,
+                backgroundColor: colors.cardBackground,
+              },
+            ]}
+          >
+            <Text size="base" weight="medium" color={colors.textMuted}>
+              $
             </Text>
-            <View
-              style={[
-                styles.costInputContainer,
-                {
-                  borderColor: errors.estimatedCost ? status.error.DEFAULT : colors.border,
-                  backgroundColor: colors.cardBackground,
-                },
-              ]}
-            >
-              <Text size="base" weight="medium" color={colors.textMuted}>
-                $
-              </Text>
-              <TextInput
-                {...inputs.cost}
-                style={[styles.costInput, { color: colors.text }]}
-                value={estimatedCost?.toString() ?? ''}
-                onChangeText={text => {
-                  const numValue = parseFloat(text.replace(/[^0-9.]/g, ''));
-                  setValue('estimatedCost', isNaN(numValue) ? undefined : numValue, {
-                    shouldDirty: true,
-                  });
-                }}
-                placeholder={t('matchCreation.fields.estimatedCostPlaceholderTotal')}
-                placeholderTextColor={colors.textMuted}
-                keyboardType="decimal-pad"
-              />
-            </View>
-            {errors.estimatedCost && (
-              <Text size="xs" color={status.error.DEFAULT} style={styles.errorText}>
-                {errors.estimatedCost.message}
-              </Text>
-            )}
-            {costSplitType === 'equal' && typeof estimatedCost === 'number' && (
-              <Text size="xs" color={colors.textMuted} style={styles.costHelperText}>
-                {(() => {
-                  const playerCount = format === 'doubles' ? 4 : 2;
-                  const perPerson = Math.ceil(estimatedCost / playerCount);
-                  const otherPlayers = playerCount - 1;
-                  if (format === 'singles') {
-                    return t('matchCreation.fields.estimatedCostHelperSingles', {
-                      amount: perPerson,
-                    });
-                  }
-                  return t('matchCreation.fields.estimatedCostHelperDoubles', {
-                    amount: perPerson,
-                    count: otherPlayers,
-                  });
-                })()}
-              </Text>
-            )}
+            <TextInput
+              {...inputs.cost}
+              style={[styles.costInput, { color: colors.text }]}
+              value={costInputValue}
+              onChangeText={handleCostChange}
+              placeholder={t('matchCreation.fields.estimatedCostPlaceholderTotal')}
+              placeholderTextColor={colors.textMuted}
+              keyboardType="decimal-pad"
+            />
           </View>
-
-          {/* Cost split type */}
-          <View style={styles.fieldGroup}>
-            <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-              {t('matchCreation.fields.costSplitType')}
+          {errors.estimatedCost && (
+            <Text size="xs" color={status.error.DEFAULT} style={styles.errorText}>
+              {errors.estimatedCost.message}
             </Text>
-            <View style={styles.optionsColumn}>
-              <OptionCard
-                icon="people-outline"
-                title={t('matchCreation.fields.costSplitEqual')}
-                description={
-                  format === 'singles'
-                    ? t('matchCreation.fields.costSplitEqualDescriptionSingles')
-                    : t('matchCreation.fields.costSplitEqualDescriptionDoubles')
-                }
-                selected={costSplitType === 'equal'}
-                onPress={() =>
-                  setValue('costSplitType', 'equal', { shouldValidate: true, shouldDirty: true })
-                }
-                colors={colors}
-              />
-              <OptionCard
-                icon="person-outline"
-                title={t('matchCreation.fields.costSplitCreator')}
-                description={t('matchCreation.fields.costSplitCreatorDescription')}
-                selected={costSplitType === 'creator_pays'}
-                onPress={() =>
-                  setValue('costSplitType', 'creator_pays', {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
-                }
-                colors={colors}
-              />
-            </View>
-          </View>
-        </>
+          )}
+        </View>
       )}
+
+      {/* Who pays */}
+      {!isCourtFree && locationType !== 'tbd' && (
+        <View style={styles.fieldGroup}>
+          <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
+            {t('matchCreation.fields.costSplitType')}
+          </Text>
+          <View style={styles.optionsRow}>
+            <OptionCard
+              icon="people-outline"
+              title={t('matchCreation.fields.costSplitEqual')}
+              selected={costSplitType === 'equal'}
+              onPress={() =>
+                setValue('costSplitType', 'equal', { shouldValidate: true, shouldDirty: true })
+              }
+              colors={colors}
+              compact
+              titleLines={2}
+            />
+            <OptionCard
+              icon="person-outline"
+              title={t('matchCreation.fields.costSplitCreator')}
+              selected={costSplitType === 'creator_pays'}
+              onPress={() =>
+                setValue('costSplitType', 'creator_pays', {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
+              colors={colors}
+              compact
+              titleLines={2}
+            />
+          </View>
+          <Text size="xs" color={colors.textMuted} style={styles.optionHint}>
+            {costSplitHint}
+          </Text>
+        </View>
+      )}
+
+      {/* Who can join: visibility, join mode, then opponent filters */}
+      <View style={styles.sectionHeader}>
+        <Text size="base" weight="bold" color={colors.text}>
+          {t('matchCreation.fields.whoCanJoin')}
+        </Text>
+        <Text size="xs" color={colors.textMuted}>
+          {t('matchCreation.fields.whoCanJoinDescription')}
+        </Text>
+      </View>
 
       {/* Visibility options */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
           {t('matchCreation.fields.visibility')}
         </Text>
-        <View style={styles.optionsColumn}>
+        <View style={styles.optionsRow}>
           <OptionCard
             icon="globe-outline"
             title={t('matchCreation.fields.visibilityPublic')}
-            description={t('matchCreation.fields.visibilityPublicDescription')}
             selected={visibility === 'public'}
             onPress={() =>
               setValue('visibility', 'public', { shouldValidate: true, shouldDirty: true })
             }
             colors={colors}
+            compact
           />
           <OptionCard
             icon="lock-closed-outline"
             title={t('matchCreation.fields.visibilityPrivate')}
-            description={t('matchCreation.fields.visibilityPrivateDescription')}
             selected={visibility === 'private'}
             onPress={() =>
               setValue('visibility', 'private', { shouldValidate: true, shouldDirty: true })
             }
             colors={colors}
+            compact
           />
         </View>
+        <Text size="xs" color={colors.textMuted} style={styles.optionHint}>
+          {t(VISIBILITY_HINT_KEYS[visibility])}
+        </Text>
       </View>
 
       {/* Private visibility: visible in groups / communities (pre-checked) */}
@@ -709,37 +606,32 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
           {t('matchCreation.fields.joinMode')}
         </Text>
-        <View style={styles.optionsColumn}>
+        <View style={styles.optionsRow}>
           <OptionCard
             icon="flash-outline"
             title={t('matchCreation.fields.joinModeDirect')}
-            description={t('matchCreation.fields.joinModeDirectDescription')}
             selected={joinMode === 'direct'}
             onPress={() =>
               setValue('joinMode', 'direct', { shouldValidate: true, shouldDirty: true })
             }
             colors={colors}
+            compact
+            titleLines={2}
           />
           <OptionCard
             icon="hand-right-outline"
             title={t('matchCreation.fields.joinModeRequest')}
-            description={t('matchCreation.fields.joinModeRequestDescription')}
             selected={joinMode === 'request'}
             onPress={() =>
               setValue('joinMode', 'request', { shouldValidate: true, shouldDirty: true })
             }
             colors={colors}
+            compact
+            titleLines={2}
           />
         </View>
-      </View>
-
-      {/* Opponent Preferences Section Header */}
-      <View style={styles.sectionHeader}>
-        <Text size="base" weight="bold" color={colors.text}>
-          {t('matchCreation.fields.opponentPreferences')}
-        </Text>
-        <Text size="xs" color={colors.textMuted}>
-          {t('matchCreation.fields.opponentPreferencesDescription')}
+        <Text size="xs" color={colors.textMuted} style={styles.optionHint}>
+          {t(JOIN_MODE_HINT_KEYS[joinMode])}
         </Text>
       </View>
 
@@ -978,14 +870,6 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: spacingPixels[2],
   },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-  },
   privateVisibilityToggles: {
     gap: spacingPixels[2],
   },
@@ -998,64 +882,14 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.md,
     borderWidth: 1,
   },
-  toggleTextContainer: {
-    flex: 1,
-  },
-  optionsColumn: {
-    gap: spacingPixels[2],
-  },
-  formatRow: {
-    flexDirection: 'row',
-    gap: spacingPixels[2],
-  },
-  optionCard: {
+  toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
-  },
-  optionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
     gap: spacingPixels[3],
-  },
-  optionTextContainer: {
-    flex: 1,
-  },
-  optionCardCompact: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[2],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    flex: 1,
-    minWidth: 0,
-    minHeight: 70,
-  },
-  optionContentCompact: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'stretch',
-    gap: spacingPixels[1],
-  },
-  compactTitle: {
-    textAlign: 'center',
-    alignSelf: 'stretch',
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    gap: spacingPixels[2],
-  },
-  sectionHeader: {
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[4],
-    paddingTop: spacingPixels[4],
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(128, 128, 128, 0.2)',
   },
   costInputContainer: {
     flexDirection: 'row',
@@ -1073,11 +907,29 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[4],
     paddingHorizontal: 0,
   },
-  costHelperText: {
-    marginTop: spacingPixels[1],
-  },
   errorText: {
     marginTop: spacingPixels[1],
+  },
+  toggleTextContainer: {
+    flex: 1,
+  },
+  formatRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+  },
+  optionsRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+  },
+  optionHint: {
+    marginTop: spacingPixels[2],
+  },
+  sectionHeader: {
+    marginTop: spacingPixels[4],
+    marginBottom: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.2)',
   },
   notesInput: {
     padding: spacingPixels[4],
@@ -1125,35 +977,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-  },
-  // Reservation contact alert styles
-  reservationAlert: {
-    padding: spacingPixels[4],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    marginBottom: spacingPixels[5],
-  },
-  reservationAlertHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
-    marginBottom: spacingPixels[2],
-  },
-  reservationAlertDescription: {
-    marginBottom: spacingPixels[3],
-  },
-  reservationAlertActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacingPixels[2],
-  },
-  reservationActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[1.5],
-    paddingVertical: spacingPixels[2],
-    paddingHorizontal: spacingPixels[3],
-    borderRadius: radiusPixels.md,
   },
 });
 

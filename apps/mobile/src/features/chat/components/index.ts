@@ -5,6 +5,7 @@
 export { MessageBubble } from './MessageBubble';
 export { MessageInput } from './MessageInput';
 export { MatchOrganizerBanner } from './MatchOrganizerBanner';
+export { QuickGameBanner } from './QuickGameBanner';
 export { ChatActionBanner } from './ChatActionBanner';
 export { MessageList } from './MessageList';
 export type { MessageListRef } from './MessageList';

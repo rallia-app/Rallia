@@ -15,6 +15,7 @@ export const ROLE_ALLOWED_ROUTES: Record<AdminRole, string[]> = {
     '/admin/map',
     '/admin/moderation',
     '/admin/rating-proofs',
+    '/admin/bug-reports',
     '/admin/alerts',
     '/admin/activity-log',
     '/admin/broadcasts',
@@ -49,6 +50,8 @@ const ROLE_WRITE_PERMISSIONS: Record<string, AdminRole[]> = {
   // Mirrors the API route's role check on /api/admin/rating-ceiling.
   'ratings:clear-ceiling': ['super_admin', 'moderator'],
   'players:delete': ['super_admin', 'moderator'],
+  // Mirrors the API route's role check on /api/admin/feedback/[id].
+  'bug-reports:triage': ['super_admin', 'moderator'],
   'players:ban': ['super_admin', 'moderator'],
   'invitations:create': ['super_admin'],
   'communications:send': ['super_admin', 'moderator'],

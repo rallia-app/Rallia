@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -117,7 +117,7 @@ interface PreferencesInfo {
 const SportProfile = () => {
   const navigation = useAppNavigation();
   const route = useRoute<SportProfileRouteProp>();
-  const { sportId, sportName, openSheet } = route.params;
+  const { sportId, openSheet } = route.params;
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { refetch: refetchSportContext } = useSport();
@@ -133,7 +133,23 @@ const SportProfile = () => {
     refetch: refetchPlayer,
   } = usePlayer();
   const userId = player?.id || '';
-  const { userSports } = useSport();
+  const { userSports, isLoading: sportsLoading } = useSport();
+  // The `sport/:sportId` deep link carries no sport name, so resolve it from the
+  // player's own sports. Everything below branches on this name, and an empty one
+  // silently takes the tennis path, so the render is gated on it further down.
+  const resolvedSport = userSports.find(s => s.id === sportId);
+  const sportName = route.params.sportName ?? resolvedSport?.name ?? '';
+
+  // Same gap for the header: the navigator titles from route.params.sportName and
+  // falls back to a generic label, so a deep link needs the name put back.
+  useLayoutEffect(() => {
+    if (route.params.sportName || !resolvedSport) return;
+    navigation.setOptions({
+      headerTitle:
+        resolvedSport.display_name ||
+        resolvedSport.name.charAt(0).toUpperCase() + resolvedSport.name.slice(1),
+    });
+  }, [navigation, resolvedSport, route.params.sportName]);
   // Shares the sheet's cached query; used only to resolve the chosen score to a
   // value so a downward change can be confirmed before it is written.
   const { ratingScores } = useRatingScoresForSport(sportName, sportId, userId);
@@ -1134,8 +1150,29 @@ const SportProfile = () => {
     loadingRating,
   ]);
 
+  // The roster settled without matching the id: a bad deep link, or a sport this
+  // player never activated. Leaving happens in an effect rather than in render
+  // because a deep link can make this the only screen on the stack, and the
+  // `Main` fallback that then applies would update another component mid-render.
+  const sportUnresolved = !!userId && !sportName && !sportsLoading;
+  useEffect(() => {
+    if (!sportUnresolved) return;
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('Main', { screen: 'Home', params: { screen: 'HomeScreen' } });
+    }
+  }, [sportUnresolved, navigation]);
+
   // Don't render until we have userId from context
   if (!userId) {
+    return null;
+  }
+
+  // A deep link arrives before the sport roster loads, so the name is briefly
+  // unresolved. Render nothing until it lands: an empty name silently takes the
+  // tennis branch in every sport check below.
+  if (!sportName) {
     return null;
   }
 

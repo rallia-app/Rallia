@@ -196,6 +196,8 @@ export function matchToFormData(
     timezone: match.timezone || timezone,
     duration,
     customDurationMinutes: customMinutes,
+    // Series membership, not whether it is still running: the match carries no
+    // stopped_at. Only used to seed a create; edits never send this field.
     isRecurring: match.recurrence_id != null,
     format: (match.format as MatchFormatEnum) || 'singles',
     playerExpectation: match.player_expectation
@@ -446,14 +448,14 @@ function getStepFields(step: 1 | 2 | 3): (keyof MatchFormSchemaData)[] {
         'isRecurring',
       ];
     case 3:
-      // Step 3: Preferences (includes format and player expectation)
+      // Step 3: Details (format, expectation, court cost, and who can join)
       return [
         'format',
         'playerExpectation',
         'courtStatus',
         'isCourtFree',
-        'costSplitType',
         'estimatedCost',
+        'costSplitType',
         'visibility',
         'visibleInGroups',
         'visibleInCommunities',

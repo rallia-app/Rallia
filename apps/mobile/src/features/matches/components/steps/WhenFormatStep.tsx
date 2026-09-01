@@ -1,8 +1,8 @@
 /**
  * When & Format Step
  *
- * Step 1 of the match creation wizard.
- * Handles date, time, duration, format, and match type selection.
+ * Step 2 of the match creation wizard.
+ * Handles the weekly repeat, date, time, duration, and timezone.
  */
 
 import React, { useState, useMemo } from 'react';
@@ -92,6 +92,8 @@ interface WhenFormatStepProps {
   locale: string;
   /** When true, date/time/duration fields are locked (from booked slot) */
   isLocked?: boolean;
+  /** Recurrence is started and stopped from the game itself, never from an edit */
+  isEditMode?: boolean;
 }
 
 interface OptionButtonProps {
@@ -160,6 +162,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
   isDark,
   locale,
   isLocked = false,
+  isEditMode = false,
 }) => {
   const {
     control,
@@ -357,6 +360,48 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
         </View>
       )}
 
+      {/* Repeat weekly. The next game is created once this one ends, always
+          without a court, so the host gets alerted when booking opens. Hidden
+          when editing: saving cannot start or stop a series, and the match only
+          carries a recurrence id, so a stopped series would still read as on. */}
+      {!isEditMode && (
+        <View style={styles.fieldGroup}>
+          <View
+            style={[
+              styles.toggleRow,
+              { borderColor: isRecurring ? colors.buttonActive : colors.border },
+            ]}
+          >
+            <View style={[styles.toggleIcon, { backgroundColor: colors.buttonInactive }]}>
+              <Ionicons
+                name="repeat"
+                size={18}
+                color={isRecurring ? colors.buttonActive : colors.textMuted}
+              />
+            </View>
+            <View style={styles.toggleTextContainer}>
+              <Text size="base" weight="semibold" color={colors.text}>
+                {t('matchCreation.fields.isRecurring')}
+              </Text>
+              <Text size="xs" color={colors.textMuted}>
+                {isRecurring
+                  ? t('matchCreation.fields.isRecurringOn')
+                  : t('matchCreation.fields.isRecurringOff')}
+              </Text>
+            </View>
+            <Switch
+              value={isRecurring ?? false}
+              onValueChange={value => {
+                lightHaptic();
+                setValue('isRecurring', value, { shouldValidate: true, shouldDirty: true });
+              }}
+              trackColor={{ false: colors.border, true: colors.buttonActive }}
+              thumbColor={colors.buttonTextActive}
+            />
+          </View>
+        </View>
+      )}
+
       {/* Date picker */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
@@ -457,6 +502,101 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           <Callout tone="success" message={t('matchCreation.nudges.postEarly')} />
         </View>
       )}
+
+      {/* Duration options */}
+      <View style={[styles.fieldGroup, isLocked && styles.fieldGroupLocked]}>
+        <View style={styles.fieldLabelRow}>
+          <Text size="sm" weight="semibold" color={colors.textSecondary}>
+            {t('matchCreation.fields.duration')}
+          </Text>
+          {isLocked && <Ionicons name="lock-closed" size={12} color={colors.textMuted} />}
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.durationRow}
+          scrollEnabled={!isLocked}
+        >
+          {(['30', '60', '90', '120'] as const).map(dur => (
+            <OptionButton
+              key={dur}
+              label={t(`matchCreation.duration.${dur}`)}
+              selected={duration === dur}
+              onPress={() => {
+                if (isLocked) return;
+                setValue('duration', dur, { shouldValidate: true, shouldDirty: true });
+                // Clear custom duration when switching to preset
+                if (duration === 'custom') {
+                  setValue('customDurationMinutes', undefined, { shouldDirty: true });
+                }
+              }}
+              colors={colors}
+            />
+          ))}
+          <OptionButton
+            label={t('matchCreation.duration.custom')}
+            selected={duration === 'custom'}
+            onPress={() => {
+              if (isLocked) return;
+              // Mounts the input focused, which scrolls it above the fold.
+              setAutoFocusCustomDuration(true);
+              setValue('duration', 'custom', { shouldValidate: true, shouldDirty: true });
+            }}
+            colors={colors}
+          />
+        </ScrollView>
+        {/* Custom duration input */}
+        {duration === 'custom' && (
+          <View style={styles.customDurationContainer}>
+            <View
+              style={[
+                styles.customDurationInputContainer,
+                {
+                  borderColor: errors.customDurationMinutes ? status.error.DEFAULT : colors.border,
+                  backgroundColor: colors.cardBackground,
+                },
+              ]}
+            >
+              <TextInput
+                {...inputs.customDuration}
+                autoFocus={autoFocusCustomDuration}
+                style={[styles.customDurationInput, { color: colors.text }]}
+                value={customDurationMinutes?.toString() ?? ''}
+                onChangeText={text => {
+                  const numValue = parseInt(text.replace(/[^0-9]/g, ''), 10);
+                  if (text === '') {
+                    setValue('customDurationMinutes', undefined, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    });
+                  } else if (!isNaN(numValue)) {
+                    setValue('customDurationMinutes', numValue, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    });
+                  }
+                }}
+                placeholder="15-480"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="number-pad"
+                maxLength={3}
+              />
+              <Text size="base" color={colors.textMuted}>
+                {t('matchCreation.fields.customDurationUnit') || 'minutes'}
+              </Text>
+            </View>
+            {errors.customDurationMinutes && (
+              <Text size="xs" color={status.error.DEFAULT} style={styles.errorText}>
+                {errors.customDurationMinutes.message}
+              </Text>
+            )}
+            <Text size="xs" color={colors.textMuted} style={styles.customDurationHint}>
+              {t('matchCreation.fields.customDurationHint') ||
+                'Enter a duration between 15 and 480 minutes'}
+            </Text>
+          </View>
+        )}
+      </View>
 
       {/* Timezone picker */}
       <View style={styles.fieldGroup}>
@@ -644,127 +784,6 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           </View>
         </Pressable>
       </Modal>
-
-      {/* Duration options */}
-      <View style={[styles.fieldGroup, isLocked && styles.fieldGroupLocked]}>
-        <View style={styles.fieldLabelRow}>
-          <Text size="sm" weight="semibold" color={colors.textSecondary}>
-            {t('matchCreation.fields.duration')}
-          </Text>
-          {isLocked && <Ionicons name="lock-closed" size={12} color={colors.textMuted} />}
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.durationRow}
-          scrollEnabled={!isLocked}
-        >
-          {(['30', '60', '90', '120'] as const).map(dur => (
-            <OptionButton
-              key={dur}
-              label={t(`matchCreation.duration.${dur}`)}
-              selected={duration === dur}
-              onPress={() => {
-                if (isLocked) return;
-                setValue('duration', dur, { shouldValidate: true, shouldDirty: true });
-                // Clear custom duration when switching to preset
-                if (duration === 'custom') {
-                  setValue('customDurationMinutes', undefined, { shouldDirty: true });
-                }
-              }}
-              colors={colors}
-            />
-          ))}
-          <OptionButton
-            label={t('matchCreation.duration.custom')}
-            selected={duration === 'custom'}
-            onPress={() => {
-              if (isLocked) return;
-              // Mounts the input focused, which scrolls it above the fold.
-              setAutoFocusCustomDuration(true);
-              setValue('duration', 'custom', { shouldValidate: true, shouldDirty: true });
-            }}
-            colors={colors}
-          />
-        </ScrollView>
-        {/* Custom duration input */}
-        {duration === 'custom' && (
-          <View style={styles.customDurationContainer}>
-            <View
-              style={[
-                styles.customDurationInputContainer,
-                {
-                  borderColor: errors.customDurationMinutes ? status.error.DEFAULT : colors.border,
-                  backgroundColor: colors.cardBackground,
-                },
-              ]}
-            >
-              <TextInput
-                {...inputs.customDuration}
-                autoFocus={autoFocusCustomDuration}
-                style={[styles.customDurationInput, { color: colors.text }]}
-                value={customDurationMinutes?.toString() ?? ''}
-                onChangeText={text => {
-                  const numValue = parseInt(text.replace(/[^0-9]/g, ''), 10);
-                  if (text === '') {
-                    setValue('customDurationMinutes', undefined, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                    });
-                  } else if (!isNaN(numValue)) {
-                    setValue('customDurationMinutes', numValue, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                    });
-                  }
-                }}
-                placeholder="15-480"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="number-pad"
-                maxLength={3}
-              />
-              <Text size="base" color={colors.textMuted}>
-                {t('matchCreation.fields.customDurationUnit') || 'minutes'}
-              </Text>
-            </View>
-            {errors.customDurationMinutes && (
-              <Text size="xs" color={status.error.DEFAULT} style={styles.errorText}>
-                {errors.customDurationMinutes.message}
-              </Text>
-            )}
-            <Text size="xs" color={colors.textMuted} style={styles.customDurationHint}>
-              {t('matchCreation.fields.customDurationHint') ||
-                'Enter a duration between 15 and 480 minutes'}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Repeat weekly. The next game is created once this one ends, always
-          without a court, so the host gets alerted when booking opens. */}
-      <View style={styles.fieldGroup}>
-        <View style={[styles.toggleRow, { borderColor: colors.border }]}>
-          <View style={styles.toggleTextContainer}>
-            <Text size="base" weight="semibold" color={colors.text}>
-              {t('matchCreation.fields.isRecurring')}
-            </Text>
-            <Text size="xs" color={colors.textMuted}>
-              {isRecurring
-                ? t('matchCreation.fields.isRecurringOn')
-                : t('matchCreation.fields.isRecurringOff')}
-            </Text>
-          </View>
-          <Switch
-            value={isRecurring ?? false}
-            onValueChange={value => {
-              lightHaptic();
-              setValue('isRecurring', value, { shouldValidate: true, shouldDirty: true });
-            }}
-            trackColor={{ false: colors.border, true: colors.buttonActive }}
-            thumbColor={colors.buttonTextActive}
-          />
-        </View>
-      </View>
     </SheetScrollView>
   );
 };
@@ -804,6 +823,13 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     gap: spacingPixels[3],
+  },
+  toggleIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radiusPixels.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   toggleTextContainer: {
     flex: 1,

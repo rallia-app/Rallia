@@ -6,6 +6,7 @@
  * - View the requester's profile info
  * - See the claimed rating they're asked to validate
  * - Approve (support) or decline the rating
+ * - Or pass, when they have never played with the requester and can't judge
  * - Add an optional message
  */
 
@@ -13,7 +14,7 @@ import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet, { SheetManager, SheetProps, ScrollView } from 'react-native-actions-sheet';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, WizardOptionCard, useToast } from '@rallia/shared-components';
 import { supabase, Logger, notifyReferenceRequestResponded } from '@rallia/shared-services';
 import { selectionHaptic, successHaptic, errorHaptic } from '@rallia/shared-utils';
 import {
@@ -26,6 +27,12 @@ import {
 
 import { useThemeStyles, useTranslation } from '#/hooks';
 
+/**
+ * `cant_say` is the way out for a referee who has never played with the
+ * requester: it closes the request without asserting anything about the level.
+ */
+type ReferenceResponse = 'approve' | 'decline' | 'cant_say';
+
 export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-to-reference'>) {
   const request = payload?.request;
   const onResponseComplete = payload?.onResponseComplete;
@@ -36,7 +43,7 @@ export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-t
 
   const [responseMessage, setResponseMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [selectedResponse, setSelectedResponse] = useState<'approve' | 'decline' | null>(null);
+  const [selectedResponse, setSelectedResponse] = useState<ReferenceResponse | null>(null);
 
   const onClose = useCallback(() => {
     SheetManager.hide('respond-to-reference');
@@ -47,10 +54,12 @@ export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-t
     setResponseMessage('');
   }, []);
 
-  const handleSelectResponse = (response: 'approve' | 'decline') => {
+  const handleSelectResponse = (response: ReferenceResponse) => {
     selectionHaptic();
     setSelectedResponse(response);
   };
+
+  const isPass = selectedResponse === 'cant_say';
 
   const handleSubmit = async () => {
     if (!selectedResponse || !request) {
@@ -62,14 +71,16 @@ export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-t
 
     try {
       const isApproved = selectedResponse === 'approve';
-      const newStatus = isApproved ? 'completed' : 'declined';
+      const newStatus = isApproved ? 'completed' : isPass ? 'dismissed' : 'declined';
+      // A pass is not a verdict, so it carries no message back to the requester.
+      const trimmedMessage = isPass ? null : responseMessage.trim() || null;
 
       const { error } = await supabase
         .from('rating_reference_request')
         .update({
           status: newStatus,
           rating_supported: isApproved,
-          response_message: responseMessage.trim() || null,
+          response_message: trimmedMessage,
           responded_at: new Date().toISOString(),
         })
         .eq('id', request.id);
@@ -79,6 +90,9 @@ export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-t
       if (isApproved) {
         successHaptic();
         toast.success(t('referenceRequest.responseSubmittedApprove'));
+      } else if (isPass) {
+        successHaptic();
+        toast.info(t('referenceRequest.responseSubmittedCantSay'));
       } else {
         errorHaptic();
         toast.info(t('referenceRequest.responseSubmittedDecline'));
@@ -87,7 +101,7 @@ export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-t
       Logger.logUserAction('respond_to_reference_request', {
         requestId: request.id,
         response: selectedResponse,
-        hasMessage: !!responseMessage.trim(),
+        hasMessage: !!trimmedMessage,
       });
 
       // Send notification to the requester (fire and forget)
@@ -114,7 +128,7 @@ export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-t
             newStatus,
             request.rating_info.label,
             isApproved,
-            responseMessage.trim() || null
+            trimmedMessage
           );
         } catch (err) {
           Logger.error('Failed to send reference response notification', err as Error);
@@ -251,40 +265,62 @@ export function RespondToReferenceActionSheet({ payload }: SheetProps<'respond-t
             </TouchableOpacity>
           </View>
 
-          {/* Optional Message */}
-          <View style={styles.messageSection}>
-            <Text style={[styles.messageLabel, { color: colors.textMuted }]}>
-              {t('referenceRequest.addMessage')} ({t('common.optional')})
-            </Text>
-            <TextInput
-              style={[
-                styles.messageInput,
-                {
-                  backgroundColor: colors.inputBackground,
-                  color: colors.text,
-                  borderColor: colors.border,
-                },
-              ]}
-              value={responseMessage}
-              onChangeText={setResponseMessage}
-              placeholder={t('referenceRequest.messagePlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              multiline
-              maxLength={250}
-              numberOfLines={3}
+          {/* Neither verdict applies: full width so it reads as an exit, not a third vote */}
+          <View style={styles.passOption}>
+            <WizardOptionCard
+              icon="help-circle-outline"
+              title={t('referenceRequest.cantSay')}
+              description={t('referenceRequest.cantSayDescription')}
+              selected={selectedResponse === 'cant_say'}
+              // WizardOptionCard fires its own haptic on press
+              onPress={() => setSelectedResponse('cant_say')}
+              colors={colors}
             />
-            <Text style={[styles.charCount, { color: colors.textMuted }]}>
-              {responseMessage.length}/250
-            </Text>
           </View>
 
-          <Text style={[styles.privacyNote, { color: colors.textMuted }]}>
-            {t('referenceRequest.privacyNote')}
-          </Text>
+          {/* Optional Message — a pass carries no message, so it drops the field */}
+          {!isPass && (
+            <>
+              <View style={styles.messageSection}>
+                <Text style={[styles.messageLabel, { color: colors.textMuted }]}>
+                  {t('referenceRequest.addMessage')} ({t('common.optional')})
+                </Text>
+                <TextInput
+                  style={[
+                    styles.messageInput,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      color: colors.text,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  value={responseMessage}
+                  onChangeText={setResponseMessage}
+                  placeholder={t('referenceRequest.messagePlaceholder')}
+                  placeholderTextColor={colors.textMuted}
+                  multiline
+                  maxLength={250}
+                  numberOfLines={3}
+                />
+                <Text style={[styles.charCount, { color: colors.textMuted }]}>
+                  {responseMessage.length}/250
+                </Text>
+              </View>
+
+              <Text style={[styles.privacyNote, { color: colors.textMuted }]}>
+                {t('referenceRequest.privacyNote')}
+              </Text>
+            </>
+          )}
         </ScrollView>
 
         {/* Sticky Footer */}
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          {isPass && (
+            <Text style={[styles.footerNote, { color: colors.textMuted }]}>
+              {t('referenceRequest.cantSayNote')}
+            </Text>
+          )}
           <TouchableOpacity
             style={[
               styles.submitButton,
@@ -388,6 +424,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
+  passOption: {
+    marginBottom: spacingPixels[4],
+  },
   messageSection: {
     marginBottom: spacingPixels[4],
   },
@@ -413,6 +452,12 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[4],
     borderTopWidth: 1,
+  },
+  footerNote: {
+    fontSize: fontSizePixels.xs,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: spacingPixels[3],
   },
   submitButton: {
     flexDirection: 'row',
