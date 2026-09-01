@@ -14,7 +14,7 @@ import * as Application from 'expo-application';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, useToast } from '@rallia/shared-components';
+import { SelectableChip, Text, useToast } from '@rallia/shared-components';
 import { Logger, supabase } from '@rallia/shared-services';
 import { useTheme, useAdminStatus, useProfile } from '@rallia/shared-hooks';
 import type { Locale } from '@rallia/shared-translations';
@@ -461,31 +461,19 @@ const SettingsScreen: React.FC = () => {
               const isActive = effectiveLocale === loc;
               const isPending = pendingLocale === loc;
               return (
-                <TouchableOpacity
+                <SelectableChip
                   key={loc}
-                  style={[
-                    styles.preferenceButton,
-                    {
-                      backgroundColor: isActive ? colors.buttonActive : colors.buttonInactive,
-                    },
-                  ]}
-                  onPress={() => handleLanguageChange(loc)}
+                  label={config.nativeName}
+                  selected={isActive}
                   disabled={isChangingLocale}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.preferenceButtonContent}>
-                    <Text
-                      size="sm"
-                      weight="medium"
-                      color={isActive ? colors.buttonTextActive : colors.buttonTextInactive}
-                    >
-                      {config.nativeName}
-                    </Text>
-                    {isPending && (
+                  style={styles.preferenceButton}
+                  trailingIcon={
+                    isPending ? (
                       <ActivityIndicator size="small" color={colors.buttonTextActive} />
-                    )}
-                  </View>
-                </TouchableOpacity>
+                    ) : undefined
+                  }
+                  onPress={() => handleLanguageChange(loc)}
+                />
               );
             })}
           </View>
@@ -513,31 +501,19 @@ const SettingsScreen: React.FC = () => {
                     ? 'settings.darkMode'
                     : 'settings.systemTheme';
               return (
-                <TouchableOpacity
+                <SelectableChip
                   key={themePref}
-                  style={[
-                    styles.preferenceButton,
-                    {
-                      backgroundColor: isActive ? colors.buttonActive : colors.buttonInactive,
-                    },
-                  ]}
-                  onPress={() => handleThemeChange(themePref)}
+                  label={t(labelKey)}
+                  selected={isActive}
                   disabled={pendingTheme !== null}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.preferenceButtonContent}>
-                    <Text
-                      size="sm"
-                      weight="medium"
-                      color={isActive ? colors.buttonTextActive : colors.buttonTextInactive}
-                    >
-                      {t(labelKey)}
-                    </Text>
-                    {isPending && (
+                  style={styles.preferenceButton}
+                  trailingIcon={
+                    isPending ? (
                       <ActivityIndicator size="small" color={colors.buttonTextActive} />
-                    )}
-                  </View>
-                </TouchableOpacity>
+                    ) : undefined
+                  }
+                  onPress={() => handleThemeChange(themePref)}
+                />
               );
             })}
           </View>
@@ -746,16 +722,10 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
   },
   preferenceButton: {
-    paddingHorizontal: spacingPixels[5],
-    paddingVertical: spacingPixels[2.5],
-    borderRadius: radiusPixels.full,
+    // Equal-width options, so the row reads as one control rather than
+    // pills that shrink-wrap labels of different lengths.
     minWidth: spacingPixels[20],
-    alignItems: 'center',
-  },
-  preferenceButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[2],
+    justifyContent: 'center',
   },
   autoDetectedText: {
     marginTop: spacingPixels[2],

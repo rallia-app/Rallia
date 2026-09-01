@@ -5,13 +5,19 @@
  * pickers. Not a Button — a Button performs an action, a chip carries a value
  * that is either picked or not, and rows of them are read as one set.
  *
- * Two looks:
- *   'solid'   the value itself. Selected fills with the accent.
+ * Three looks:
+ *   'solid'   the value itself. Selected fills with the accent, label goes white.
+ *   'tinted'  quieter. Selected washes the accent at low alpha and keeps the
+ *             label in the accent, for chips that sit inside a card or a form
+ *             rather than in a dense filter strip.
  *   'ghost'   the escape hatch at the end of a strip ("Other day…"), dashed so
  *             it reads as "not one of these" rather than an unselected value.
  *
+ * Unselected looks identical across all three, so a row can mix them.
+ *
  * @example
  * <SelectableChip label="Tomorrow" selected={day === key} onPress={pick} />
+ * <SelectableChip label="At a club" variant="tinted" selected={mode === 'club'} onPress={pick} />
  * <SelectableChip label="Other day" variant="ghost" icon={<Icon />} onPress={open} />
  * <SelectableChip label="Unread" badge={12} selected={f === 'unread'} onPress={pick} />
  */
@@ -27,7 +33,7 @@ import {
   StyleProp,
 } from 'react-native';
 import { useThemeStyles } from '@rallia/shared-hooks';
-import { base, spacingPixels, radiusPixels, lighten } from '@rallia/design-system';
+import { base, spacingPixels, radiusPixels, lighten, hexToRgba } from '@rallia/design-system';
 
 import { Text } from './Text';
 
@@ -41,10 +47,17 @@ export interface SelectableChipProps {
   trailingIcon?: React.ReactNode;
   /** Count pill after the label. Hidden at 0, clamped to "99+". */
   badge?: number;
-  /** 'solid' = a pickable value; 'ghost' = the "something else" escape hatch. */
-  variant?: 'solid' | 'ghost';
+  /** 'solid' = a pickable value; 'tinted' = the quieter in-card form of one;
+   *  'ghost' = the "something else" escape hatch. */
+  variant?: 'solid' | 'tinted' | 'ghost';
   /** Overrides the theme accent used for the selected fill. */
   accentColor?: string;
+  /**
+   * Overrides the selected label colour. Needed when the accent is light
+   * enough that white text on it fails contrast, e.g. a pale dark-mode accent
+   * that wants near-black text instead.
+   */
+  selectedLabelColor?: string;
   /** Bounce the chip on tap. For dense filter strips where the row is the unit. */
   animateOnPress?: boolean;
   disabled?: boolean;
@@ -62,6 +75,7 @@ export function SelectableChip({
   badge,
   variant = 'solid',
   accentColor,
+  selectedLabelColor,
   animateOnPress = false,
   disabled = false,
   style,
@@ -71,14 +85,37 @@ export function SelectableChip({
   const { colors } = useThemeStyles();
   const accent = accentColor ?? colors.buttonActive;
   const isGhost = variant === 'ghost';
+  const isTinted = variant === 'tinted';
 
-  const background = isGhost ? 'transparent' : selected ? accent : colors.buttonInactive;
-  // A selected chip keeps a rim a step lighter than its own fill. Without it the
-  // border matches the fill exactly and a dense strip reads as one bar of colour
-  // rather than separate pills. `lighten` returns its input for a non-hex accent,
-  // which degrades to the flat fill rather than throwing.
-  const border = isGhost ? colors.border : selected ? lighten(accent, 20) : colors.border;
-  const labelColor = isGhost ? colors.textMuted : selected ? base.white : colors.text;
+  // hexToRgba returns its input unmodified for a non-hex accent, which would
+  // wash the chip in the opaque accent and hide an accent-coloured label. Fall
+  // back to the unselected fill in that case.
+  const wash = hexToRgba(accent, 0.12);
+  const tintFill = wash === accent ? colors.buttonInactive : wash;
+
+  // Unselected is one look across every variant, so a row can mix them.
+  let background = colors.buttonInactive;
+  let border = colors.border;
+  let labelColor = colors.text;
+
+  if (isGhost) {
+    background = 'transparent';
+    labelColor = colors.textMuted;
+  } else if (selected && isTinted) {
+    background = tintFill;
+    border = accent;
+    labelColor = accent;
+  } else if (selected) {
+    background = accent;
+    // A selected solid chip keeps a rim a step lighter than its own fill. Without
+    // it the border matches the fill exactly and a dense strip reads as one bar
+    // of colour rather than separate pills. `lighten` returns its input for a
+    // non-hex accent, degrading to the flat fill rather than throwing.
+    border = lighten(accent, 20);
+    labelColor = base.white;
+  }
+
+  if (selected && selectedLabelColor) labelColor = selectedLabelColor;
 
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -116,11 +153,13 @@ export function SelectableChip({
         {label}
       </Text>
       {showBadge ? (
-        <View style={[styles.badge, { backgroundColor: selected ? base.white : accent }]}>
+        <View
+          style={[styles.badge, { backgroundColor: selected && !isTinted ? base.white : accent }]}
+        >
           <Text
             size="xs"
             weight="semibold"
-            color={selected ? accent : base.white}
+            color={selected && !isTinted ? accent : base.white}
             style={styles.badgeText}
           >
             {badge > 99 ? '99+' : String(badge)}

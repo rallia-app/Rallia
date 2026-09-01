@@ -7,14 +7,8 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton } from '@rallia/shared-components';
-import {
-  spacingPixels,
-  radiusPixels,
-  shadowsNative,
-  primary,
-  neutral,
-} from '@rallia/design-system';
+import { SelectableChip, Text, Skeleton } from '@rallia/shared-components';
+import { base, spacingPixels, radiusPixels, shadowsNative, neutral } from '@rallia/design-system';
 import type { Locale } from '@rallia/shared-translations';
 import type { FormattedSlot } from '@rallia/shared-hooks';
 import type { Court } from '@rallia/shared-types';
@@ -161,30 +155,23 @@ function FilterChips({ activeFilter, onFilterChange, colors, isDark, t }: Filter
       {filters.map(filter => {
         const isActive = activeFilter === filter.key;
         return (
-          <TouchableOpacity
+          <SelectableChip
             key={filter.key}
+            label={filter.label}
+            selected={isActive}
+            animateOnPress
+            icon={
+              <Ionicons
+                name={filter.icon}
+                size={14}
+                color={isActive ? base.white : colors.textMuted}
+              />
+            }
             onPress={() => {
               lightHaptic();
               onFilterChange(filter.key);
             }}
-            activeOpacity={0.7}
-            style={[
-              styles.filterChip,
-              {
-                backgroundColor: isActive ? primary[500] : colors.primary + '10',
-                borderColor: isActive ? primary[500] : colors.primary + '25',
-              },
-            ]}
-          >
-            <Ionicons name={filter.icon} size={14} color={isActive ? '#fff' : colors.textMuted} />
-            <Text
-              size="xs"
-              weight={isActive ? 'semibold' : 'medium'}
-              color={isActive ? '#fff' : colors.text}
-            >
-              {filter.label}
-            </Text>
-          </TouchableOpacity>
+          />
         );
       })}
     </ScrollView>
@@ -715,15 +702,6 @@ const styles = StyleSheet.create({
   filterChipsContainer: {
     paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[2],
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacingPixels[1.5],
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
   },
   // Banner
   banner: {

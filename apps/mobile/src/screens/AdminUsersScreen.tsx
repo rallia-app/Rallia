@@ -32,7 +32,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, useToast } from '@rallia/shared-components';
+import { SelectableChip, Text, useToast } from '@rallia/shared-components';
 import { Logger } from '@rallia/shared-services';
 import {
   useTheme,
@@ -523,35 +523,26 @@ const AdminUsersScreen: React.FC = () => {
       {/* Filter Pills */}
       {showFilters && (
         <View style={[styles.filtersContainer, { borderBottomColor: colors.border }]}>
-          {filterOptions.map(option => (
-            <TouchableOpacity
-              key={option.value}
-              style={[
-                styles.filterPill,
-                {
-                  backgroundColor:
-                    selectedStatus === option.value ? colors.accentLight : colors.inputBackground,
-                  borderColor: selectedStatus === option.value ? colors.accent : 'transparent',
-                },
-              ]}
-              onPress={() => handleFilterChange(option.value)}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={option.icon}
-                size={14}
-                color={selectedStatus === option.value ? colors.accent : colors.textMuted}
+          {filterOptions.map(option => {
+            const isActive = selectedStatus === option.value;
+            return (
+              <SelectableChip
+                key={option.value}
+                variant="tinted"
+                label={t(option.labelKey as TranslationKey)}
+                selected={isActive}
+                accentColor={colors.accent}
+                icon={
+                  <Ionicons
+                    name={option.icon}
+                    size={14}
+                    color={isActive ? colors.accent : colors.textMuted}
+                  />
+                }
+                onPress={() => handleFilterChange(option.value)}
               />
-              <Text
-                size="xs"
-                weight={selectedStatus === option.value ? 'semibold' : 'regular'}
-                color={selectedStatus === option.value ? colors.accent : colors.textMuted}
-                style={styles.filterPillText}
-              >
-                {t(option.labelKey as TranslationKey)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+            );
+          })}
         </View>
       )}
 
@@ -686,18 +677,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacingPixels[3],
     gap: spacingPixels[2],
     borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  filterPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
-    gap: spacingPixels[1],
-  },
-  filterPillText: {
-    marginLeft: spacingPixels[1],
   },
   resultsHeader: {
     paddingHorizontal: spacingPixels[4],

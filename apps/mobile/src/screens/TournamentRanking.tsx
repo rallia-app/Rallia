@@ -10,20 +10,13 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  ActivityIndicator,
-  RefreshControl,
-  TouchableOpacity,
-} from 'react-native';
+import { View, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SheetManager } from 'react-native-actions-sheet';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, shadowsNative } from '@rallia/design-system';
+import { SelectableChip, Text } from '@rallia/shared-components';
+import { base, spacingPixels, primary, shadowsNative } from '@rallia/design-system';
 import {
   useAuth,
   useTournamentRanking,
@@ -53,63 +46,6 @@ import {
   type ThemeBits,
 } from '../components/classements/BoardKit';
 import { PointsToDefendCard } from '../components/classements/PointsToDefendCard';
-
-/**
- * Board filter pill. Solid accent + checkmark when active; quiet outline
- * otherwise. Labels carry the actual value ("My level · Intermediate",
- * "My rating · 4.0") so bucket vs exact rating is self-explanatory.
- */
-const FilterChip: React.FC<{
-  active: boolean;
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  accentColor: string;
-  isDark: boolean;
-  cardColor: string;
-  borderColor: string;
-  mutedColor: string;
-  onPress: () => void;
-}> = ({
-  active,
-  icon,
-  label,
-  accentColor,
-  isDark,
-  cardColor,
-  borderColor,
-  mutedColor,
-  onPress,
-}) => (
-  <TouchableOpacity
-    activeOpacity={0.8}
-    onPress={() => {
-      void lightHaptic();
-      onPress();
-    }}
-    accessibilityRole="button"
-    accessibilityState={{ selected: active }}
-    style={[
-      styles.filterChip,
-      active
-        ? { backgroundColor: accentColor, borderColor: accentColor }
-        : { backgroundColor: cardColor, borderColor },
-    ]}
-  >
-    <Ionicons
-      name={active ? 'checkmark' : icon}
-      size={14}
-      color={active ? (isDark ? primary[950] : '#ffffff') : mutedColor}
-    />
-    <Text
-      size="sm"
-      weight={active ? 'semibold' : 'medium'}
-      color={active ? (isDark ? primary[950] : '#ffffff') : mutedColor}
-      numberOfLines={1}
-    >
-      {label}
-    </Text>
-  </TouchableOpacity>
-);
 
 export const TournamentRanking: React.FC = () => {
   const { t } = useTranslation();
@@ -151,6 +87,9 @@ export const TournamentRanking: React.FC = () => {
     useTournamentRanking(sportId, undefined, levelFilter, ratingFilter, board);
 
   const accentColor = isDark ? primary[300] : primary[600];
+  // primary[300] is pale enough that white text on it fails contrast, so the
+  // selected label goes near-black in dark mode instead.
+  const selectedLabel = isDark ? primary[950] : base.white;
 
   const theme: ThemeBits = useMemo(
     () => ({
@@ -238,60 +177,88 @@ export const TournamentRanking: React.FC = () => {
       />
 
       <View style={styles.filterRow}>
-        <FilterChip
-          active={board === 'singles'}
-          icon="person-outline"
+        <SelectableChip
           label={t('tournamentRanking.boards.singles')}
+          selected={board === 'singles'}
           accentColor={accentColor}
-          isDark={isDark}
-          cardColor={colors.card}
-          borderColor={colors.border}
-          mutedColor={colors.textMuted}
-          onPress={() => setBoard('singles')}
+          selectedLabelColor={selectedLabel}
+          style={styles.filterChip}
+          icon={
+            <Ionicons
+              name={board === 'singles' ? 'checkmark' : 'person-outline'}
+              size={14}
+              color={board === 'singles' ? selectedLabel : colors.textMuted}
+            />
+          }
+          onPress={() => {
+            void lightHaptic();
+            setBoard('singles');
+          }}
         />
-        <FilterChip
-          active={board === 'doubles'}
-          icon="people-outline"
+        <SelectableChip
           label={t('tournamentRanking.boards.doubles')}
+          selected={board === 'doubles'}
           accentColor={accentColor}
-          isDark={isDark}
-          cardColor={colors.card}
-          borderColor={colors.border}
-          mutedColor={colors.textMuted}
-          onPress={() => setBoard('doubles')}
+          selectedLabelColor={selectedLabel}
+          style={styles.filterChip}
+          icon={
+            <Ionicons
+              name={board === 'doubles' ? 'checkmark' : 'people-outline'}
+              size={14}
+              color={board === 'doubles' ? selectedLabel : colors.textMuted}
+            />
+          }
+          onPress={() => {
+            void lightHaptic();
+            setBoard('doubles');
+          }}
         />
       </View>
 
       {myRank && (myRank.levelBucket || myRatingValue != null) ? (
         <View style={styles.filterRow}>
           {myRank?.levelBucket ? (
-            <FilterChip
-              active={filterMode === 'level'}
-              icon="layers-outline"
+            <SelectableChip
               label={t('tournamentRanking.filterMyLevel', {
                 level: t(`tournamentRanking.levels.${myRank.levelBucket}`),
               })}
+              selected={filterMode === 'level'}
               accentColor={accentColor}
-              isDark={isDark}
-              cardColor={colors.card}
-              borderColor={colors.border}
-              mutedColor={colors.textMuted}
-              onPress={() => setFilterMode(m => (m === 'level' ? 'none' : 'level'))}
+              selectedLabelColor={selectedLabel}
+              style={styles.filterChip}
+              icon={
+                <Ionicons
+                  name={filterMode === 'level' ? 'checkmark' : 'layers-outline'}
+                  size={14}
+                  color={filterMode === 'level' ? selectedLabel : colors.textMuted}
+                />
+              }
+              onPress={() => {
+                void lightHaptic();
+                setFilterMode(m => (m === 'level' ? 'none' : 'level'));
+              }}
             />
           ) : null}
           {myRatingValue != null ? (
-            <FilterChip
-              active={filterMode === 'rating'}
-              icon="speedometer-outline"
+            <SelectableChip
               label={t('tournamentRanking.filterMyRating', {
                 rating: Number(myRatingValue).toFixed(1),
               })}
+              selected={filterMode === 'rating'}
               accentColor={accentColor}
-              isDark={isDark}
-              cardColor={colors.card}
-              borderColor={colors.border}
-              mutedColor={colors.textMuted}
-              onPress={() => setFilterMode(m => (m === 'rating' ? 'none' : 'rating'))}
+              selectedLabelColor={selectedLabel}
+              style={styles.filterChip}
+              icon={
+                <Ionicons
+                  name={filterMode === 'rating' ? 'checkmark' : 'speedometer-outline'}
+                  size={14}
+                  color={filterMode === 'rating' ? selectedLabel : colors.textMuted}
+                />
+              }
+              onPress={() => {
+                void lightHaptic();
+                setFilterMode(m => (m === 'rating' ? 'none' : 'rating'));
+              }}
             />
           ) : null}
         </View>
@@ -383,15 +350,9 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[2],
   },
   filterChip: {
+    // Boards share the row evenly, and the pill is raised off the page.
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: spacingPixels[1.5],
-    paddingVertical: spacingPixels[2],
-    paddingHorizontal: spacingPixels[3],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
     ...shadowsNative.sm,
   },
   footer: {

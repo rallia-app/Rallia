@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, Button, useToast } from '@rallia/shared-components';
+import { Text, Button, SelectableChip, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -843,55 +843,32 @@ export const SessionDetail: React.FC = () => {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.partnerChips}
                 >
-                  <TouchableOpacity
+                  <SelectableChip
+                    variant="tinted"
+                    label={t('sessionDetail.partner.none')}
+                    selected={selectedPartner === null}
+                    accentColor={colors.primary}
+                    testID="partner-chip-none"
                     onPress={() => {
                       lightHaptic();
                       setPartnerChoice(null);
                     }}
-                    style={[
-                      styles.partnerChip,
-                      {
-                        borderColor: selectedPartner === null ? colors.primary : colors.border,
-                        backgroundColor:
-                          selectedPartner === null ? colors.highlightBg : colors.card,
-                      },
-                    ]}
-                    testID="partner-chip-none"
-                  >
-                    <Text
-                      size="sm"
-                      weight={selectedPartner === null ? 'semibold' : 'regular'}
-                      color={selectedPartner === null ? colors.primary : colors.text}
-                    >
-                      {t('sessionDetail.partner.none')}
-                    </Text>
-                  </TouchableOpacity>
+                  />
                   {partnerCandidates.map(p => {
                     const selected = selectedPartner === p.user_id;
                     return (
-                      <TouchableOpacity
+                      <SelectableChip
                         key={p.user_id}
+                        variant="tinted"
+                        label={nameOf(p.user_id)}
+                        selected={selected}
+                        accentColor={colors.primary}
+                        testID={`partner-chip-${p.user_id}`}
                         onPress={() => {
                           lightHaptic();
                           setPartnerChoice(selected ? null : p.user_id);
                         }}
-                        style={[
-                          styles.partnerChip,
-                          {
-                            borderColor: selected ? colors.primary : colors.border,
-                            backgroundColor: selected ? colors.highlightBg : colors.card,
-                          },
-                        ]}
-                        testID={`partner-chip-${p.user_id}`}
-                      >
-                        <Text
-                          size="sm"
-                          weight={selected ? 'semibold' : 'regular'}
-                          color={selected ? colors.primary : colors.text}
-                        >
-                          {nameOf(p.user_id)}
-                        </Text>
-                      </TouchableOpacity>
+                      />
                     );
                   })}
                 </ScrollView>
@@ -1531,12 +1508,6 @@ const styles = StyleSheet.create({
   ctaButtons: { flexDirection: 'row', gap: spacingPixels[3] },
   partnerBlock: { gap: spacingPixels[2] },
   partnerChips: { flexDirection: 'row', gap: spacingPixels[2] },
-  partnerChip: {
-    borderWidth: 1,
-    borderRadius: radiusPixels.full,
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
-  },
   ctaButton: {
     flex: 1,
     flexDirection: 'row',
