@@ -389,6 +389,7 @@ const DEFAULT_PRIORITIES: Record<ExtendedNotificationTypeEnum, NotificationPrior
   reference_request_received: 'high',
   reference_request_accepted: 'normal',
   reference_request_declined: 'normal',
+  reference_request_dismissed: 'low',
   payment: 'normal',
   support: 'normal',
   reminder: 'normal',
@@ -517,6 +518,7 @@ const TITLE_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   reference_request_received: 'Reference requested',
   reference_request_accepted: 'Reference provided',
   reference_request_declined: 'Reference declined',
+  reference_request_dismissed: 'Reference passed on',
   reminder: 'Game coming up',
   payment: 'Payment update',
   support: 'Message from Rallia',
@@ -653,6 +655,8 @@ const BODY_TEMPLATES: Record<ExtendedNotificationTypeEnum, string> = {
   reference_request_received: '{playerName} would like you to verify their {sportName} rating.',
   reference_request_accepted: '{playerName} verified your {sportName} rating.',
   reference_request_declined: '{playerName} declined to verify your {sportName} rating.',
+  reference_request_dismissed:
+    "{playerName} passed on your {sportName} rating request. Ask someone you've played with.",
   reminder: "Don't forget your {sportName} game on {matchDate} at {locationName}",
   payment: 'Your payment status has been updated. Tap to view details.',
   support: 'Our support team has sent you a message. Tap to read.',
@@ -1504,12 +1508,17 @@ export async function notifyReferenceRequestResponded(
   requestId: string,
   refereeName: string,
   sportName: string,
-  status: 'completed' | 'declined',
+  status: 'completed' | 'declined' | 'dismissed',
   ratingLabel?: string,
   ratingSupported?: boolean,
   responseMessage?: string | null
 ): Promise<Notification> {
-  const type = status === 'completed' ? 'reference_request_accepted' : 'reference_request_declined';
+  const type =
+    status === 'completed'
+      ? 'reference_request_accepted'
+      : status === 'dismissed'
+        ? 'reference_request_dismissed'
+        : 'reference_request_declined';
 
   return createNotification({
     type,

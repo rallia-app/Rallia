@@ -34,6 +34,7 @@ export type NotificationType =
   | 'reference_request_received'
   | 'reference_request_accepted'
   | 'reference_request_declined'
+  | 'reference_request_dismissed'
   // Organization staff notifications
   | 'booking_created'
   | 'booking_cancelled_by_player'
@@ -239,6 +240,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   reference_request_received: { email: false, push: true, sms: false },
   reference_request_accepted: { email: false, push: true, sms: false },
   reference_request_declined: { email: false, push: true, sms: false },
+  reference_request_dismissed: { email: false, push: true, sms: false },
   // Community notifications
   community_join_request: { email: false, push: true, sms: false },
   community_join_accepted: { email: false, push: true, sms: false },

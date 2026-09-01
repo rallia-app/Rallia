@@ -296,6 +296,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   reference_request_received: 'person-circle-outline',
   reference_request_accepted: 'checkmark-circle-outline',
   reference_request_declined: 'close-circle-outline',
+  reference_request_dismissed: 'help-circle-outline',
   // Feedback types
   feedback_request: 'star-outline',
   feedback_reminder: 'notifications-outline',
@@ -419,6 +420,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   reference_request_received: '#4DB8A8', // Teal - incoming request
   reference_request_accepted: '#4CAF50', // Green - positive outcome
   reference_request_declined: '#F44336', // Red - declined
+  reference_request_dismissed: '#9E9E9E', // Grey - closed without a verdict
   // Feedback types
   feedback_request: '#FFC107', // Amber
   feedback_reminder: '#FF9800', // Orange
@@ -539,6 +541,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   reference_request_received: 'Reference Request Received',
   reference_request_accepted: 'Reference Request Accepted',
   reference_request_declined: 'Reference Request Declined',
+  reference_request_dismissed: 'Reference Request Dismissed',
   feedback_request: 'Feedback Request',
   feedback_reminder: 'Feedback Reminder',
   score_confirmation: 'Score Confirmation',
@@ -663,6 +666,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   reference_request_received: 'social',
   reference_request_accepted: 'social',
   reference_request_declined: 'social',
+  reference_request_dismissed: 'social',
   // System category
   reminder: 'system',
   payment: 'system',
@@ -831,6 +835,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   reference_request_received: { email: true, push: true, sms: false },
   reference_request_accepted: { email: true, push: true, sms: false },
   reference_request_declined: { email: true, push: true, sms: false },
+  reference_request_dismissed: { email: false, push: true, sms: false },
   // System types - email only by default
   reminder: { email: false, push: true, sms: false },
   payment: { email: true, push: true, sms: false },
@@ -969,12 +974,14 @@ export const REFERENCE_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum
   'reference_request_received',
   'reference_request_accepted',
   'reference_request_declined',
+  'reference_request_dismissed',
 ];
 
 /** Reference responses that deep-link to the sport profile. */
 export const REFERENCE_RESPONSE_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] = [
   'reference_request_accepted',
   'reference_request_declined',
+  'reference_request_dismissed',
 ];
 
 /** Tournament notifications — target_id is always the tournament id. */

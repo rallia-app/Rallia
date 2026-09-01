@@ -262,6 +262,7 @@
       "reference_request_received": "Référence demandée",
       "reference_request_accepted": "Référence acceptée",
       "reference_request_declined": "Référence refusée",
+      "reference_request_dismissed": "Référence passée",
       "reminder": "Rappel",
       "payment": "Paiement",
       "support": "Support",
@@ -465,6 +466,10 @@
         "title": "{playerName} a refusé ta référence",
         "body": "{playerName} n'a pas pu confirmer ton niveau en {sportName}. Demande à un autre joueur."
       },
+      "reference_request_dismissed": {
+        "title": "{playerName} a passé son tour",
+        "body": "{playerName} ne s'est pas prononcé sur ton niveau en {sportName}. Demande à un joueur avec qui tu as déjà joué."
+      },
       "match_spot_opened": {
         "title": "Une place s'est libérée en {sportName}",
         "body": "Une place vient de se libérer le {matchDate}{startTime}{locationName}. Prends-la vite!"
@@ -627,14 +632,18 @@
     "question": "Selon votre expérience de jeu avec {name}, ce niveau est-il exact?",
     "yesApprove": "Oui, approuver",
     "approveDescription": "Ce niveau semble correct",
-    "noDecline": "Non, refuser",
+    "noDecline": "Non, pas exact",
     "declineDescription": "Ce niveau semble inexact",
+    "cantSay": "Je ne peux pas me prononcer",
+    "cantSayDescription": "Je n'ai jamais joué avec ce joueur",
+    "cantSayNote": "Rien ne compte pour ou contre son niveau.",
     "addMessage": "Ajouter un message",
     "messagePlaceholder": "Ajoutez des commentaires ou du contexte pour le joueur...",
     "submitResponse": "Soumettre la réponse",
-    "selectResponse": "Veuillez sélectionner approuver ou refuser",
+    "selectResponse": "Choisis une réponse",
     "responseSubmittedApprove": "Référence approuvée avec succès!",
     "responseSubmittedDecline": "Référence refusée",
+    "responseSubmittedCantSay": "Demande fermée. On lui a dit que tu as passé ton tour.",
     "failedToSubmit": "Échec de la soumission. Veuillez réessayer.",
     "privacyNote": "Votre réponse sera visible par le joueur demandeur. Les demandes refusées ne comptent pas pour leur certification.",
     "badge": {
@@ -1180,6 +1189,7 @@
       "status": {
         "approved": "Approuvée",
         "contested": "Contestée",
+        "passed": "Sans avis",
         "pending": "En attente"
       },
       "filters": {

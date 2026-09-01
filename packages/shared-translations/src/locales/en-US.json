@@ -262,6 +262,7 @@
       "reference_request_received": "Reference requested",
       "reference_request_accepted": "Reference accepted",
       "reference_request_declined": "Reference declined",
+      "reference_request_dismissed": "Reference passed on",
       "reminder": "Reminder",
       "payment": "Payment",
       "support": "Support",
@@ -465,6 +466,10 @@
         "title": "{playerName} declined your reference",
         "body": "{playerName} couldn't confirm your {sportName} rating. Tap to ask another player."
       },
+      "reference_request_dismissed": {
+        "title": "{playerName} passed on your request",
+        "body": "{playerName} didn't weigh in on your {sportName} level. Ask a player you've already played with."
+      },
       "match_spot_opened": {
         "title": "A spot opened in a {sportName} game",
         "body": "A spot just opened on {matchDate}{startTime}{locationName}. Tap to claim it before it's gone."
@@ -627,14 +632,18 @@
     "question": "Based on your experience playing with {name}, is this rating accurate?",
     "yesApprove": "Yes, Approve",
     "approveDescription": "This rating seems accurate",
-    "noDecline": "No, Decline",
+    "noDecline": "No, not accurate",
     "declineDescription": "This rating seems inaccurate",
+    "cantSay": "I can't say",
+    "cantSayDescription": "I have not played with this player",
+    "cantSayNote": "Nothing counts for or against their level.",
     "addMessage": "Add a message",
     "messagePlaceholder": "Add any feedback or context for the player...",
     "submitResponse": "Submit Response",
-    "selectResponse": "Please select approve or decline",
+    "selectResponse": "Please pick an answer",
     "responseSubmittedApprove": "Reference approved successfully!",
     "responseSubmittedDecline": "Reference declined",
+    "responseSubmittedCantSay": "Request closed. We let them know you passed.",
     "failedToSubmit": "Failed to submit response. Please try again.",
     "privacyNote": "Your response will be visible to the requesting player. Declined requests won't count towards their certification.",
     "badge": {
@@ -1180,6 +1189,7 @@
       "status": {
         "approved": "Approved",
         "contested": "Contested",
+        "passed": "Couldn't say",
         "pending": "Pending"
       },
       "filters": {

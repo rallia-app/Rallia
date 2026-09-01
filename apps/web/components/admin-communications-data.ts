@@ -46,6 +46,7 @@ export type NotificationType =
   | 'reference_request_received'
   | 'reference_request_accepted'
   | 'reference_request_declined'
+  | 'reference_request_dismissed'
   | 'booking_created'
   | 'booking_cancelled_by_player'
   | 'booking_modified'
@@ -98,6 +99,7 @@ export const NOTIFICATION_CATEGORIES: Record<NotificationType, NotificationCateg
   reference_request_received: 'social',
   reference_request_accepted: 'social',
   reference_request_declined: 'social',
+  reference_request_dismissed: 'social',
   feedback_request: 'social',
   feedback_reminder: 'social',
   score_confirmation: 'social',
@@ -164,6 +166,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   reference_request_received: { email: false, push: true, sms: false },
   reference_request_accepted: { email: false, push: true, sms: false },
   reference_request_declined: { email: false, push: true, sms: false },
+  reference_request_dismissed: { email: false, push: true, sms: false },
   community_join_request: { email: false, push: true, sms: false },
   community_join_accepted: { email: false, push: true, sms: false },
   community_join_rejected: { email: false, push: true, sms: false },

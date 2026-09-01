@@ -17022,6 +17022,7 @@ export type Database = {
         | "tournament_registration_closing_soon"
         | "recurring_court_opened"
         | "tournament_match_cancelled"
+        | "reference_request_dismissed"
       odd_cardinality_mode: "bye" | "three_player" | "drill"
       opponent_level_assessment_enum: "below" | "at" | "above"
       organization_nature_enum: "public" | "private"
@@ -17090,6 +17091,7 @@ export type Database = {
         | "declined"
         | "expired"
         | "cancelled"
+        | "dismissed"
       rating_source_type:
         | "self_reported"
         | "api_verified"
@@ -17721,6 +17723,7 @@ export const Constants = {
         "tournament_registration_closing_soon",
         "recurring_court_opened",
         "tournament_match_cancelled",
+        "reference_request_dismissed",
       ],
       odd_cardinality_mode: ["bye", "three_player", "drill"],
       opponent_level_assessment_enum: ["below", "at", "above"],
@@ -17798,6 +17801,7 @@ export const Constants = {
         "declined",
         "expired",
         "cancelled",
+        "dismissed",
       ],
       rating_source_type: [
         "self_reported",

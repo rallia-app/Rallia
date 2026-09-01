@@ -387,6 +387,7 @@ const CTA_BY_TYPE: Record<string, CtaSpec> = {
   reference_request_received: { buttonKey: 'match.button.viewRequest', to: 'referenceRequests' },
   reference_request_accepted: { buttonKey: 'match.button.viewRating', to: 'profile' },
   reference_request_declined: { buttonKey: 'match.button.viewRating', to: 'profile' },
+  reference_request_dismissed: { buttonKey: 'match.button.viewRating', to: 'profile' },
   availability_refresh_reminder: {
     buttonKey: 'match.button.updateAvailability',
     to: 'availability',

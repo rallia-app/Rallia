@@ -94,6 +94,7 @@ const ACTIVE_NOTIFICATION_TYPES = new Set<ExtendedNotificationTypeEnum>([
   'reference_request_received',
   'reference_request_accepted',
   'reference_request_declined',
+  'reference_request_dismissed',
   // Email digest
   'morning_digest',
   // Weekly availability refresh nudge
@@ -166,6 +167,7 @@ const NOTIFICATION_DS_COLORS: Partial<Record<ExtendedNotificationTypeEnum, strin
   reference_request_received: primary[500],
   reference_request_accepted: status.success.light,
   reference_request_declined: secondary[500],
+  reference_request_dismissed: neutral[500],
   morning_digest: status.info.DEFAULT,
   // Match time-suggestion flow
   match_time_suggested: accent[600],

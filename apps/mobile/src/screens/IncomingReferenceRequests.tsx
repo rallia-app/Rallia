@@ -49,7 +49,7 @@ interface ReferenceRequest {
   requester_id: string;
   player_rating_score_id: string;
   message: string | null;
-  status: 'pending' | 'completed' | 'declined' | 'expired' | 'cancelled';
+  status: 'pending' | 'completed' | 'declined' | 'dismissed' | 'expired' | 'cancelled';
   expires_at: string;
   created_at: string;
   // Joined data
