@@ -101,11 +101,7 @@ export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-
   const presetColors = useMemo(
     () => ({
       presetActiveBg: colors.primary,
-      presetInactiveBg: colors.inputBackground,
-      presetActiveBorder: colors.primary,
-      presetInactiveBorder: colors.inputBorder,
       presetActiveText: colors.primaryForeground,
-      presetInactiveText: colors.text,
       textMuted: colors.textMuted,
       border: colors.inputBorder,
     }),

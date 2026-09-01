@@ -14,7 +14,7 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, EmptyState, useToast } from '@rallia/shared-components';
+import { Text, EmptyState, Button, useToast } from '@rallia/shared-components';
 import {
   spacingPixels,
   radiusPixels,
@@ -62,6 +62,7 @@ export function TournamentLinkMatchActionSheet({ payload }: SheetProps<'tourname
   const entryFormat = payload?.entryFormat ?? 'singles';
   const team1UserIds = useMemo(() => payload?.team1UserIds ?? [], [payload?.team1UserIds]);
   const team2UserIds = useMemo(() => payload?.team2UserIds ?? [], [payload?.team2UserIds]);
+  const onManualEntry = payload?.onManualEntry;
   const onSuccess = payload?.onSuccess;
   const onDismiss = payload?.onDismiss;
 
@@ -121,6 +122,15 @@ export function TournamentLinkMatchActionSheet({ payload }: SheetProps<'tourname
     [attach, tournamentMatchId, tournamentId]
   );
 
+  // No game was ever created for this matchup: hand off to the manual score
+  // sheet once this one is fully hidden. Mark as picked so the dismiss
+  // callback stays quiet mid-handoff.
+  const handleManualEntry = useCallback(() => {
+    void lightHaptic();
+    didPickRef.current = true;
+    void SheetManager.hide(SHEET_ID).then(() => onManualEntry?.());
+  }, [onManualEntry]);
+
   const renderItem = useCallback(
     ({ item }: { item: LinkableMatch }) => (
       <LinkableMatchCard
@@ -168,6 +178,19 @@ export function TournamentLinkMatchActionSheet({ payload }: SheetProps<'tourname
           showsVerticalScrollIndicator={false}
         />
       )}
+      {onManualEntry && !isLoading ? (
+        <View style={styles.manualEntry}>
+          <Button
+            variant={matches.length === 0 ? 'primary' : 'outline'}
+            size="md"
+            fullWidth
+            onPress={handleManualEntry}
+            testID="cta-manual-score"
+          >
+            {t('tournamentDetail.linkPicker.manualCta')}
+          </Button>
+        </View>
+      ) : null}
     </BaseActionSheet>
   );
 }
@@ -638,6 +661,10 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[8],
     gap: spacingPixels[2],
+  },
+  manualEntry: {
+    paddingHorizontal: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
   },
 });
 

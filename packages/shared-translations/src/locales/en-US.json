@@ -3,20 +3,23 @@
     "badge": "1,000 players",
     "title": "1,000 players. One community.",
     "body1": "A few months ago, Rallia was just an idea between two players tired of never finding anyone to hit with.",
-    "body2": "Today, 1,000 of you have joined in. Playing, organizing your games, and keeping recreational tennis and pickleball alive in Montreal.",
+    "body2": "Today, 1,000 of you have joined in. Playing, organizing your games, and keeping recreational tennis and pickleball alive in Greater Montreal.",
     "body2b": "And you're one of them.",
     "body3": "Thank you for believing in it. Thank you for playing. Thank you for being here.",
     "signature": "Jean & Mathis",
     "continueCta": "Continue",
     "ctaTitle": "What if we were 2,000?",
-    "ctaSubtitle": "Share Rallia with someone you would like to play with. Your next game might already be in your contacts.",
-    "prize": "Up for grabs: {prize}",
+    "ctaSubtitle": "Share Rallia with someone you would like to play with. Your contacts, your social networks, your player groups: your next game might already be there.",
+    "creditPledge": "Bring 5 new players and get $10 in credit toward Rallia events.",
     "yourCode": "Your code",
     "shareCta": "Share Rallia",
     "copyLink": "Copy my link",
     "copyCode": "Copy my code",
     "shareTitle": "Join me on Rallia",
-    "shareMessage": "There are already 1,000 of us playing on Rallia in Montreal. Find yourself a game, it takes two minutes: {link}"
+    "shareMessage": "There are already 1,000 of us playing on Rallia in Greater Montreal. Find yourself a game, it takes two minutes: {link}",
+    "socialTitle": "Follow the journey",
+    "socialSubtitle": "News, events, and community highlights all happen on our socials. Follow us so you don't miss a thing.",
+    "doneCta": "Done"
   },
   "suggestionCard": {
     "courtsAvailable": "{count} courts available"
@@ -245,6 +248,7 @@
       "match_new_available": "New game in group",
       "match_spot_opened": "Spot opened",
       "court_booking_nudge": "Book your court",
+      "recurring_court_opened": "Recurring game courts",
       "match_last_minute_spots": "Starting soon",
       "match_unfilled_recovery": "Game recovery",
       "play_rhythm_nudge": "Usual slot open",
@@ -468,6 +472,10 @@
       "court_booking_nudge": {
         "title": "Courts are open at {facilityName}",
         "body": "Games with a booked court fill faster. Grab yours while it's open."
+      },
+      "recurring_court_opened": {
+        "title": "Courts just opened at {facilityName}",
+        "body": "Booking just opened for your recurring game. Lock in your court before it goes."
       },
       "match_last_minute_spots": {
         "title": "Starting soon · {sportName} at {locationName}",
@@ -726,6 +734,7 @@
     "deleteAccountBlockedTitle": "Account still linked to events",
     "deleteAccountBlockedMessage": "Your account is linked to tournament or league records (registrations, results or payments). Withdraw from any active events first, then write to contact@rallia.ca and we'll finish the deletion for you.",
     "contactSupport": "Contact Support",
+    "previewMilestone1000": "Open the 1000-player announcement",
     "appInfo": "App Info",
     "version": "Version",
     "environment": "Environment",
@@ -2362,6 +2371,17 @@
     "announcement": {
       "subtitle": "Official announcements",
       "readOnly": "Only Rallia posts here"
+    },
+    "poolRoom": {
+      "subtitle": "Pool {n}",
+      "welcome": "Welcome to your pool. Give your availability to unlock your game conversations. What is written here does not count in the automatic decisions at the deadline.",
+      "lockedNotice": "Reading is open to everyone. To write here and plan your games, give your availability first.",
+      "lockedCta": "Give my availability"
+    },
+    "pairingScore": {
+      "title": "Enter the score",
+      "subtitle": "Already played? Record the result here",
+      "saved": "Result saved 🙌"
     }
   },
   "map": {
@@ -3358,7 +3378,16 @@
       "previewSuggestions": "Suggested times to play",
       "staleOption": "No longer open",
       "likedBy": "{name} likes this time",
-      "likedByCount": "{count} players like this time"
+      "likedByCount": "{count} players like this time",
+      "tentative": "Game proposed",
+      "tentativeWaiting": "Waiting for {name} to confirm. Without an answer it stands in 24 h.",
+      "tentativeAsk": "{name} created this game. Confirm it, or propose another time.",
+      "tentativeAccept": "Works for me",
+      "tentativeRepropose": "Propose another time",
+      "forfeitCta": "I have to forfeit",
+      "forfeitConfirmTitle": "Forfeit this game?",
+      "forfeitConfirmBody": "Your opponent wins by forfeit and the result is final. Do this only if you truly cannot play.",
+      "forfeitConfirm": "Forfeit"
     },
     "banner": {
       "title": "Organize a game",
@@ -3406,7 +3435,10 @@
       "systemNote": "{name} suggested another time",
       "errorPast": "Pick a time in the future.",
       "errorSettled": "The game for this matchup already exists.",
-      "errorGeneric": "Could not suggest that time. Try again."
+      "errorGeneric": "Could not suggest that time. Try again.",
+      "errorReproposalSpent": "You have already proposed another time for this game.",
+      "errorWindowClosed": "This game is confirmed now. To change it, cancel the game.",
+      "errorPastDeadline": "That time is after the deadline for this round."
     }
   },
   "matchShare": {
@@ -3418,6 +3450,19 @@
     }
   },
   "matchDetail": {
+    "recurring": {
+      "title": "Repeats weekly",
+      "subtitle": "Next week's game is created once this one ends.",
+      "stop": "Stop",
+      "stopConfirmTitle": "Stop repeating this game?",
+      "stopConfirmMessage": "Games already created stay on your schedule. No new ones will be created.",
+      "stopSuccess": "This game no longer repeats.",
+      "stopError": "Could not stop the repeat. Try again.",
+      "cancelKeepsRepeating": "Next week's game will still be created. Turn on the option below to stop the repeat as well.",
+      "alsoStopTitle": "Stop repeating too",
+      "alsoStopSubtitle": "No new games will be created after this one.",
+      "cancelAndStop": "Cancel and stop"
+    },
     "title": "Game details",
     "preferences": "Preferences",
     "chat": "Chat",
@@ -3582,7 +3627,13 @@
       "acceptSuccess": "Game rescheduled",
       "declineSuccess": "Suggestion declined",
       "errorMatchFull": "The match filled up while this was pending. Free up a spot or decline."
-    }
+    },
+    "contestScore": "Contest this score",
+    "contestScoreTitle": "Contest this score?",
+    "contestScoreBody": "The result is flagged and the organizer decides it instead of the app. Do this if the score is wrong, not because you would rather it had gone the other way.",
+    "contestScoreCta": "Contest it",
+    "contestScoreDone": "Contested. The organizer will settle it.",
+    "contestScoreError": "Could not contest this score. Try again."
   },
   "registerMatchScore": {
     "title": "Register score",
@@ -3641,6 +3692,7 @@
       "subtitle": "Keep the momentum going and line up your next one now.",
       "playAgain": "Play again next week",
       "joinAnother": "Join another game",
+      "coPlayerGamesTitle": "Coming up with players from this game",
       "done": "Done"
     },
     "matchContext": {
@@ -4092,6 +4144,9 @@
       "emailFacility": "Email",
       "visitWebsite": "Website",
       "isCourtFree": "Free Court",
+      "isRecurring": "Repeat weekly",
+      "isRecurringOn": "Next week's game is created as soon as this one ends, without a court. We tell you the moment courts open.",
+      "isRecurringOff": "This is a one-time game.",
       "isCourtFreeYes": "Yes, it's free",
       "isCourtFreeNo": "No, there's a cost",
       "costSplitType": "Cost Split",
@@ -4192,6 +4247,10 @@
       "selectDate": "Select game date",
       "selectTime": "Select start time",
       "selectTimezone": "Select timezone for game location"
+    },
+    "nudges": {
+      "bookCourt": "Games with the court already booked fill about twice as often.",
+      "postEarly": "Posting a day ahead roughly doubles your chances of someone joining."
     },
     "booking": {
       "openReservation": "Open Reservation",
@@ -4609,6 +4668,7 @@
       "breakdownEntry": "Entry fee: {amount}",
       "breakdownServiceFee": "Rallia service fee: {amount}",
       "breakdownFeeTax": "GST + QST on the service fee: {amount}",
+      "breakdownCredit": "Rallia credit: -{amount}",
       "breakdownTotal": "Total: {amount}",
       "breakdownTotalTaxesIncluded": "Total: {amount} (taxes included)",
       "feeCoveredByOrganizer": "Rallia service fee and taxes: covered by the organizer, nothing is added for you.",
@@ -4678,11 +4738,20 @@
       "empty": "No sessions scheduled yet",
       "namePlaceholder": "e.g., Tuesday night",
       "date": "Date",
+      "windowStart": "Start",
       "time": "Time",
       "capacityPlaceholder": "Capacity (optional)",
       "submit": "Create session",
       "creating": "Creating...",
       "publish": "Publish",
+      "publishNamed": "Publish {name}",
+      "confirmSpot": "Confirm your spot",
+      "createSessionCta": {
+        "description": "Members only get games once a session is on the calendar."
+      },
+      "publishCta": {
+        "description": "A draft session stays invisible. Publish it so members can answer."
+      },
       "created": "Session created",
       "published": "Session published",
       "seriesCreated": "{count} sessions created",
@@ -4989,7 +5058,9 @@
       "draftBanner": "Draft. Only you can see these pairings. Adjust them, then publish.",
       "draftHint": "Regenerating reshuffles the unlocked pairings. Nothing reaches your members until you publish.",
       "publish": "Publish the sheet",
-      "published": "Sheet published"
+      "published": "Sheet published",
+      "stateDraft": "Draft",
+      "statePublished": "Published"
     },
     "score": {
       "title": "Enter score",
@@ -5002,11 +5073,15 @@
       "confirmLast": {
         "title": "Close the session?",
         "message": "This is the last result. Saving it closes the session and updates the standings. You can still fix any score for 24 hours.",
-        "cta": "Save and close"
+        "cta": "Save and close",
+        "selfMessage": "This is the last result of the session. Saving it closes the session and updates the standings."
       },
       "errors": {
-        "correctionWindowClosed": "The 24-hour window to correct this session has closed. Ask an admin for help."
-      }
+        "correctionWindowClosed": "The 24-hour window to correct this session has closed. Ask an admin for help.",
+        "alreadyScored": "This matchup already has a result.",
+        "matchAlreadyLinked": "A game is already linked to this matchup. Enter the score in that game instead."
+      },
+      "selfSubtitle": "Enter the final score you agreed on with your opponent. It counts right away in the standings. The organizer can fix mistakes."
     },
     "rpcErrors": {
       "startPassed": "The session start time has already passed.",
@@ -5037,7 +5112,8 @@
         "matchAlreadyLinked": "That game is already linked to another result.",
         "matchNotVerified": "That game's score isn't confirmed yet.",
         "participantsMismatch": "The players in that game don't match this matchup."
-      }
+      },
+      "manualCta": "Enter the score manually"
     },
     "pairingChat": {
       "organize": "Organize your game",
@@ -5079,7 +5155,6 @@
     "create": "Create an event",
     "createSubtitle": "Run a tournament or a league",
     "myEvents": "My events",
-    "viewAllMine": "View all",
     "searchPlaceholder": "Search events...",
     "empty": "No events yet",
     "emptyDescription": "Nothing open near you right now. Check back soon, or create your own.",
@@ -5214,7 +5289,7 @@
       "schedulingTitle": "How sessions run",
       "scheduling": {
         "fixed": {
-          "title": "Fixed evenings",
+          "title": "Fixed dates",
           "description": "Every session is one date at one time. Everyone plays together."
         },
         "flex": {
@@ -5374,6 +5449,7 @@
       "breakdownEntry": "Entry fee: {amount}",
       "breakdownServiceFee": "Service fee: {amount}",
       "breakdownFeeTax": "GST + QST on the service fee: {amount}",
+      "breakdownCredit": "Rallia credit: -{amount}",
       "breakdownTotal": "Total: {amount}",
       "breakdownTotalTaxesIncluded": "Total: {amount} (taxes included)",
       "feeCoveredByOrganizer": "Rallia service fee and taxes: covered by the organizer, nothing is added for you.",
@@ -5492,7 +5568,8 @@
         "openDescription": "{count} of {max} spots filled.",
         "closedDescription": "{count} players are in. Generate the bracket to start play.",
         "liveTitle": "Tournament in progress",
-        "liveDescription": "{done} of {total} games completed. Tap a pending game in the bracket to record its result."
+        "liveDescription": "{done} of {total} games completed. Tap a pending game in the bracket to record its result.",
+        "deadlinesDescription": "Set a date for each round so players know when to play by."
       },
       "registerCta": {
         "full": "Tournament full",
@@ -5512,7 +5589,6 @@
         "descriptionInvited": "Accept the invitation to confirm your spot. You can also withdraw if you can't play."
       },
       "inviteFriendsCta": {
-        "title": "Bring your friends",
         "description": "Tournaments are better with people you know. Share your link and get them in the draw."
       },
       "pendingRequestsCta": {
@@ -5522,6 +5598,9 @@
       },
       "myMatch": {
         "title": "Your next game",
+        "poolTitle": "Your pool games",
+        "poolProgress": "{done} of {total} games played",
+        "poolProgress_one": "{done} of {total} game played",
         "vs": "vs {name}",
         "hint": "Tap to link your played game",
         "organize": "Organize your game",
@@ -5606,6 +5685,8 @@
       "closeRegistration": "Close registration",
       "reopenRegistration": "Reopen registration",
       "shareInviteLink": "Share invite link",
+      "setDeadlines": "Round deadlines",
+      "setDeadlinesCta": "Set the round deadlines",
       "register": "Register",
       "addMyself": "Add myself",
       "withdraw": "Withdraw",
@@ -5789,7 +5870,8 @@
         "matchAlreadyLinked": "That game is already linked to another result.",
         "matchNotVerified": "That game's score isn't confirmed yet.",
         "participantsMismatch": "The players in that game don't match this matchup."
-      }
+      },
+      "manualCta": "Enter the score manually"
     },
     "partner": {
       "title": "Pick your partner",
@@ -5822,6 +5904,15 @@
         "message": "{champion} wins {score} and is crowned champion. Ranking points go out right away. You can still fix this for 24 hours.",
         "cta": "Confirm the champion"
       },
+      "outcome": {
+        "completed": "Score",
+        "walkover": "Walkover",
+        "retired": "Retirement",
+        "cancelled": "Cancelled",
+        "walkoverHint": "Nobody played. Who goes through?",
+        "retiredHint": "The game started and was abandoned. Who takes it?",
+        "cancelledHint": "This game will not be played. It counts for neither player in the pool standings."
+      },
       "errors": {
         "notOverridable": "This match can't be edited anymore.",
         "nextMatchPlayed": "You can't change this score now. The next game has already been played.",
@@ -5829,8 +5920,55 @@
         "notInProgress": "The tournament isn't in progress.",
         "slotsIncomplete": "Both players aren't set yet for this match.",
         "correctionWindowClosed": "The 24-hour window to correct this result has closed. Ask an admin for help.",
-        "generic": "Couldn't save the result. Please try again."
+        "generic": "Couldn't save the result. Please try again.",
+        "cancelNeedsBracketOutcome": "A bracket game cannot be cancelled: somebody has to go through. Declare a walkover instead.",
+        "winnerRequired": "Pick who goes through.",
+        "matchAlreadyLinked": "A game is already linked to this matchup. Enter the score in that game instead."
       }
+    },
+    "restore": {
+      "title": "This game was settled automatically",
+      "cta": "Put the game back to unplayed",
+      "confirmTitle": "Undo this decision?",
+      "confirmBody": "The pairing goes back to unplayed, whoever it advanced comes back out of the next round, and the reputation hit it caused is removed. Use this when the app got it wrong, not to record a result.",
+      "confirmCta": "Undo it",
+      "windowClosed": "Too late to undo it here: the draw has moved past this pairing. Record the result instead.",
+      "organizerOnly": "Only the organizer can undo an automatic decision.",
+      "errorGeneric": "Could not undo this decision. Try again.",
+      "rule": {
+        "no_show": "One side checked in for the agreed game and the other did not, so the walkover went against the absent side.",
+        "cancel_forfeit": "One side cancelled the agreed game and it was not rescheduled before the deadline.",
+        "one_sided": "One side gave their availability before the deadline and the other did nothing.",
+        "gap_rule": "Both sides tried, but one clearly did more to get the game organized.",
+        "no_effort": "Neither side followed up before the deadline, so nobody advanced.",
+        "stalemate": "Both sides did their part and it did not come together, so the game was cancelled with nobody at fault.",
+        "generic": "The app settled this pairing when the round deadline passed."
+      }
+    },
+    "rules": {
+      "title": "How the deadline works",
+      "intro": "Every round has a date by which the game has to be played. If it is not, the app decides the pairing rather than letting it hang. Here is exactly how, so nothing comes as a surprise.",
+      "deadline": {
+        "title": "The deadline is firm",
+        "body": "When it passes, the pairing is settled one way or another and the round moves on. Nothing is extended automatically, and a game booked after the deadline does not count."
+      },
+      "trying": {
+        "title": "What counts as trying",
+        "body": "Giving your availability, booking one of the times you have in common, and answering when your opponent proposes something. Only these count. Messages in the chat do not, on purpose: the app cannot fairly judge a conversation, but it can see an hour you declared free."
+      },
+      "bothTried": {
+        "title": "If you both tried and still could not play",
+        "body": "Nobody is blamed. If one of you clearly did more (answered sooner, gave more hours, replied to proposals), that person advances. If it is close, the game is cancelled and counts for neither of you."
+      },
+      "neither": {
+        "title": "If one of you did nothing",
+        "body": "The one who tried advances by walkover. If neither of you did anything, nobody advances. You get two reminders before that, 48 hours and 12 hours out."
+      },
+      "cost": {
+        "title": "What a walkover costs",
+        "body": "It counts as a loss in the standings, and that is all. It never touches your rating, and it does not change your Rallia points. Not answering at all can affect your reputation score, but only if we actually reached you first."
+      },
+      "footnote": "Organizers can move a deadline while it is still ahead, and can undo a decision the app got wrong. If something looks off, tell the organizer."
     },
     "generateBracketErrors": {
       "insufficientParticipants": "At least 2 players must be registered.",
@@ -5902,6 +6040,10 @@
       "walkover": "W/O",
       "cancelled": "Cancelled",
       "toPlay": "To play",
+      "played": "Played",
+      "resultWon": "Won {detail}",
+      "resultLost": "Lost {detail}",
+      "byWalkover": "by walkover",
       "launchKnockout": "Launch the knockout stage",
       "launchKnockoutWaiting": "Knockout opens when every pool game is settled",
       "launchKnockoutReady": "Pools are done. The organizer can now launch the knockout.",
@@ -5909,18 +6051,82 @@
       "knockoutTitle": "Knockout",
       "headerRecord": "W-L",
       "headerSets": "Sets",
-      "vs": "vs"
+      "vs": "vs",
+      "enterScore": "Enter score"
     },
     "deadlines": {
       "playBy": "play by {date}",
       "hoursLeft": "{hours}h left to play",
       "phaseDeadline": "Current phase: {when}"
     },
+    "deadlinesEditor": {
+      "title": "Round deadlines",
+      "hint": "Players play up to the deadline. Once it passes, the rules settle whatever is left and the date can no longer be moved, so set it now and push it back early if you need to.",
+      "poolPhase": "Pool phase",
+      "notSet": "No deadline",
+      "passed": "Already passed, can no longer be moved",
+      "noRounds": "The rounds appear once the pools or the draw are published.",
+      "save": "Save deadlines",
+      "saved": "Deadlines updated. The players have been notified.",
+      "errorInPast": "A deadline has to be in the future.",
+      "errorTooSoon": "You cannot pull a deadline in to less than 48 hours from now. Players were counting on the date they were given.",
+      "errorPassed": "That deadline has passed, so it is settled and cannot be moved. Correct a result instead.",
+      "errorNotIncreasing": "Each round has to end after the one before it.",
+      "errorNotIncreasingRound": "{round} has to end after the round before it.",
+      "errorNotReady": "Deadlines can only be set while the tournament is open or in progress.",
+      "errorInvalid": "Those dates could not be saved.",
+      "errorGeneric": "The deadlines could not be saved."
+    },
+    "availabilityGate": {
+      "title": "Your availability",
+      "poolPhase": "Pool phase",
+      "window": "Your hours count until {date}. Check off everything that works, your opponents will see the hours you share.",
+      "cta": "Give my availability",
+      "edit": "Adjust my availability",
+      "confirm": "Confirm my availability",
+      "saveEdited": "Save my availability",
+      "skip": "Continue without giving hours",
+      "saved": "Availability saved. Your games can now be planned.",
+      "minHint": "Aim for at least {hours} h of availability so your games are easy to plan.",
+      "errorNoDeadline": "The organizer has not set this phase's deadline yet.",
+      "errorWindowClosed": "This phase's deadline has passed.",
+      "errorNotParticipant": "Only registered players can answer.",
+      "errorNotInProgress": "The tournament is not live.",
+      "errorGeneric": "Could not save your availability. Try again.",
+      "stakes": "If you do not give hours and your opponent does, the game can be forfeited against you at the deadline.",
+      "rulesLink": "How the deadline works"
+    },
+    "poolRoom": {
+      "title": "Pool {n}",
+      "settledCount": "{settled}/{total} games settled",
+      "deadline": "Play by {date}",
+      "ready": "Ready to plan",
+      "waitingFor": "Waiting for {names}",
+      "walkover": "Walkover",
+      "cancelled": "Voided",
+      "played": "Played",
+      "toPlay": "To play",
+      "ping": "Remind",
+      "pingSentShort": "Reminded",
+      "pingSent": "Reminder sent.",
+      "pingTooSoon": "You already reminded them recently. Give it a day or two.",
+      "pingNobody": "Everyone has given their availability.",
+      "pingError": "Could not send the reminder. Try again.",
+      "waitingForYou": "Waiting on your availability",
+      "giveMine": "My hours",
+      "openRoom": "Open the game chat"
+    },
     "goodToKnow": {
       "title": "Good to know",
       "courts": "Court time isn't included. You book your court and split the cost with your opponent.",
       "scheduling": "Once the draw is out, you and your opponent agree on when and where to play, before the round deadline.",
-      "cancelRefund": "If the organizer cancels the tournament, your entry fee is refunded automatically."
+      "cancelRefund": "If the organizer cancels the tournament, your entry fee is refunded automatically.",
+      "deadlineRule": "If the round deadline passes without the game being played, the app settles the pairing: whoever tried to organize it advances. A walkover counts in the standings but never touches your rating.",
+      "availabilityRule": "Giving your availability is what unlocks your games and what proves you tried. Messages in the chat do not count."
+    },
+    "selfReport": {
+      "title": "Enter your result",
+      "subtitle": "Enter the final score you agreed on with your opponent. It counts right away and moves the bracket forward. The organizer can fix mistakes."
     }
   },
   "tournamentCreation": {
@@ -6669,6 +6875,9 @@
       },
       "favorites": {
         "label": "Favorites"
+      },
+      "forYou": {
+        "label": "For you"
       },
       "specificTime": {
         "label": "Pick a time",
@@ -12170,6 +12379,10 @@
     "ogTitle": "Join a {sport} match on Rallia",
     "ogSpotsLeft": "{count, plural, one {1 spot left} other {# spots left}}",
     "ogMatchFull": "Match full",
+    "ogChallengeSingles": "Come challenge me",
+    "ogChallengeDoubles": "Come challenge us",
+    "ogFinalScore": "Final score",
+    "ogTeamFallback": "Team {number}",
     "format": {
       "singles": "Singles",
       "doubles": "Doubles"

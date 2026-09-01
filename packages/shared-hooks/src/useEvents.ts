@@ -12,6 +12,8 @@
 
 import { useMemo } from 'react';
 import {
+  eventTimeKey,
+  isLiveEvent,
   leagueToEventSummary,
   tournamentToEventSummary,
   type EventSummary,
@@ -69,4 +71,21 @@ export function useMyEvents(userId: string | undefined, sportId?: string): Event
     isError: tournaments.isError || leagues.isError,
     refetch: () => Promise.all([tournaments.refetch(), leagues.refetch()]),
   };
+}
+
+/**
+ * The subset of `useMyEvents` a player is actually committed to right now:
+ * registration open or closed, or under way, soonest first. Drafts and
+ * finished events stay in the library — this is what belongs on Home and at
+ * the top of discovery.
+ */
+export function useMyLiveEvents(userId: string | undefined, sportId?: string): EventsQueryResult {
+  const all = useMyEvents(userId, sportId);
+
+  const data = useMemo<EventSummary[]>(
+    () => all.data.filter(isLiveEvent).sort((a, b) => eventTimeKey(a) - eventTimeKey(b)),
+    [all.data]
+  );
+
+  return { ...all, data };
 }

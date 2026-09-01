@@ -15,6 +15,7 @@ export type MatchWithRelations = Match & {
         status: string;
         is_host: boolean;
         player_id: string;
+        team_number: number | null;
         player: {
           profile: {
             display_name: string | null;
@@ -23,6 +24,14 @@ export type MatchWithRelations = Match & {
         } | null;
       }[]
     | null;
+  // match_result is unique per match, so PostgREST embeds it as an object.
+  result: {
+    winning_team: number | null;
+    team1_score: number | null;
+    team2_score: number | null;
+    disputed: boolean | null;
+    sets: { set_number: number; team1_score: number; team2_score: number }[] | null;
+  } | null;
 };
 
 // cache() dedupes the generateMetadata + page render pair into one query.
@@ -31,7 +40,7 @@ export const getMatch = cache(async (id: string): Promise<MatchWithRelations | n
   const { data } = await supabase
     .from('match')
     .select(
-      '*, sport:sport_id (name, slug), facility:facility_id (name, city), court:court_id (name), min_rating_score:min_rating_score_id (label), participants:match_participant (id, status, is_host, player_id, player:player_id (profile!player_id_fkey (display_name, profile_picture_url)))'
+      '*, sport:sport_id (name, slug), facility:facility_id (name, city), court:court_id (name), min_rating_score:min_rating_score_id (label), participants:match_participant (id, status, is_host, player_id, team_number, player:player_id (profile!player_id_fkey (display_name, profile_picture_url))), result:match_result (winning_team, team1_score, team2_score, disputed, sets:match_set (set_number, team1_score, team2_score))'
     )
     .eq('id', id)
     .single();

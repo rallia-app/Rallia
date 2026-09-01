@@ -128,5 +128,8 @@ export {
   acceptRebuttalScore,
   disputeRebuttalScore,
   notifyOpponentsOfPendingScore,
+  getMatchContestState,
+  contestMatchResult,
   type SubmitMatchResultForMatchParams,
+  type MatchContestState,
 } from './playedMatchService';

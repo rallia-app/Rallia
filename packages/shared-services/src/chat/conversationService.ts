@@ -14,6 +14,7 @@ import type {
   UpdateConversationInput,
   MessageStatus,
   MessageWithSender,
+  PairingScoreContext,
 } from './chatTypes';
 
 // This title is persisted and read by every participant, so it is pinned to
@@ -72,6 +73,7 @@ interface ConversationRPCRow {
   tournament_name: string | null;
   tournament_status: string | null;
   tournament_sport_name: string | null;
+  tournament_pool_number: number | null;
 }
 
 // ============================================================================
@@ -165,6 +167,7 @@ export async function getPlayerConversations(
         network_id: row.network_id,
         network_type: row.network_type,
         tournament_id: row.tournament_id,
+        tournament_pool_number: row.tournament_pool_number,
         tournament_info: tournamentInfo,
       };
     });
@@ -191,6 +194,8 @@ export async function getConversation(
       title,
       picture_url,
       match_id,
+      tournament_id,
+      tournament_pool_number,
       tournament_match_id,
       session_match_id,
       created_by,
@@ -483,6 +488,29 @@ export async function getOrCreateSessionPairingChat(
   return (data as string | null) ?? null;
 }
 
+/**
+ * Everything the record-score sheet needs for one pairing, plus whether the
+ * caller may self-report on it right now (the verdict mirrors the participant
+ * guards of the write RPCs, so the entry point can never offer a submit the
+ * server would refuse). Null when the caller is not on the pairing.
+ */
+export async function getPairingScoreContext(params: {
+  tournamentMatchId?: string | null;
+  sessionMatchId?: string | null;
+}): Promise<PairingScoreContext | null> {
+  const { data, error } = await supabase.rpc('lt_pairing_score_context', {
+    p_tournament_match_id: params.tournamentMatchId ?? undefined,
+    p_session_match_id: params.sessionMatchId ?? undefined,
+  });
+
+  if (error) {
+    console.error('Error fetching pairing score context:', error);
+    throw error;
+  }
+
+  return (data as PairingScoreContext | null) ?? null;
+}
+
 // ============================================================================
 // TOURNAMENT CHAT OPERATIONS
 // ============================================================================
@@ -500,6 +528,10 @@ export async function getTournamentChat(tournamentId: string): Promise<Conversat
     .from('conversation')
     .select('*')
     .eq('tournament_id', tournamentId)
+    // The pool rooms of the scheduling funnel carry the same tournament_id;
+    // only the event-wide room has no pool number, and .single() would error
+    // rather than pick once a pool room exists.
+    .is('tournament_pool_number', null)
     .single();
 
   if (error) {
@@ -667,6 +699,7 @@ interface FilteredConversationRPCRow {
   tournament_name: string | null;
   tournament_status: string | null;
   tournament_sport_name: string | null;
+  tournament_pool_number: number | null;
 }
 
 /**
@@ -788,6 +821,7 @@ export async function getPlayerConversationsFiltered(
           network_id: row.network_id,
           network_type: row.network_type,
           tournament_id: row.tournament_id,
+          tournament_pool_number: row.tournament_pool_number,
           tournament_info: tournamentInfo,
         };
       }

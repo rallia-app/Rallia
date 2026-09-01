@@ -140,8 +140,19 @@ export function matchesRatingBand(event: EventSummary, rating: number | null): b
   return true;
 }
 
-/** Discovery hides terminal events; My Events still lists them. */
-export function isDiscoverable(event: EventSummary): boolean {
+/**
+ * Still open to enter, or still under way. Discovery shows exactly these, and
+ * so does a player's own "what am I in right now" list; a terminal event only
+ * belongs in the library.
+ */
+export function isLiveEvent(event: EventSummary): boolean {
   if (event.engine === 'tournament' && TOURNAMENT_HIDDEN.has(event.tournament.status)) return false;
   return event.phase !== 'closed';
+}
+
+/** Chronological sort key: a tournament's own dates, a league's creation. */
+export function eventTimeKey(event: EventSummary): number {
+  if (event.engine === 'league') return new Date(event.league.created_at).getTime();
+  const t = event.tournament;
+  return new Date(t.cancelled_at ?? t.start_date).getTime();
 }

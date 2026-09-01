@@ -64,11 +64,15 @@ ALTER TABLE tournament_matches ADD COLUMN deadline_override_at timestamptz;
 ```
 
 **Effective deadline** = `COALESCE(deadline_override_at, round row)`. The
-override exists so one match can get an extension (injury, weather, the
-automatic grace below) without sliding the whole round.
+override exists so one match can get more time for an exceptional reason
+(injury, weather) without sliding the whole round. It is set by the organizer
+only, and only while the deadline is still ahead: nothing in the system stamps
+it automatically any more.
 
 No effective deadline (round row absent and no override) means no automation for
-that match — the feature is opt-out by simply not setting deadlines.
+that match. This is no longer reachable in practice: generation always seeds
+default deadlines, falling back to a week per round when `end_date` is unusable,
+so a draw with pairings always has a clock.
 
 ## Defaults & organizer control
 
@@ -88,10 +92,10 @@ the RPC below and re-triggers the availability gate for affected players (see
 
 ### RPCs
 
-| RPC                                                               | Who             | Behavior                                                                                                                                                                                                                                                           |
-| ----------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `tournament_set_round_deadlines(p_tournament_id, p_rounds jsonb)` | organizer/admin | Upserts round rows. Validates strictly increasing across rounds and `> now()` for rounds with unresolved matches. Values past `end_date` are allowed with a warning return field (end_date is informational; a hard cap would block legitimate overruns). Audited. |
-| `tournament_extend_match_deadline(p_tm_id, p_deadline_at)`        | organizer/admin | Sets `deadline_override_at`. Must be `> now()`. Audited with reason.                                                                                                                                                                                               |
+| RPC                                                               | Who             | Behavior                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tournament_set_round_deadlines(p_tournament_id, p_rounds jsonb)` | organizer/admin | Upserts round rows. Validates strictly increasing across rounds and `> now()` for rounds with unresolved matches. Values past `end_date` are allowed with a warning return field (end_date is informational; a hard cap would block legitimate overruns). Audited.                                              |
+| `tournament_extend_match_deadline(p_tm_id, p_deadline_at)`        | organizer/admin | Sets `deadline_override_at`. The new date must be `> now()`, **and the pairing's current effective deadline must not have passed** (`DEADLINE_PASSED`), matching the phase-wide RPC: once a deadline expires the pairing belongs to the resolver, and the way back is restore or override. Audited with reason. |
 
 Both notify affected players (`tournament_deadline_changed`). Moving a deadline
 earlier than 48h from now is rejected (`DEADLINE_TOO_SOON`) — players were
@@ -133,52 +137,31 @@ pattern as `lt_close_due_tournament_registrations`) evaluates every unresolved
 `tournament_matches` row whose effective deadline has passed, in a tournament
 that is `in_progress`.
 
-### Step 0 — scheduled game earns automatic grace
+### The ladder itself: see unplayed-match-resolution.md
 
-If the slot has an attached `match` row (the pair created a game — that _is_
-mutual agreement), the match is never forfeited at the deadline. Instead the
-cron stamps `deadline_override_at = match_date + 72h` once (48h score-entry
-window + 24h confirmation window) and moves on. This covers both "scheduled
-inside the window, playing on the last day" and "both agreed to play two days
-after the deadline" — punishing a pair who found a time is the worst possible
-outcome. If the attached game is cancelled, the override is cleared and the
-ladder applies at the next pass.
+**Superseded 2026-08-31.** What used to sit here (Step 0's automatic 72h grace
+on a scheduled game, the effort split read partly from chat messages, and the
+one automatic extension when both sides had effort) has been **removed from the
+product**, not moved. The ladder that ships is R0..R6 in
+[unplayed-match-resolution.md](./unplayed-match-resolution.md) § 6, and it
+differs from the text this replaces on three points that matter:
 
-A submitted-but-unconfirmed score inside that grace resolves through the
-auto-confirm path (24h), which must be cronned — see dependency below. A
-`disputed` result stops the ladder entirely: disputes are never auto-resolved
-(consistent with [score-entry.md](./score-entry.md)); the match escalates to
-the organizer (`tournament_dispute_escalated` notification) and waits.
+- **The machine grants itself no time.** There is no grace, no extension, and
+  no waiting for a game booked past the deadline. The deadline is a hard stop:
+  at it, the pairing is decided. Jean's objection (2026-08-31) was that a
+  system whose whole purpose is to enforce a deadline cannot then hand out
+  72-hour reprieves; only an organizer moves a date, and only while it is still
+  in the future.
+- **Effort is never read from chat.** Sides are scored from recorded scheduling
+  acts (availability answers, bookings, responses to them), because a message
+  cannot be judged fairly by a machine and a declared hour can. See § 4 of the
+  resolution spec for the signal model.
+- **Two engaged sides that cannot converge are not extended.** They are
+  separated by the gap rule, or the game is cancelled with nobody at fault.
 
-### Step 1 — effort split
-
-For matches with no attached game at the deadline, compute per-side **effort**
-from recorded scheduling actions only (no message content is ever read):
-
-Effort = any of:
-
-- voted on ≥ 1 organizer-card option (`match_time_vote`)
-- posted an organizer card themselves
-- answered the availability gate with an **edit** (updated their hours)
-- ≥ 1 message sent in the round chat (count only — weak, but distinguishes "talking, can't converge" from silence)
-
-A gate "confirm" tap alone is **not** effort — anyone taps yes to reach the
-composer. Auto-posted cards credit nobody (decision already taken in the gate
-spec).
-
-| Situation                           | Resolution                                                                                                                                                                                                                                                                             |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| One side has effort, other has none | **Walkover** for the effortful side: `status='walkover'`, `score='W/O'`, winner set, bracket advances via `lt_advance_tournament_winner`.                                                                                                                                              |
-| Neither side has effort             | **Double walkover**, immediately (nudges at T-48/T-12 were their warning).                                                                                                                                                                                                             |
-| Both sides have effort              | **One automatic extension** of `half the original round length` (min 48h, capped at `end_date`), stamped on the match with a `tournament_deadline_extended` notification to both. At the extended deadline, if still no game: double walkover. The extension fires **once** per match. |
-
-The both-effort branch is deliberately deterministic rather than clever.
-Advancing by seed rewards the stronger player for stalling; a coin flip is
-indefensible to the loser; picking "more effort" is gameable and arbitrary.
-One extension, loudly announced, then both out — and the organizer can override
-with a real winner at any moment before or after, which remains the appeal
-path. With the auto-posted card and the availability gate upstream, this branch
-should be rare; measure it.
+The organizer's appeal path is unchanged and is the only accommodation left:
+move the deadline before it expires, override the outcome, or restore a
+decision the machine got wrong.
 
 ### Double walkover mechanics
 
@@ -208,8 +191,9 @@ declared"; do not invent one.
   states why); the round-3 opponent learns via the existing
   `tournament_match_ready` when their slot fills.
 - **Audit**: every automated action writes to `leagues_tournaments_audit`
-  (`action` ∈ `auto_walkover`, `auto_double_walkover`, `auto_extension`,
-  `auto_grace`) with the effort evidence snapshot in the payload — the
+  (`action` ∈ `auto_walkover`, `auto_double_forfeit`, `auto_cancel`; the
+  retired `auto_grace` and `auto_extension` may appear on historical rows)
+  with the signal evidence snapshot in the payload — the
   organizer adjudicating a complaint needs to see exactly why the machine
   decided.
 
@@ -228,22 +212,23 @@ tournaments**; the flag gate lifts when the refund path is wired.
 
 | Dependency                                                                                   | Why                                                                                                                                                                                                        |
 | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auto_confirm_expired_scores` cronned                                                        | Step 0's grace assumes submitted scores verify within 24h; today nothing runs it.                                                                                                                          |
+| ~~`auto_confirm_expired_scores` cronned~~                                                    | Moot: Step 0's grace is gone, and a declared score is final on entry with a 48h contest window rather than waiting on a confirmation.                                                                      |
 | [Match-organizer live suggestions](../08-communications/match-organizer-live-suggestions.md) | Effort signals (`match_time_vote`, gate outcomes) feed the ladder; the gate needs deadlines for its round-window question; the engine clamps its window to the deadline. Ship deadlines first or together. |
 | Player-declared forfeit                                                                      | The gate's "I can't play this round" exit resolves a match _before_ the ladder ever fires — the cheapest resolution of all.                                                                                |
 | [tournament-bracket.md](./tournament-bracket.md)                                             | Bye/phantom propagation reused by double walkover.                                                                                                                                                         |
 
 ## Analytics
 
-| Event                            | Properties                                                                                 |
-| -------------------------------- | ------------------------------------------------------------------------------------------ |
-| `tournament_round_resolved`      | round, n_matches, n_played, n_walkovers, n_double_walkovers, n_extensions, n_org_overrides |
-| `tournament_deadline_nudge_sent` | tier (48h/12h), had_votes, had_game                                                        |
-| `tournament_match_auto_resolved` | outcome, effort_p1, effort_p2, days_stalled                                                |
+| Event                            | Properties                                                                                            |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `tournament_round_resolved`      | round, n_matches, n_played, n_walkovers, n_double_walkovers, n_cancelled, n_org_overrides, n_restores |
+| `tournament_deadline_nudge_sent` | tier (48h/12h), had_votes, had_game                                                                   |
+| `tournament_match_auto_resolved` | outcome, effort_p1, effort_p2, days_stalled                                                           |
 
 North star: **% of matches resolved without organizer action** (today: 38%).
-Second: median days from pairing-ready to resolution. If the both-effort
-extension branch fires often, that is the availability-matching problem
+Second: median days from pairing-ready to resolution. If the cancelled branch
+fires often (two engaged sides who could not converge), that is the
+availability-matching problem
 resurfacing — fix upstream, don't tighten the ladder.
 
 ## Rollout

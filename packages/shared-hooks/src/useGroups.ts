@@ -34,6 +34,8 @@ import {
   submitMatchResultForMatch,
   getPendingScoreConfirmations,
   confirmMatchScore,
+  getMatchContestState,
+  contestMatchResult,
   proposeRebuttalScore,
   acceptRebuttalScore,
   disputeRebuttalScore,
@@ -621,6 +623,33 @@ export function usePendingScoreConfirmations(playerId: string | undefined) {
     enabled: !!playerId,
     staleTime: 1000 * 60, // 1 minute
     refetchInterval: 1000 * 60 * 5, // Refetch every 5 minutes
+  });
+}
+
+/**
+ * Whether the viewer can still contest the declared score on this match.
+ */
+export function useMatchContestState(matchId?: string) {
+  const query = useQuery({
+    queryKey: ['match', 'contestState', matchId ?? ''],
+    queryFn: () => getMatchContestState(matchId as string),
+    enabled: !!matchId,
+    staleTime: 30_000,
+  });
+  return { state: query.data, isLoading: query.isLoading };
+}
+
+/**
+ * Contest a declared score, inside its window. A contested result stops the
+ * ladder and goes to the organizer rather than being decided automatically.
+ */
+export function useContestMatchResult() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ matchId }: { matchId: string }) => contestMatchResult(matchId),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['match', 'contestState', vars.matchId] });
+    },
   });
 }
 

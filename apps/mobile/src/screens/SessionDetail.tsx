@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Text, Button, useToast } from '@rallia/shared-components';
+import { Text, Button, SelectableChip, useToast } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -529,6 +529,13 @@ export const SessionDetail: React.FC = () => {
     [sessionScoreable, isOrganizer, isScored]
   );
 
+  // Same rule the row's swap icon uses, named once so the tappable sides and
+  // the icon cannot drift apart.
+  const canSwapOn = useCallback(
+    (m: SessionMatch) => canOverride(m) && !isScored(m) && !m.match_id,
+    [canOverride, isScored]
+  );
+
   // A participant with an open pairing can organize the game with their
   // opponent in the pairing chat, before or after a game has been agreed on.
   const canOrganize = useCallback(
@@ -548,6 +555,46 @@ export const SessionDetail: React.FC = () => {
   // nothing left to link: the score arrives through that game's confirmation.
   const canLink = useCallback((m: SessionMatch) => canOrganize(m) && !m.match_id, [canOrganize]);
 
+  const openScoreEntry = useCallback(
+    (m: SessionMatch) => {
+      lightHaptic();
+      void SheetManager.show('session-record-score', {
+        payload: {
+          sessionMatchId: m.id,
+          sessionId,
+          seasonId,
+          versionWas: m.version,
+          teamAName: teamLabel(m.team_a_user_ids),
+          teamBName: teamLabel(m.team_b_user_ids),
+          isPickleball: isPickleballLeague,
+          matchFormat: sess?.match_format,
+          pointsPerGame: sess?.points_per_game,
+          isEdit: isScored(m),
+          isDecider: isSessionDecider(m),
+          mode: isOrganizer ? 'organizer' : 'participant',
+          onSuccess: () => {
+            toast.success(t('sessionDetail.score.saved'));
+            Analytics.sessionScoreSubmittedAnalytics({ sessionId });
+            invalidate();
+          },
+        },
+      });
+    },
+    [
+      sessionId,
+      seasonId,
+      nameOf,
+      isPickleballLeague,
+      sess?.match_format,
+      isScored,
+      isSessionDecider,
+      isOrganizer,
+      toast,
+      t,
+      invalidate,
+    ]
+  );
+
   const openLinkMatch = useCallback(
     (m: SessionMatch) => {
       if (!league) return;
@@ -561,33 +608,37 @@ export const SessionDetail: React.FC = () => {
           entryFormat: m.format,
           team1UserIds: m.team_a_user_ids,
           team2UserIds: m.team_b_user_ids,
+          // No game was ever created for this pairing: the participant can
+          // record the agreed score directly (server enforces the guards).
+          onManualEntry: () => openScoreEntry(m),
           onSuccess: () => invalidate(),
         },
       });
     },
-    [league, sessionId, seasonId, invalidate]
+    [league, sessionId, seasonId, invalidate, openScoreEntry]
   );
 
-  // Substitution: the first player of team A is the one offered up, since a
-  // singles row has one player per side and the picker names who leaves.
+  // Substitution. The server takes any player sitting on the named row, so the
+  // organizer picks who leaves: tapping a side offers that side, the row's icon
+  // offers everyone on it. Offering team A's first player and nothing else was
+  // what made a hand-built pairing impossible to reach.
   const openSwapPlayer = useCallback(
-    (m: SessionMatch) => {
+    (m: SessionMatch, sideIds?: string[]) => {
       if (!sess) return;
-      const userOut = m.team_a_user_ids[0];
-      if (!userOut) return;
+      const userOutOptions = sideIds ?? [...m.team_a_user_ids, ...m.team_b_user_ids];
+      if (userOutOptions.length === 0) return;
       lightHaptic();
       void SheetManager.show('session-swap-player', {
         payload: {
           sessionId,
           matchId: m.id,
           round: m.round_number,
-          userOut,
-          userOutName: nameOf(userOut),
+          userOutOptions,
           sessionVersion: sess.version,
         },
       });
     },
-    [sess, sessionId, nameOf]
+    [sess, sessionId]
   );
 
   // Open (get-or-create) the per-pairing chat and drop the caller in, so they
@@ -610,44 +661,6 @@ export const SessionDetail: React.FC = () => {
       });
     },
     [openPairingChat, navigation, league?.name, toast, t]
-  );
-
-  const openScoreEntry = useCallback(
-    (m: SessionMatch) => {
-      lightHaptic();
-      void SheetManager.show('session-record-score', {
-        payload: {
-          sessionMatchId: m.id,
-          sessionId,
-          seasonId,
-          versionWas: m.version,
-          teamAName: teamLabel(m.team_a_user_ids),
-          teamBName: teamLabel(m.team_b_user_ids),
-          isPickleball: isPickleballLeague,
-          matchFormat: sess?.match_format,
-          pointsPerGame: sess?.points_per_game,
-          isEdit: isScored(m),
-          isDecider: isSessionDecider(m),
-          onSuccess: () => {
-            toast.success(t('sessionDetail.score.saved'));
-            Analytics.sessionScoreSubmittedAnalytics({ sessionId });
-            invalidate();
-          },
-        },
-      });
-    },
-    [
-      sessionId,
-      seasonId,
-      nameOf,
-      isPickleballLeague,
-      sess?.match_format,
-      isScored,
-      isSessionDecider,
-      toast,
-      t,
-      invalidate,
-    ]
   );
 
   const handleConfirm = useCallback(
@@ -830,55 +843,32 @@ export const SessionDetail: React.FC = () => {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.partnerChips}
                 >
-                  <TouchableOpacity
+                  <SelectableChip
+                    variant="tinted"
+                    label={t('sessionDetail.partner.none')}
+                    selected={selectedPartner === null}
+                    accentColor={colors.primary}
+                    testID="partner-chip-none"
                     onPress={() => {
                       lightHaptic();
                       setPartnerChoice(null);
                     }}
-                    style={[
-                      styles.partnerChip,
-                      {
-                        borderColor: selectedPartner === null ? colors.primary : colors.border,
-                        backgroundColor:
-                          selectedPartner === null ? colors.highlightBg : colors.card,
-                      },
-                    ]}
-                    testID="partner-chip-none"
-                  >
-                    <Text
-                      size="sm"
-                      weight={selectedPartner === null ? 'semibold' : 'regular'}
-                      color={selectedPartner === null ? colors.primary : colors.text}
-                    >
-                      {t('sessionDetail.partner.none')}
-                    </Text>
-                  </TouchableOpacity>
+                  />
                   {partnerCandidates.map(p => {
                     const selected = selectedPartner === p.user_id;
                     return (
-                      <TouchableOpacity
+                      <SelectableChip
                         key={p.user_id}
+                        variant="tinted"
+                        label={nameOf(p.user_id)}
+                        selected={selected}
+                        accentColor={colors.primary}
+                        testID={`partner-chip-${p.user_id}`}
                         onPress={() => {
                           lightHaptic();
                           setPartnerChoice(selected ? null : p.user_id);
                         }}
-                        style={[
-                          styles.partnerChip,
-                          {
-                            borderColor: selected ? colors.primary : colors.border,
-                            backgroundColor: selected ? colors.highlightBg : colors.card,
-                          },
-                        ]}
-                        testID={`partner-chip-${p.user_id}`}
-                      >
-                        <Text
-                          size="sm"
-                          weight={selected ? 'semibold' : 'regular'}
-                          color={selected ? colors.primary : colors.text}
-                        >
-                          {nameOf(p.user_id)}
-                        </Text>
-                      </TouchableOpacity>
+                      />
                     );
                   })}
                 </ScrollView>
@@ -979,9 +969,41 @@ export const SessionDetail: React.FC = () => {
         {/* Match sheet */}
         {(hasSheet || (isOrganizer && sess.status === 'published')) && (
           <View style={styles.section}>
-            <Text size="xs" weight="semibold" color={colors.textMuted} style={styles.sectionTitle}>
-              {t('sessionDetail.sheet.title').toUpperCase()}
-            </Text>
+            {/* The hero chip states the SESSION's status, which stays
+                "published" while the sheet swings between draft and released.
+                Testers read it as the sheet's own state, so the sheet says its
+                state here, next to its title. Organizer-only: a member never
+                sees a draft. */}
+            <View style={styles.sectionTitleRow}>
+              <Text
+                size="xs"
+                weight="semibold"
+                color={colors.textMuted}
+                style={styles.sectionTitle}
+              >
+                {t('sessionDetail.sheet.title').toUpperCase()}
+              </Text>
+              {hasSheet && isOrganizer && (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: isDraftSheet ? colors.neutralBg : colors.positiveBg },
+                  ]}
+                >
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    color={isDraftSheet ? colors.neutralText : colors.positiveText}
+                  >
+                    {t(
+                      isDraftSheet
+                        ? 'sessionDetail.sheet.stateDraft'
+                        : 'sessionDetail.sheet.statePublished'
+                    )}
+                  </Text>
+                </View>
+              )}
+            </View>
             <View
               style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
@@ -1016,64 +1038,82 @@ export const SessionDetail: React.FC = () => {
                         </Text>
                       ) : null}
                       <View style={styles.vsRow}>
-                        <Text
-                          size="base"
-                          weight={
-                            m.winner_team === 'a'
-                              ? 'bold'
-                              : !isScored(m) && userId && m.team_a_user_ids.includes(userId)
-                                ? 'semibold'
-                                : 'regular'
-                          }
-                          color={
-                            isScored(m)
-                              ? m.winner_team !== 'a'
-                                ? colors.textMuted
-                                : colors.text
-                              : userId && m.team_a_user_ids.includes(userId)
-                                ? colors.primary
-                                : colors.text
-                          }
-                          numberOfLines={1}
+                        {/* Each side is its own tap target for the organizer:
+                            it is the shortcut to replacing THAT player, which
+                            the row-level icon cannot express. Disabled for
+                            everyone else, so it reads as plain text. */}
+                        <TouchableOpacity
+                          disabled={!canSwapOn(m)}
+                          onPress={() => openSwapPlayer(m, m.team_a_user_ids)}
                           style={styles.vsName}
+                          accessibilityLabel={t('sessionDetail.swap.action')}
+                          testID={`cta-swap-side-a-${m.id}`}
                         >
-                          {teamLabel(m.team_a_user_ids)}
-                        </Text>
+                          <Text
+                            size="base"
+                            weight={
+                              m.winner_team === 'a'
+                                ? 'bold'
+                                : !isScored(m) && userId && m.team_a_user_ids.includes(userId)
+                                  ? 'semibold'
+                                  : 'regular'
+                            }
+                            color={
+                              isScored(m)
+                                ? m.winner_team !== 'a'
+                                  ? colors.textMuted
+                                  : colors.text
+                                : userId && m.team_a_user_ids.includes(userId)
+                                  ? colors.primary
+                                  : colors.text
+                            }
+                            numberOfLines={1}
+                          >
+                            {teamLabel(m.team_a_user_ids)}
+                          </Text>
+                        </TouchableOpacity>
                         <Text size="sm" color={colors.textMuted}>
                           {isScored(m)
                             ? m.score || t('sessionDetail.score.played')
                             : t('sessionDetail.sheet.vs')}
                         </Text>
-                        <Text
-                          size="base"
-                          weight={
-                            m.winner_team === 'b'
-                              ? 'bold'
-                              : !isScored(m) && userId && m.team_b_user_ids.includes(userId)
-                                ? 'semibold'
-                                : 'regular'
-                          }
-                          color={
-                            isScored(m)
-                              ? m.winner_team !== 'b'
-                                ? colors.textMuted
-                                : colors.text
-                              : userId && m.team_b_user_ids.includes(userId)
-                                ? colors.primary
-                                : colors.text
-                          }
-                          numberOfLines={1}
+                        <TouchableOpacity
+                          disabled={!canSwapOn(m)}
+                          onPress={() => openSwapPlayer(m, m.team_b_user_ids)}
                           style={styles.vsName}
+                          accessibilityLabel={t('sessionDetail.swap.action')}
+                          testID={`cta-swap-side-b-${m.id}`}
                         >
-                          {teamLabel(m.team_b_user_ids)}
-                        </Text>
+                          <Text
+                            size="base"
+                            weight={
+                              m.winner_team === 'b'
+                                ? 'bold'
+                                : !isScored(m) && userId && m.team_b_user_ids.includes(userId)
+                                  ? 'semibold'
+                                  : 'regular'
+                            }
+                            color={
+                              isScored(m)
+                                ? m.winner_team !== 'b'
+                                  ? colors.textMuted
+                                  : colors.text
+                                : userId && m.team_b_user_ids.includes(userId)
+                                  ? colors.primary
+                                  : colors.text
+                            }
+                            numberOfLines={1}
+                          >
+                            {teamLabel(m.team_b_user_ids)}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
                     {canOverride(m) ? (
                       <View style={styles.matchActions}>
                         {/* Substitute before anyone plays: the late cancellation
                             the review asked about, without re-pairing the night. */}
-                        {!isScored(m) && !m.match_id ? (
+                        {canSwapOn(m) ? (
                           <TouchableOpacity
                             onPress={() => openSwapPlayer(m)}
                             style={styles.lockButton}
@@ -1468,12 +1508,6 @@ const styles = StyleSheet.create({
   ctaButtons: { flexDirection: 'row', gap: spacingPixels[3] },
   partnerBlock: { gap: spacingPixels[2] },
   partnerChips: { flexDirection: 'row', gap: spacingPixels[2] },
-  partnerChip: {
-    borderWidth: 1,
-    borderRadius: radiusPixels.full,
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
-  },
   ctaButton: {
     flex: 1,
     flexDirection: 'row',

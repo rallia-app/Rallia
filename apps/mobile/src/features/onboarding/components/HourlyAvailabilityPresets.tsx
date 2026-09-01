@@ -13,7 +13,7 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { SelectableChip, Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   AVAILABILITY_PRESETS,
@@ -34,11 +34,7 @@ const PRESETS = AVAILABILITY_PRESETS.map(preset => ({
 
 interface PresetColors {
   presetActiveBg: string;
-  presetInactiveBg: string;
-  presetActiveBorder: string;
-  presetInactiveBorder: string;
   presetActiveText: string;
-  presetInactiveText: string;
   textMuted: string;
   border: string;
 }
@@ -96,36 +92,19 @@ export const HourlyAvailabilityPresets: React.FC<HourlyAvailabilityPresetsProps>
       {PRESETS.map((preset, idx) => {
         const active = appliedFlags[idx];
         return (
-          <TouchableOpacity
+          <SelectableChip
             key={preset.key}
-            style={[
-              styles.chip,
-              {
-                backgroundColor: active ? colors.presetActiveBg : colors.presetInactiveBg,
-                borderColor: active ? colors.presetActiveBorder : colors.presetInactiveBorder,
-              },
-            ]}
+            label={t(preset.labelKey)}
+            selected={active}
+            accentColor={colors.presetActiveBg}
+            selectedLabelColor={colors.presetActiveText}
+            icon={
+              active ? (
+                <Ionicons name="checkmark" size={14} color={colors.presetActiveText} />
+              ) : undefined
+            }
             onPress={() => togglePreset(idx)}
-            activeOpacity={0.7}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: active }}
-          >
-            {active && (
-              <Ionicons
-                name="checkmark"
-                size={14}
-                color={colors.presetActiveText}
-                style={styles.icon}
-              />
-            )}
-            <Text
-              size="xs"
-              weight="semibold"
-              color={active ? colors.presetActiveText : colors.presetInactiveText}
-            >
-              {t(preset.labelKey)}
-            </Text>
-          </TouchableOpacity>
+          />
         );
       })}
     </ScrollView>

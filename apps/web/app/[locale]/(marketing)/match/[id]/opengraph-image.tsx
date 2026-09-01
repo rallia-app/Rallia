@@ -24,6 +24,7 @@ export default async function Image({
   const { id, locale } = await params;
   const match = await getMatch(id);
   const t = await getTranslations({ locale, namespace: 'gamesPage' });
+  const tMatch = await getTranslations({ locale, namespace: 'matchPage' });
   const {
     poppinsBold: poppinsBoldData,
     poppinsSemiBold: poppinsSemiBoldData,
@@ -58,23 +59,27 @@ export default async function Image({
   // ---------- Derived values ----------
   const rawSport = match.sport?.name;
   const sportName = rawSport ? rawSport.charAt(0).toUpperCase() + rawSport.slice(1) : 'Match';
+  const isPickleball = match.sport?.slug === 'pickleball';
   const facilityName = match.facility?.name;
   const city = match.facility?.city;
   const location = facilityName
     ? `${facilityName}${city ? `, ${city}` : ''}`
     : (match.location_name ?? '');
   const dateObj = new Date(`${match.match_date}T${match.start_time}`);
-  const dateStr = dateObj.toLocaleDateString(locale, {
+  // French renders "dimanche 9 août"; only the first letter should go up, so
+  // capitalize here instead of letting CSS title-case every word.
+  const rawDate = dateObj.toLocaleDateString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
+  const dateStr = rawDate.charAt(0).toUpperCase() + rawDate.slice(1);
   const timeStr = dateObj.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
   let endTimeStr = '';
   if (match.end_time) {
     const endObj = new Date(`${match.match_date}T${match.end_time}`);
-    endTimeStr = ` \u2013 ${endObj.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}`;
+    endTimeStr = ` – ${endObj.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}`;
   }
 
   const total = match.format === 'doubles' ? 4 : 2;
@@ -82,6 +87,20 @@ export default async function Image({
   const joinedCount = joined.length;
   const spotsLeft = Math.max(0, total - joinedCount);
   const isFull = spotsLeft === 0;
+
+  // A registered, uncontested score turns the card into a scoreboard.
+  const result = match.result;
+  const resultSets = [...(result?.sets ?? [])].sort((a, b) => a.set_number - b.set_number);
+  const showResult =
+    !!result &&
+    !result.disputed &&
+    (resultSets.length > 0 || result.team1_score !== null || result.team2_score !== null);
+
+  // Competitive games get a challenge hero; a full or finished game has nobody left to challenge.
+  const isCompetitive = match.player_expectation === 'competitive';
+  const showChallenge = isCompetitive && !isFull && !showResult;
+  const challengeText =
+    match.format === 'doubles' ? tMatch('ogChallengeDoubles') : tMatch('ogChallengeSingles');
 
   const spotsColor = isFull
     ? status.error.dark
@@ -111,23 +130,606 @@ export default async function Image({
       initials: participant?.player?.profile?.display_name?.charAt(0).toUpperCase() ?? null,
     };
   });
+  const filledSlots = slots.filter(s => s.filled);
+
+  // Sides for the scoreboard. team_number predates the assign-on-submit RPC and
+  // is still null on older rows, so unknowns fill whichever side has room.
+  const perSide = total / 2;
+  const sides: (typeof sorted)[] = [[], []];
+  const unassigned: typeof sorted = [];
+  for (const participant of sorted) {
+    if (participant.team_number === 1 || participant.team_number === 2) {
+      sides[participant.team_number - 1].push(participant);
+    } else {
+      unassigned.push(participant);
+    }
+  }
+  for (const participant of unassigned) {
+    sides[sides[0].length < perSide ? 0 : 1].push(participant);
+  }
+
+  const sideLabel = (members: typeof sorted, index: number) => {
+    const names = members
+      .map(m => m.player?.profile?.display_name?.trim())
+      .filter((n): n is string => !!n);
+    if (names.length === 0) return tMatch('ogTeamFallback', { number: index + 1 });
+    const label = (names.length > 1 ? names.map(n => n.split(/[\s_]+/)[0]) : names).join(' & ');
+    const limit = names.length > 1 ? 22 : 26;
+    return label.length > limit ? `${label.slice(0, limit - 1)}…` : label;
+  };
+
+  const scoreRows = sides.map((members, index) => ({
+    label: sideLabel(members, index),
+    won: result?.winning_team === index + 1,
+    avatars: members.map(m => ({
+      avatarUrl:
+        getStorageImageUrl(m.player?.profile?.profile_picture_url, {
+          width: 200,
+          height: 200,
+          quality: 75,
+        }) ?? null,
+      initials: m.player?.profile?.display_name?.charAt(0).toUpperCase() ?? null,
+    })),
+    // Per-set games when they were registered, otherwise the sets-won tally.
+    scores:
+      resultSets.length > 0
+        ? resultSets.map(set => ({
+            value: index === 0 ? set.team1_score : set.team2_score,
+            tookIt:
+              index === 0 ? set.team1_score > set.team2_score : set.team2_score > set.team1_score,
+          }))
+        : [
+            {
+              value: (index === 0 ? result?.team1_score : result?.team2_score) ?? 0,
+              tookIt: result?.winning_team === index + 1,
+            },
+          ],
+  }));
 
   // Build attribute badges
-  const attributes: string[] = [];
-  attributes.push(match.format === 'doubles' ? t('doubles') : t('singles'));
+  const attributes: { label: string; highlight?: boolean }[] = [];
+  attributes.push({ label: match.format === 'doubles' ? t('doubles') : t('singles') });
   if (match.player_expectation && match.player_expectation !== 'both') {
-    attributes.push(match.player_expectation === 'competitive' ? t('competitive') : t('casual'));
+    attributes.push({
+      label: isCompetitive ? t('competitive') : t('casual'),
+      highlight: isCompetitive,
+    });
   }
   if (match.min_rating_score) {
-    attributes.push(match.min_rating_score.label);
+    attributes.push({ label: match.min_rating_score.label });
   }
   if (match.court_status === 'reserved') {
-    attributes.push(t('courtBooked'));
+    attributes.push({ label: t('courtBooked') });
   }
   if (match.is_court_free) {
-    attributes.push(t('free'));
+    attributes.push({ label: t('free') });
   } else if (match.estimated_cost) {
-    attributes.push(t('costPerPlayer', { amount: (match.estimated_cost / total).toFixed(2) }));
+    attributes.push({
+      label: t('costPerPlayer', { amount: (match.estimated_cost / total).toFixed(2) }),
+    });
+  }
+
+  // ---------- Shared chrome ----------
+
+  // Faint sport-accurate court lines: tennis gets service boxes, pickleball
+  // gets the kitchen. Sits behind the content, cropped by the right edge.
+  const courtArt = (
+    <div
+      style={{
+        position: 'absolute',
+        top: isPickleball ? 200 : 140,
+        right: isPickleball ? -110 : -230,
+        display: 'flex',
+        opacity: 0.09,
+        transform: 'rotate(-9deg)',
+      }}
+    >
+      {isPickleball ? (
+        <svg width="700" height="318" viewBox="0 0 440 200" fill="none">
+          <rect x="2" y="2" width="436" height="196" stroke="#ffffff" strokeWidth="3" />
+          <line x1="150" y1="2" x2="150" y2="198" stroke="#ffffff" strokeWidth="2" />
+          <line x1="290" y1="2" x2="290" y2="198" stroke="#ffffff" strokeWidth="2" />
+          <line x1="2" y1="100" x2="150" y2="100" stroke="#ffffff" strokeWidth="2" />
+          <line x1="290" y1="100" x2="438" y2="100" stroke="#ffffff" strokeWidth="2" />
+          <line x1="220" y1="0" x2="220" y2="200" stroke="#ffffff" strokeWidth="4" />
+        </svg>
+      ) : (
+        <svg width="880" height="406" viewBox="0 0 780 360" fill="none">
+          <rect x="3" y="3" width="774" height="354" stroke="#ffffff" strokeWidth="4" />
+          <line x1="3" y1="48" x2="777" y2="48" stroke="#ffffff" strokeWidth="3" />
+          <line x1="3" y1="312" x2="777" y2="312" stroke="#ffffff" strokeWidth="3" />
+          <line x1="180" y1="48" x2="180" y2="312" stroke="#ffffff" strokeWidth="3" />
+          <line x1="600" y1="48" x2="600" y2="312" stroke="#ffffff" strokeWidth="3" />
+          <line x1="180" y1="180" x2="600" y2="180" stroke="#ffffff" strokeWidth="3" />
+          <line x1="3" y1="180" x2="20" y2="180" stroke="#ffffff" strokeWidth="3" />
+          <line x1="760" y1="180" x2="777" y2="180" stroke="#ffffff" strokeWidth="3" />
+          <line x1="390" y1="0" x2="390" y2="360" stroke="#ffffff" strokeWidth="6" />
+        </svg>
+      )}
+    </div>
+  );
+
+  // Soft light source: gold for the challenge, teal otherwise.
+  const glow = (
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        background: showChallenge
+          ? 'radial-gradient(circle at 78% 42%, rgba(245,181,53,0.18), rgba(245,181,53,0) 55%)'
+          : 'radial-gradient(circle at 72% 30%, rgba(23,201,180,0.16), rgba(23,201,180,0) 60%)',
+      }}
+    />
+  );
+
+  const eyebrowLabel = showChallenge ? `${sportName} · ${t('competitive')}` : sportName;
+
+  const locationRow = location ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={primary[100]}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+        <circle cx="12" cy="10" r="3" />
+      </svg>
+      <span style={{ fontSize: 25, fontWeight: 500, color: neutral[200] }}>{location}</span>
+    </div>
+  ) : null;
+
+  const badgesRow = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      {attributes.map((attr, i) => (
+        <div
+          key={i}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '7px 18px',
+            borderRadius: 10,
+            background: attr.highlight ? 'rgba(245,181,53,0.16)' : 'rgba(0,0,0,0.18)',
+            border: attr.highlight
+              ? '1px solid rgba(245,181,53,0.45)'
+              : '1px solid rgba(255,255,255,0.12)',
+          }}
+        >
+          <span
+            style={{
+              fontSize: 17,
+              fontWeight: 500,
+              color: attr.highlight ? accent[200] : primary[100],
+            }}
+          >
+            {attr.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+
+  const spotsPill = (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '12px 26px',
+        borderRadius: 100,
+        background: spotsBg,
+      }}
+    >
+      <div style={{ width: 10, height: 10, borderRadius: 5, background: spotsDot }} />
+      <span style={{ fontFamily: 'Poppins', fontSize: 19, fontWeight: 600, color: spotsColor }}>
+        {spotsText}
+      </span>
+    </div>
+  );
+
+  const avatarCircle = (
+    slot: { avatarUrl: string | null; initials: string | null },
+    px: number,
+    ring: string,
+    overlap: boolean,
+    key: number,
+    glowRing?: boolean
+  ) => (
+    <div
+      key={key}
+      style={{
+        width: px,
+        height: px,
+        borderRadius: px / 2,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        marginLeft: overlap ? -Math.round(px * 0.24) : 0,
+        background: slot.avatarUrl ? primary[700] : primary[500],
+        border: ring,
+        ...(glowRing ? { boxShadow: '0 0 70px rgba(245,181,53,0.4)' } : {}),
+      }}
+    >
+      {slot.avatarUrl ? (
+        <img
+          src={slot.avatarUrl}
+          width={px}
+          height={px}
+          style={{ objectFit: 'cover', width: px, height: px }}
+        />
+      ) : (
+        <span
+          style={{
+            fontFamily: 'Poppins',
+            fontSize: Math.round(px * 0.36),
+            fontWeight: 700,
+            color: '#ffffff',
+          }}
+        >
+          {slot.initials}
+        </span>
+      )}
+    </div>
+  );
+
+  // ---------- Variant content ----------
+
+  let content;
+  if (showResult) {
+    // Broadcast-style score bug: one table, aligned set columns, gold winner row.
+    content = (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          justifyContent: 'center',
+          gap: 24,
+        }}
+      >
+        <div style={{ display: 'flex' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 20px',
+              borderRadius: 999,
+              border: '1px solid rgba(245,181,53,0.5)',
+              background: 'rgba(245,181,53,0.1)',
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'Poppins',
+                fontSize: 16,
+                fontWeight: 600,
+                color: accent[300],
+                textTransform: 'uppercase',
+                letterSpacing: '0.16em',
+              }}
+            >
+              {tMatch('ogFinalScore')}
+            </span>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            padding: 10,
+            borderRadius: 22,
+            background: 'rgba(0,0,0,0.18)',
+            border: '1px solid rgba(255,255,255,0.1)',
+          }}
+        >
+          {scoreRows.map((row, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 18,
+                padding: '18px 26px',
+                borderRadius: 14,
+                background: row.won ? 'rgba(245,181,53,0.12)' : 'rgba(255,255,255,0.03)',
+                borderLeft: row.won
+                  ? `6px solid ${accent[400]}`
+                  : '6px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {row.avatars.map((avatar, j) =>
+                  avatarCircle(
+                    avatar,
+                    58,
+                    row.won ? '3px solid rgba(245,181,53,0.55)' : '3px solid rgba(15,118,110,0.6)',
+                    j > 0,
+                    j
+                  )
+                )}
+              </div>
+              <span
+                style={{
+                  fontFamily: 'Poppins',
+                  fontSize: 31,
+                  fontWeight: 700,
+                  color: row.won ? '#ffffff' : primary[200],
+                }}
+              >
+                {row.label}
+              </span>
+              {row.won && (
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={accent[300]}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                  <path d="M4 22h16" />
+                  <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                  <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                  <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                </svg>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+                {row.scores.map((score, j) => (
+                  <div
+                    key={j}
+                    style={{
+                      width: 62,
+                      height: 62,
+                      borderRadius: 12,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: score.tookIt ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.25)',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: 'Poppins',
+                        fontSize: 32,
+                        fontWeight: 700,
+                        color: score.tookIt ? '#ffffff' : primary[300],
+                      }}
+                    >
+                      {score.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span style={{ fontSize: 22, fontWeight: 500, color: primary[200] }}>{dateStr}</span>
+          {location && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: 3,
+                  background: 'rgba(255,255,255,0.35)',
+                }}
+              />
+              <span style={{ fontSize: 22, fontWeight: 500, color: neutral[200] }}>{location}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  } else if (showChallenge) {
+    // Fight poster: message stack on the left, the duel on the right. The
+    // dashed circle is the open spot the viewer is being dared to take.
+    const duelSize = match.format === 'doubles' ? 104 : 160;
+    const shownFilled = filledSlots.slice(0, 2);
+    const emptyCount = Math.min(spotsLeft, 2);
+    content = (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          flex: 1,
+          gap: 30,
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22, width: 640 }}>
+          <span
+            style={{
+              fontFamily: 'Poppins',
+              fontSize: 60,
+              fontWeight: 700,
+              color: '#ffffff',
+              lineHeight: 1.08,
+            }}
+          >
+            {challengeText}
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span
+              style={{
+                fontFamily: 'Poppins',
+                fontSize: 29,
+                fontWeight: 600,
+                color: 'rgba(255,255,255,0.94)',
+              }}
+            >
+              {dateStr}
+            </span>
+            <span style={{ fontSize: 24, fontWeight: 500, color: primary[200] }}>
+              {timeStr}
+              {endTimeStr}
+            </span>
+          </div>
+          {locationRow}
+          {badgesRow}
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 20,
+            marginLeft: 'auto',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              {shownFilled.map((slot, i) =>
+                avatarCircle(slot, duelSize, `4px solid ${accent[400]}`, i > 0, i, true)
+              )}
+            </div>
+            <span
+              style={{
+                fontFamily: 'Poppins',
+                fontSize: 30,
+                fontWeight: 700,
+                color: accent[300],
+                letterSpacing: '0.06em',
+              }}
+            >
+              VS
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              {Array.from({ length: emptyCount }, (_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: duelSize,
+                    height: duelSize,
+                    borderRadius: duelSize / 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginLeft: i === 0 ? 0 : -Math.round(duelSize * 0.24),
+                    background: 'rgba(0,0,0,0.16)',
+                    border: '3px dashed rgba(255,255,255,0.4)',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: 'Poppins',
+                      fontSize: Math.round(duelSize * 0.38),
+                      fontWeight: 700,
+                      color: 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    ?
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {spotsPill}
+        </div>
+      </div>
+    );
+  } else {
+    // Upcoming game: date-led poster, spots pill closing the story.
+    content = (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          justifyContent: 'center',
+          gap: 20,
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span
+            style={{
+              fontFamily: 'Poppins',
+              fontSize: 58,
+              fontWeight: 700,
+              color: '#ffffff',
+              lineHeight: 1.1,
+            }}
+          >
+            {dateStr}
+          </span>
+          <span style={{ fontSize: 30, fontWeight: 500, color: primary[200] }}>
+            {timeStr}
+            {endTimeStr}
+          </span>
+        </div>
+        {locationRow}
+        {badgesRow}
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            {slots.map((slot, i) =>
+              slot.filled ? (
+                avatarCircle(slot, 64, '3px solid rgba(15,118,110,0.6)', i > 0, i)
+              ) : (
+                <div
+                  key={i}
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginLeft: i === 0 ? 0 : -15,
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '2px solid rgba(255,255,255,0.18)',
+                  }}
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.35)"
+                    strokeWidth="2"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </div>
+              )
+            )}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginLeft: 20 }}>
+            <span
+              style={{
+                fontFamily: 'Poppins',
+                fontSize: 28,
+                fontWeight: 700,
+                color: '#ffffff',
+                lineHeight: 1,
+              }}
+            >
+              {joinedCount}/{total}
+            </span>
+            <span style={{ fontSize: 16, fontWeight: 500, color: primary[100] }}>
+              {t('playersJoined')}
+            </span>
+          </div>
+          <div style={{ display: 'flex', marginLeft: 'auto' }}>{spotsPill}</div>
+        </div>
+      </div>
+    );
   }
 
   return new ImageResponse(
@@ -141,6 +743,7 @@ export default async function Image({
         fontFamily: 'Inter',
         padding: '0 56px',
         position: 'relative',
+        overflow: 'hidden',
       }}
     >
       {/* Accent gradient bar at very top */}
@@ -156,6 +759,9 @@ export default async function Image({
         }}
       />
 
+      {glow}
+      {courtArt}
+
       {/* Top bar: Sport + Rallia */}
       <div
         style={{
@@ -163,7 +769,7 @@ export default async function Image({
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingTop: 36,
-          paddingBottom: 20,
+          paddingBottom: 12,
         }}
       >
         <span
@@ -171,194 +777,17 @@ export default async function Image({
             fontFamily: 'Poppins',
             fontSize: 20,
             fontWeight: 600,
-            color: primary[200],
+            color: showChallenge ? accent[300] : primary[200],
             textTransform: 'uppercase',
             letterSpacing: '0.12em',
           }}
         >
-          {sportName}
+          {eyebrowLabel}
         </span>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={logoSrc} height={40} style={{ height: 40, objectFit: 'contain' }} />
       </div>
 
-      {/* Main card */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          background: 'rgba(255,255,255,0.1)',
-          borderRadius: 24,
-          border: '1px solid rgba(255,255,255,0.15)',
-          padding: '40px 48px',
-          justifyContent: 'space-between',
-        }}
-      >
-        {/* Date + Time */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <span
-            style={{
-              fontFamily: 'Poppins',
-              fontSize: 52,
-              fontWeight: 700,
-              color: '#ffffff',
-              lineHeight: 1.15,
-              textTransform: 'capitalize',
-            }}
-          >
-            {dateStr}
-          </span>
-          <span style={{ fontSize: 30, fontWeight: 500, color: primary[200] }}>
-            {timeStr}
-            {endTimeStr}
-          </span>
-        </div>
-
-        {/* Location */}
-        {location && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={primary[100]}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-            <span style={{ fontSize: 26, fontWeight: 500, color: neutral[200] }}>{location}</span>
-          </div>
-        )}
-
-        {/* Match attributes row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          {attributes.map((attr, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '8px 20px',
-                borderRadius: 10,
-                background: 'rgba(0,0,0,0.15)',
-                border: '1px solid rgba(255,255,255,0.1)',
-              }}
-            >
-              <span style={{ fontSize: 18, fontWeight: 500, color: primary[100] }}>{attr}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Bottom row: Avatars + count on left, spots pill on right */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Avatars + count */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            {/* Overlapping avatar stack */}
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              {slots.map((slot, i) => (
-                <div
-                  key={i}
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 28,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    marginLeft: i === 0 ? 0 : -12,
-                    background: slot.filled
-                      ? slot.avatarUrl
-                        ? primary[700]
-                        : primary[500]
-                      : 'rgba(255,255,255,0.06)',
-                    border: slot.filled
-                      ? '3px solid rgba(15,118,110,0.6)'
-                      : '2px solid rgba(255,255,255,0.15)',
-                  }}
-                >
-                  {slot.filled ? (
-                    slot.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={slot.avatarUrl}
-                        width={56}
-                        height={56}
-                        style={{ objectFit: 'cover', width: 56, height: 56 }}
-                      />
-                    ) : (
-                      <span
-                        style={{
-                          fontFamily: 'Poppins',
-                          fontSize: 20,
-                          fontWeight: 700,
-                          color: '#ffffff',
-                        }}
-                      >
-                        {slot.initials}
-                      </span>
-                    )
-                  ) : (
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="rgba(255,255,255,0.3)"
-                      strokeWidth="2"
-                    >
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Player count text */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span
-                style={{
-                  fontFamily: 'Poppins',
-                  fontSize: 28,
-                  fontWeight: 700,
-                  color: '#ffffff',
-                  lineHeight: 1,
-                }}
-              >
-                {joinedCount}/{total}
-              </span>
-              <span style={{ fontSize: 16, fontWeight: 500, color: primary[100] }}>
-                {t('playersJoined')}
-              </span>
-            </div>
-          </div>
-
-          {/* Spots status pill */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '12px 26px',
-              borderRadius: 100,
-              background: spotsBg,
-            }}
-          >
-            <div style={{ width: 10, height: 10, borderRadius: 5, background: spotsDot }} />
-            <span
-              style={{ fontFamily: 'Poppins', fontSize: 19, fontWeight: 600, color: spotsColor }}
-            >
-              {spotsText}
-            </span>
-          </div>
-        </div>
-      </div>
+      {content}
 
       {/* Bottom branding */}
       <div
@@ -366,8 +795,8 @@ export default async function Image({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          paddingTop: 18,
-          paddingBottom: 24,
+          paddingTop: 14,
+          paddingBottom: 22,
         }}
       >
         <span style={{ fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.35)' }}>

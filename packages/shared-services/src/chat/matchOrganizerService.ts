@@ -440,3 +440,131 @@ export async function createCasualMatch(params: {
 
   return data as string;
 }
+
+// ============================================================================
+// SCHEDULING FUNNEL — ONE-TAP BOOKING
+// ============================================================================
+
+/** The tentative booking behind a funnel pairing, if one exists. */
+export interface PairingBooking {
+  tournament_match_id: string;
+  match_id: string;
+  booked_by: string;
+  booked_at: string;
+  tentative_until: string;
+  accepted_at: string | null;
+  accepted_by: string | null;
+}
+
+/**
+ * Book a MUTUAL option in one tap (scheduling-funnel.md § 5.3). Both sides
+ * declared themselves free for it inside the phase, so no vote is asked for.
+ * Creates and links the game, and opens the 24 h tentative window the other
+ * side is notified about. Returns the game id.
+ */
+export async function bookMutualOption(messageId: string, optionIndex: number): Promise<string> {
+  const { data, error } = await supabase.rpc('lt_funnel_book_mutual_option', {
+    p_message_id: messageId,
+    p_option_index: optionIndex,
+  });
+
+  if (error) {
+    console.error('Error booking mutual option:', error);
+    throw error;
+  }
+
+  return data as string;
+}
+
+/**
+ * "Ça marche": the side that did not book accepts, which makes the agreement
+ * firm at once and records it as EXPLICIT, so a later absence is a no-show
+ * rather than unresponsiveness (scheduling-funnel.md § 5.4 and § 8).
+ */
+export async function acceptPairingBooking(tournamentMatchId: string): Promise<PairingBooking> {
+  const { data, error } = await supabase.rpc('lt_funnel_accept_booking', {
+    p_tournament_match_id: tournamentMatchId,
+  });
+
+  if (error) {
+    console.error('Error accepting booking:', error);
+    throw error;
+  }
+
+  return data as PairingBooking;
+}
+
+/** The pairing's tentative booking, or null when nothing is booked. */
+export async function getPairingBooking(tournamentMatchId: string): Promise<PairingBooking | null> {
+  const { data, error } = await supabase
+    .from('lt_pairing_booking')
+    .select('*')
+    .eq('tournament_match_id', tournamentMatchId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching pairing booking:', error);
+    throw error;
+  }
+
+  return (data as PairingBooking | null) ?? null;
+}
+
+/**
+ * "Proposer un autre moment" (scheduling-funnel.md § 5.4). Cancels the tentative
+ * game without penalty and posts the counter-slot as a custom option the booker
+ * then thumbs. One per side per pairing. Returns the card's message id.
+ */
+export async function reproposePairingSlot(params: {
+  tournamentMatchId: string;
+  slotStart: string;
+  facilityId?: string | null;
+  placeName?: string | null;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('lt_funnel_repropose_slot', {
+    p_tournament_match_id: params.tournamentMatchId,
+    p_slot_start: params.slotStart,
+    ...(params.facilityId ? { p_facility_id: params.facilityId } : {}),
+    ...(params.placeName ? { p_place_name: params.placeName } : {}),
+  });
+
+  if (error) {
+    console.error('Error re-proposing a slot:', error);
+    throw error;
+  }
+
+  return data as string;
+}
+
+/**
+ * Concede one pairing (scheduling-funnel.md § 3). The opponent takes the
+ * walkover at once with the format's forfeit score; the declaring side takes
+ * the forfeit reputation event, not the unresponsive one.
+ */
+export async function declarePairingForfeit(tournamentMatchId: string): Promise<void> {
+  const { error } = await supabase.rpc('lt_funnel_declare_forfeit', {
+    p_tournament_match_id: tournamentMatchId,
+  });
+
+  if (error) {
+    console.error('Error declaring a forfeit:', error);
+    throw error;
+  }
+}
+
+/**
+ * Nudge the side of a pairing that has not answered the phase gate. One per
+ * opponent per 48 h. Returns how many were nudged.
+ */
+export async function pingPairingOpponent(tournamentMatchId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('lt_funnel_ping_opponent', {
+    p_tournament_match_id: tournamentMatchId,
+  });
+
+  if (error) {
+    console.error('Error nudging an opponent:', error);
+    throw error;
+  }
+
+  return (data as number) ?? 0;
+}

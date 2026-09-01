@@ -26,7 +26,7 @@ import {
 } from '@rallia/design-system';
 import { errorHaptic, lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { Logger } from '@rallia/shared-services';
-import { useAddCustomOrganizerOption } from '@rallia/shared-hooks';
+import { useAddCustomOrganizerOption, useReproposePairingSlot } from '@rallia/shared-hooks';
 
 import { BaseActionSheet } from '#/components/BaseActionSheet';
 import { SheetDateField } from '#/components/SheetDateField';
@@ -56,6 +56,7 @@ export function MatchOrganizerCustomSlotActionSheet(
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const addOption = useAddCustomOrganizerOption();
+  const repropose = useReproposePairingSlot();
 
   const buttonThemeColors = useMemo(
     () => ({
@@ -103,7 +104,7 @@ export function MatchOrganizerCustomSlotActionSheet(
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (!payload || addOption.isPending) return;
+    if (!payload || addOption.isPending || repropose.isPending) return;
 
     if (slot.getTime() <= Date.now()) {
       setErrorMsg(t('matchOrganizer.custom.errorPast'));
@@ -113,19 +114,39 @@ export function MatchOrganizerCustomSlotActionSheet(
 
     setErrorMsg(null);
     try {
-      await addOption.mutateAsync({
-        messageId: payload.messageId,
-        slotStart: slot.toISOString(),
-        placeName: place.trim() || null,
-        conversationId: payload.conversationId,
-      });
+      if (payload.reproposeForPairing) {
+        // Countering a tentative booking: the game is cancelled without
+        // penalty and this slot is offered in its place.
+        await repropose.mutateAsync({
+          tournamentMatchId: payload.reproposeForPairing,
+          slotStart: slot.toISOString(),
+          placeName: place.trim() || null,
+          conversationId: payload.conversationId,
+        });
+      } else {
+        await addOption.mutateAsync({
+          messageId: payload.messageId,
+          slotStart: slot.toISOString(),
+          placeName: place.trim() || null,
+          conversationId: payload.conversationId,
+        });
+      }
       void successHaptic();
       toastSuccess(t('matchOrganizer.custom.success'));
       void SheetManager.hide('match-organizer-custom-slot');
     } catch (err) {
       const code = err instanceof Error ? err.message : '';
       // Expected rejections, not bugs, so keep them out of Sentry's error stream.
-      if (['SLOT_IN_PAST', 'CARD_ALREADY_SETTLED', 'NOT_A_PARTICIPANT'].includes(code)) {
+      if (
+        [
+          'SLOT_IN_PAST',
+          'CARD_ALREADY_SETTLED',
+          'NOT_A_PARTICIPANT',
+          'REPROPOSAL_SPENT',
+          'WINDOW_CLOSED',
+          'SLOT_PAST_DEADLINE',
+        ].includes(code)
+      ) {
         Logger.warn('Custom organizer option rejected', { reason: code });
       } else {
         Logger.error(
@@ -136,9 +157,15 @@ export function MatchOrganizerCustomSlotActionSheet(
       setErrorMsg(
         code === 'SLOT_IN_PAST'
           ? t('matchOrganizer.custom.errorPast')
-          : code === 'CARD_ALREADY_SETTLED'
-            ? t('matchOrganizer.custom.errorSettled')
-            : t('matchOrganizer.custom.errorGeneric')
+          : code === 'REPROPOSAL_SPENT'
+            ? t('matchOrganizer.custom.errorReproposalSpent')
+            : code === 'WINDOW_CLOSED'
+              ? t('matchOrganizer.custom.errorWindowClosed')
+              : code === 'SLOT_PAST_DEADLINE'
+                ? t('matchOrganizer.custom.errorPastDeadline')
+                : code === 'CARD_ALREADY_SETTLED'
+                  ? t('matchOrganizer.custom.errorSettled')
+                  : t('matchOrganizer.custom.errorGeneric')
       );
       void errorHaptic();
     }

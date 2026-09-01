@@ -2,13 +2,13 @@
 -- Tournaments — F4c: resolution ladder on PAID draws
 -- ============================================
 -- A paid single-elim draw of 4 with an expired round-1 deadline:
---   * semi 1: one side has effort → walkover; the silent loser PLAYED
+--   * semi 1: one side engaged at the gate → walkover; the passive loser PLAYED
 --     nothing but a single walkover is not the refund case → stays
 --     registered, no refund queued;
---   * semi 2: both silent → double walkover; both sides have zero completed
---     games → both registrations disqualified, both succeeded payments
---     surface in lt_cancel_refund_candidates and neither in
---     lt_release_candidates.
+--   * semi 2: both silent → double walkover; the zero-games refund is
+--     retired (Jean 2026-08-23, unplayed-match-resolution.md § 10), so both
+--     sides STAY registered, no refund is queued, and once the event
+--     completes both entries release to the organizer like any played entry.
 --
 -- Run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
 --        -v ON_ERROR_STOP=1 -f supabase/tests/tournament_paid_ladder_test.sql
@@ -43,6 +43,36 @@ RETURNS void LANGUAGE sql AS $$
     UPDATE tournament_registrations
        SET status = 'registered', version = version + 1, updated_at = now()
      WHERE id = p_reg;
+$$;
+
+-- The ladder reads gate answers now, not chat. These two helpers put a side
+-- into the state the assertions below are about.
+CREATE OR REPLACE FUNCTION pg_temp.engaged(p_t uuid, p_reg uuid) RETURNS void
+LANGUAGE sql AS $$
+  INSERT INTO tournament_phase_availability
+      (tournament_id, bracket_side, round_number, player_id, outcome,
+       responded_at, hours_in_window, grid_snapshot)
+  SELECT p_t, 'main', 1, u, 'edited',
+         (SELECT min(created_at) FROM tournament_matches
+           WHERE tournament_id = p_t AND bracket_side = 'main'),
+         12, '[{"day":"monday","hour":18}]'::jsonb
+    FROM unnest(public.lt_registration_users(p_reg)) u
+  ON CONFLICT (tournament_id, bracket_side, round_number, player_id) DO UPDATE
+    SET hours_in_window = 12, outcome = 'edited', responded_at = EXCLUDED.responded_at;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.passive(p_t uuid, p_reg uuid) RETURNS void
+LANGUAGE sql AS $$
+  INSERT INTO tournament_phase_availability
+      (tournament_id, bracket_side, round_number, player_id, outcome,
+       responded_at, hours_in_window, grid_snapshot)
+  SELECT p_t, 'main', 1, u, 'skipped',
+         (SELECT min(created_at) FROM tournament_matches
+           WHERE tournament_id = p_t AND bracket_side = 'main') + interval '5 days',
+         0, '[]'::jsonb
+    FROM unnest(public.lt_registration_users(p_reg)) u
+  ON CONFLICT (tournament_id, bracket_side, round_number, player_id) DO UPDATE
+    SET hours_in_window = 0, outcome = 'skipped', responded_at = EXCLUDED.responded_at;
 $$;
 
 CREATE OR REPLACE FUNCTION pg_temp.say(p_tm uuid, p_user uuid, p_text text)
@@ -124,9 +154,15 @@ BEGIN
     SELECT * INTO v_m2 FROM tournament_matches
      WHERE tournament_id = v_t.id AND round_number = 1 AND match_position = 2;
 
-    PERFORM pg_temp.say(v_m1.id,
-        (SELECT user_id FROM tournament_registrations WHERE id = v_m1.player1_registration_id),
-        'on joue quand?');
+    -- The ladder only acts on funnel events, and reads gate answers, so the
+    -- effort split is expressed there rather than in chat.
+    UPDATE tournaments SET scheduling_funnel_enabled = true WHERE id = v_t.id;
+    UPDATE tournament_matches
+       SET deadline_nudge48_at = now() - interval '2 days',
+           deadline_nudge12_at = now() - interval '12 hours'
+     WHERE tournament_id = v_t.id AND round_number = 1;
+    PERFORM pg_temp.engaged(v_t.id, v_m1.player1_registration_id);
+    PERFORM pg_temp.passive(v_t.id, v_m1.player2_registration_id);
 
     PERFORM public.lt_resolve_due_tournament_matches(false);
 
@@ -141,32 +177,44 @@ BEGIN
         RAISE EXCEPTION 'single-walkover loser should stay registered, got %', v_reg.status;
     END IF;
 
-    -- Semi 2: double walkover; both zero-game sides disqualified.
+    -- Semi 2: double walkover; the zero-games refund is retired, so both
+    -- sides keep their registration and nothing is queued.
     SELECT * INTO v_m2 FROM tournament_matches WHERE id = v_m2.id;
     IF v_m2.status <> 'walkover' OR v_m2.winner_registration_id IS NOT NULL THEN
         RAISE EXCEPTION 'paid semi 2 not a double walkover';
     END IF;
     SELECT count(*) INTO v_cnt FROM tournament_registrations
      WHERE id IN (v_m2.player1_registration_id, v_m2.player2_registration_id)
-       AND status = 'disqualified';
+       AND status = 'registered';
     IF v_cnt <> 2 THEN
-        RAISE EXCEPTION 'expected both double-walkover sides disqualified, got %', v_cnt;
+        RAISE EXCEPTION 'expected both double-walkover sides to stay registered, got %', v_cnt;
     END IF;
-
-    -- Both queued for refund, neither releasable to the organizer.
+    SELECT count(*) INTO v_cnt FROM leagues_tournaments_audit
+     WHERE scope = 'registration' AND action = 'auto_refund_queued'
+       AND entity_id IN (v_m2.player1_registration_id, v_m2.player2_registration_id);
+    IF v_cnt <> 0 THEN
+        RAISE EXCEPTION 'no refund may be queued post-open, got % audit rows', v_cnt;
+    END IF;
     SELECT count(*) INTO v_cnt FROM public.lt_cancel_refund_candidates() c
       JOIN lt_registration_payment p ON p.id = c.payment_id
      WHERE p.tournament_registration_id
            IN (v_m2.player1_registration_id, v_m2.player2_registration_id);
-    IF v_cnt <> 2 THEN
-        RAISE EXCEPTION 'expected 2 refund candidates, got %', v_cnt;
+    IF v_cnt <> 0 THEN
+        RAISE EXCEPTION 'expected 0 refund candidates, got %', v_cnt;
     END IF;
+
+    -- And at completion the entries settle to the organizer like any played
+    -- entry, so no payment sits 'succeeded' forever.
+    UPDATE tournaments
+       SET status = 'completed', start_date = now() - interval '3 days',
+           end_date = now() - interval '2 days'
+     WHERE id = v_t.id;
     SELECT count(*) INTO v_cnt FROM public.lt_release_candidates() c
       JOIN lt_registration_payment p ON p.id = c.payment_id
      WHERE p.tournament_registration_id
            IN (v_m2.player1_registration_id, v_m2.player2_registration_id);
-    IF v_cnt <> 0 THEN
-        RAISE EXCEPTION 'refund-queued entries must not be releasable, got %', v_cnt;
+    IF v_cnt <> 2 THEN
+        RAISE EXCEPTION 'expected both double-walkover entries releasable at completion, got %', v_cnt;
     END IF;
 
     RAISE NOTICE 'tournament_paid_ladder_test: ALL PASS';

@@ -84,6 +84,7 @@ import {
   useTournamentPoolStandings,
   useGenerateTournamentKnockout,
   useTournamentRoundDeadlines,
+  useTournamentPhaseAvailability,
   useOpenTournamentRoundChat,
   useIsTournamentOrganizer,
   useIsCertifiedOrganizer,
@@ -116,7 +117,7 @@ import { EventDetailTabBar } from '../features/events/components/EventDetailChro
 import { styles } from '../features/tournaments/detail/detailStyles';
 import { BracketTab } from '../features/tournaments/detail/BracketTab';
 import { OverviewTab } from '../features/tournaments/detail/OverviewTab';
-import { roundLabel } from '../features/tournaments/detail/BracketSection';
+import { parseScoreSets, roundLabel } from '../features/tournaments/detail/BracketSection';
 import { DetailsTab } from '../features/tournaments/detail/DetailsTab';
 import { PlayersTab } from '../features/tournaments/detail/PlayersTab';
 import { RulesTab } from '../features/tournaments/detail/RulesTab';
@@ -609,17 +610,21 @@ export const TournamentDetail: React.FC = () => {
             partnerId,
             termsVersion,
           });
-          const { error: initError } = await initPaymentSheet({
-            paymentIntentClientSecret: intent.clientSecret,
-            merchantDisplayName: 'Rallia',
-            applePay: { merchantCountryCode: 'CA' },
-            googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
-          });
-          if (initError) throw new Error(initError.message);
-          const { error: paymentError } = await presentPaymentSheet();
-          if (paymentError) {
-            if (paymentError.code === 'Canceled') return; // user backed out — slot reaper frees it
-            throw new Error(paymentError.message);
+          // Fully covered by referral credit: the edge function already
+          // finalized the registration — no Stripe sheet to present.
+          if (!intent.fullyCovered) {
+            const { error: initError } = await initPaymentSheet({
+              paymentIntentClientSecret: intent.clientSecret as string,
+              merchantDisplayName: 'Rallia',
+              applePay: { merchantCountryCode: 'CA' },
+              googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
+            });
+            if (initError) throw new Error(initError.message);
+            const { error: paymentError } = await presentPaymentSheet();
+            if (paymentError) {
+              if (paymentError.code === 'Canceled') return; // user backed out — slot reaper frees it
+              throw new Error(paymentError.message);
+            }
           }
           successHaptic();
           toast.success(t('tournamentDetail.payments.successToast'), inviteNudgeAction());
@@ -666,6 +671,12 @@ export const TournamentDetail: React.FC = () => {
       // A fee-waived event (0% override) still bills player_pays, so the fee
       // lines have to key off the amount, not the mode.
       const chargesServiceFee = !!feeQuote && playerPaysFee && feeQuote.serviceFeeCents > 0;
+      const creditCents = feeQuote?.creditApplicableCents ?? 0;
+      const payableCents = feeQuote ? Math.max(feeQuote.totalCents - creditCents, 0) : 0;
+      const creditLine =
+        creditCents > 0
+          ? t('tournamentDetail.payments.breakdownCredit').replace('{amount}', money(creditCents))
+          : null;
       const breakdown = !feeQuote
         ? null
         : playerPaysFee
@@ -686,9 +697,10 @@ export const TournamentDetail: React.FC = () => {
                     money(feeQuote.feeTaxCents)
                   )
                 : null,
+              creditLine,
               t('tournamentDetail.payments.breakdownTotal').replace(
                 '{amount}',
-                money(feeQuote.totalCents)
+                money(payableCents)
               ),
             ]
               .filter(Boolean)
@@ -699,12 +711,15 @@ export const TournamentDetail: React.FC = () => {
                 money(feeQuote.entryCents)
               ),
               t('tournamentDetail.payments.feeCoveredByOrganizer'),
+              creditLine,
               t('tournamentDetail.payments.breakdownTotalTaxesIncluded').replace(
                 '{amount}',
-                money(feeQuote.totalCents)
+                money(payableCents)
               ),
-            ].join('\n');
-      const totalLabel = feeQuote ? money(feeQuote.totalCents) : null;
+            ]
+              .filter(Boolean)
+              .join('\n');
+      const totalLabel = feeQuote ? money(payableCents) : null;
       const disclosureLines = [
         breakdown,
         refundPolicyLine(feeQuote, t, locale),
@@ -1162,9 +1177,10 @@ export const TournamentDetail: React.FC = () => {
     generateKnockout.mutate({ tournamentId: tournament.id, versionWas: tournament.version });
   }, [tournament, generateKnockout]);
 
-  const { data: roundDeadlines = [] } = useTournamentRoundDeadlines(
-    shouldFetchBracket && tournament?.status === 'in_progress' ? tournament?.id : undefined
-  );
+  const { data: roundDeadlines = [], isSuccess: roundDeadlinesLoaded } =
+    useTournamentRoundDeadlines(
+      shouldFetchBracket && tournament?.status === 'in_progress' ? tournament?.id : undefined
+    );
 
   // The phase the players are racing right now: the pool deadline while the
   // pool stage is live, else the earliest knockout round still unresolved.
@@ -1627,6 +1643,72 @@ export const TournamentDetail: React.FC = () => {
     return row?.deadline_at ?? null;
   }, [myNextMatch, roundDeadlines]);
 
+  // Scheduling funnel: the phase gate. Answering is the ack that unlocks the
+  // pool room composer and the pairing rooms (scheduling-funnel.md § 3).
+  const funnelEnabled = !!tournament?.scheduling_funnel_enabled;
+  const gatePhase = useMemo(() => {
+    if (!myNextMatch) return null;
+    return myNextMatch.bracket_side === 'pool'
+      ? { bracketSide: 'pool' as const, roundNumber: 0 }
+      : { bracketSide: 'main' as const, roundNumber: myNextMatch.round_number };
+  }, [myNextMatch]);
+  const phaseDeadlineAt = useMemo(() => {
+    if (!gatePhase) return null;
+    const row = roundDeadlines.find(d =>
+      gatePhase.bracketSide === 'pool'
+        ? d.bracket_side === 'pool'
+        : d.bracket_side === 'main' && d.round_number === gatePhase.roundNumber
+    );
+    return row?.deadline_at ?? null;
+  }, [gatePhase, roundDeadlines]);
+  const { data: gateAnswers = [] } = useTournamentPhaseAvailability(
+    tournament?.id,
+    gatePhase?.bracketSide ?? 'pool',
+    gatePhase?.roundNumber ?? 0,
+    funnelEnabled && !!gatePhase && tournament?.status === 'in_progress'
+  );
+  const myGateAnswer = useMemo(
+    () => (userId ? (gateAnswers.find(a => a.player_id === userId) ?? null) : null),
+    [gateAnswers, userId]
+  );
+  const needsGateAnswer =
+    funnelEnabled &&
+    tournament?.status === 'in_progress' &&
+    !!myActiveRegistration &&
+    !!gatePhase &&
+    !!phaseDeadlineAt &&
+    !myGateAnswer &&
+    new Date(phaseDeadlineAt).getTime() > Date.now();
+  const handleOpenAvailabilityGate = useCallback(() => {
+    if (!tournament || !gatePhase) return;
+    const snapshot = Array.isArray(myGateAnswer?.grid_snapshot)
+      ? (myGateAnswer.grid_snapshot as { day?: string; hour?: number }[])
+          .filter(c => typeof c?.day === 'string' && typeof c?.hour === 'number')
+          .map(c => `${c.day}-${c.hour}`)
+      : null;
+    void SheetManager.show('tournament-availability-gate', {
+      payload: {
+        tournamentId: tournament.id,
+        bracketSide: gatePhase.bracketSide,
+        roundNumber: gatePhase.roundNumber,
+        phaseLabel:
+          gatePhase.bracketSide === 'pool'
+            ? t('tournamentDetail.availabilityGate.poolPhase')
+            : roundLabel(gatePhase.roundNumber, totalRounds, t),
+        deadlineAt: phaseDeadlineAt,
+        minHours: tournament.min_availability_hours ?? null,
+        initialCells: snapshot && snapshot.length > 0 ? snapshot : undefined,
+      },
+    });
+  }, [tournament, gatePhase, myGateAnswer, phaseDeadlineAt, totalRounds, t]);
+
+  const canEditGateAnswer =
+    funnelEnabled &&
+    tournament?.status === 'in_progress' &&
+    !!myGateAnswer &&
+    !!phaseDeadlineAt &&
+    new Date(phaseDeadlineAt).getTime() > Date.now();
+
   const myBracketState = useMemo<'next' | 'waiting' | 'eliminated' | 'champion' | null>(() => {
     if (!myRegId || tournament?.status !== 'in_progress') return null;
     if (myNextMatch) {
@@ -1655,6 +1737,61 @@ export const TournamentDetail: React.FC = () => {
     return nameByRegId.get(oppId) ?? seedFallbackLabel(seedByRegId.get(oppId), t);
   }, [myNextMatch, myRegId, nameByRegId, seedByRegId, t]);
 
+  // Pool play is not knockout: all of a player's pool games share one deadline
+  // instead of arriving one round at a time. Handing the dashboard the whole
+  // set keeps it from showing a single opponent, which reads as "one game to
+  // play by that date" and leaves the other two unscheduled.
+  const myPoolPhase = useMemo(() => {
+    if (!myRegId || myNextMatch?.bracket_side !== 'pool') return null;
+    const deadlineAt = roundDeadlines.find(d => d.bracket_side === 'pool')?.deadline_at ?? null;
+    const games = poolMatches
+      .filter(
+        m =>
+          !m.player1_is_bye &&
+          !m.player2_is_bye &&
+          !!m.player1_registration_id &&
+          !!m.player2_registration_id &&
+          // A cancelled pairing is not a game the player still owes.
+          m.status !== 'cancelled' &&
+          (m.player1_registration_id === myRegId || m.player2_registration_id === myRegId)
+      )
+      .sort((a, b) => a.round_number - b.round_number)
+      .map(m => {
+        const oppId =
+          m.player1_registration_id === myRegId
+            ? m.player2_registration_id
+            : m.player1_registration_id;
+        // Settled means a result is on the books. A disputed game was played
+        // but is unresolved, so it stays actionable alongside the unplayed ones.
+        const settled =
+          ['completed', 'walkover', 'retired'].includes(m.status) || !!m.winner_registration_id;
+        // The stored score is player1-first; flip it when the viewer is player2
+        // so their own games always read on the left.
+        const iAmPlayer1 = m.player1_registration_id === myRegId;
+        const sets = parseScoreSets(m.score);
+        const scoreLabel = sets.length
+          ? sets.map(s => (iAmPlayer1 ? `${s.a}-${s.b}` : `${s.b}-${s.a}`)).join(' ')
+          : null;
+        return {
+          id: m.id,
+          p1RegId: m.player1_registration_id as string,
+          p2RegId: m.player2_registration_id as string,
+          opponentLabel: oppId
+            ? (nameByRegId.get(oppId) ?? seedFallbackLabel(seedByRegId.get(oppId), t))
+            : null,
+          settled,
+          isDisputed: m.status === 'disputed',
+          isWalkover: m.status === 'walkover',
+          didWin: m.winner_registration_id ? m.winner_registration_id === myRegId : null,
+          scoreLabel,
+          // An organizer extension on one pairing wins over the phase row, so
+          // that row states its own date rather than the shared one.
+          deadlineAt: m.deadline_override_at ?? deadlineAt,
+        };
+      });
+    return games.length > 0 ? { games, deadlineAt } : null;
+  }, [myRegId, myNextMatch, poolMatches, roundDeadlines, nameByRegId, seedByRegId, t]);
+
   // Flashscore-style content tabs (Overview / Bracket / Players / Details).
   // Keyed, not positional: tabs appear and disappear with tournament state, so
   // an index would silently select a different tab underneath the user.
@@ -1665,12 +1802,53 @@ export const TournamentDetail: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
   const heroHeightRef = useRef(0);
 
+  // Structured set-entry sheet on a bracket match. Organizers record an
+  // authoritative result (override path, outcome picker included); a
+  // participant self-reports a played score on their own pairing when no game
+  // was ever created for it (server-enforced).
+  const openRecordScore = useCallback(
+    (
+      tournamentMatchId: string,
+      p1RegId: string,
+      p2RegId: string,
+      mode: 'organizer' | 'participant'
+    ) => {
+      if (!tournament) return;
+      lightHaptic();
+      const sportName = sports.find(s => s.id === tournament.sport_id)?.name;
+      const match = matches.find(m => m.id === tournamentMatchId);
+      SheetManager.show('tournament-record-score', {
+        payload: {
+          tournamentMatchId,
+          tournamentId: tournament.id,
+          player1RegId: p1RegId,
+          player2RegId: p2RegId,
+          player1Name: nameByRegId.get(p1RegId) ?? seedFallbackLabel(seedByRegId.get(p1RegId), t),
+          player2Name: nameByRegId.get(p2RegId) ?? seedFallbackLabel(seedByRegId.get(p2RegId), t),
+          isPickleball: sportName === 'pickleball',
+          matchFormat: tournament.match_format,
+          pointsPerGame: tournament.points_per_game,
+          isFinal:
+            !!totalRounds && match?.bracket_side === 'main' && match?.round_number === totalRounds,
+          // A pool row can be cancelled outright; a bracket slot cannot.
+          isPoolMatch: match?.pool_number != null,
+          mode,
+          onSuccess: () => {
+            successHaptic();
+          },
+        },
+      });
+    },
+    [tournament, sports, matches, totalRounds, nameByRegId, seedByRegId, t]
+  );
+
   const handleBracketMatchTap = useCallback(
     (tournamentMatchId: string, p1RegId: string, p2RegId: string) => {
       const team1 = membersByRegId.get(p1RegId);
       const team2 = membersByRegId.get(p2RegId);
       if (!team1?.length || !team2?.length || !tournament) return;
       lightHaptic();
+      const match = matches.find(m => m.id === tournamentMatchId);
       SheetManager.show('tournament-link-match', {
         payload: {
           tournamentMatchId,
@@ -1679,10 +1857,17 @@ export const TournamentDetail: React.FC = () => {
           entryFormat: tournament.entry_format,
           team1UserIds: team1,
           team2UserIds: team2,
+          // A pairing with no game behind it can be settled by entering the
+          // agreed score directly; one bound to a game keeps that game as the
+          // single score path.
+          onManualEntry:
+            match && !match.match_id
+              ? () => openRecordScore(tournamentMatchId, p1RegId, p2RegId, 'participant')
+              : undefined,
         },
       });
     },
-    [membersByRegId, tournament]
+    [membersByRegId, tournament, matches, openRecordScore]
   );
 
   // Open (get-or-create) the per-pairing round chat and drop the caller in, so
@@ -1711,30 +1896,9 @@ export const TournamentDetail: React.FC = () => {
   // bracket match via the structured set-entry sheet.
   const handleOrganizerOverride = useCallback(
     (tournamentMatchId: string, p1RegId: string, p2RegId: string) => {
-      if (!tournament) return;
-      lightHaptic();
-      const sportName = sports.find(s => s.id === tournament.sport_id)?.name;
-      const match = matches.find(m => m.id === tournamentMatchId);
-      SheetManager.show('tournament-record-score', {
-        payload: {
-          tournamentMatchId,
-          tournamentId: tournament.id,
-          player1RegId: p1RegId,
-          player2RegId: p2RegId,
-          player1Name: nameByRegId.get(p1RegId) ?? seedFallbackLabel(seedByRegId.get(p1RegId), t),
-          player2Name: nameByRegId.get(p2RegId) ?? seedFallbackLabel(seedByRegId.get(p2RegId), t),
-          isPickleball: sportName === 'pickleball',
-          matchFormat: tournament.match_format,
-          pointsPerGame: tournament.points_per_game,
-          isFinal:
-            !!totalRounds && match?.bracket_side === 'main' && match?.round_number === totalRounds,
-          onSuccess: () => {
-            successHaptic();
-          },
-        },
-      });
+      openRecordScore(tournamentMatchId, p1RegId, p2RegId, 'organizer');
     },
-    [tournament, sports, matches, totalRounds, nameByRegId, seedByRegId, t]
+    [openRecordScore]
   );
 
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -1794,12 +1958,19 @@ export const TournamentDetail: React.FC = () => {
     // after registration closes, the organizer can still admit late entrants by
     // link (draft/open already reach the link through the "Invite players" sheet).
     const canShareLink = s === 'registration_closed' && !tournament?.bracket_locked_at;
+    // Mirrors the RPC's own status gate, and only once there is something to
+    // set: a pool phase (known from the format, before the draw) or generated
+    // knockout rounds. Otherwise the entry opens on an empty sheet.
+    const canSetDeadlines =
+      (s === 'registration_open' || s === 'registration_closed' || s === 'in_progress') &&
+      (isPoolTournament || knockoutMatches.length > 0);
     const enabled =
       isOrganizer &&
       (canEdit ||
         canInvite ||
         canReopen ||
         canShareLink ||
+        canSetDeadlines ||
         canCancel ||
         canArchive ||
         canUnarchive);
@@ -1808,12 +1979,19 @@ export const TournamentDetail: React.FC = () => {
       canInvite,
       canReopen,
       canShareLink,
+      canSetDeadlines,
       canCancel,
       canArchive,
       canUnarchive,
       enabled,
     };
-  }, [isOrganizer, tournament?.status, tournament?.bracket_locked_at]);
+  }, [
+    isOrganizer,
+    tournament?.status,
+    tournament?.bracket_locked_at,
+    isPoolTournament,
+    knockoutMatches.length,
+  ]);
 
   // Creation-success handoff: land here with openInviteSheet=true and the
   // invite sheet opens once, after the screen settles. The param is cleared
@@ -1897,6 +2075,24 @@ export const TournamentDetail: React.FC = () => {
       },
     });
   }, [tournament, registrations, userId]);
+
+  // Every automated resolution keys on a deadline; with none set, nothing
+  // resolves and the organizer is back to chasing players by hand.
+  const handleSetDeadlines = useCallback(() => {
+    if (!tournament) return;
+    lightHaptic();
+    const knockoutRounds = Array.from(new Set(knockoutMatches.map(m => m.round_number))).sort(
+      (a, b) => a - b
+    );
+    void SheetManager.show('tournament-deadlines', {
+      payload: {
+        tournamentId: tournament.id,
+        hasPoolPhase: isPoolTournament,
+        knockoutRounds,
+        totalRounds,
+      },
+    });
+  }, [tournament, knockoutMatches, isPoolTournament, totalRounds]);
 
   const handleManageCoOrganizers = useCallback(() => {
     if (!tournament) return;
@@ -2083,6 +2279,8 @@ export const TournamentDetail: React.FC = () => {
       : daysToStart === 0
         ? t('tournamentDetail.dashboard.stats.startsToday')
         : shortDate(tournament.start_date);
+  // Which pairing's chat is opening, so a pool list spins only the row tapped.
+  const openRoundChatPendingId = openRoundChat.isPending ? (openRoundChat.variables ?? null) : null;
   const myMatchP1 = myNextMatch?.player1_registration_id ?? null;
   const myMatchP2 = myNextMatch?.player2_registration_id ?? null;
   const registerCloseHint = tournament.registration_closes_at
@@ -2093,9 +2291,15 @@ export const TournamentDetail: React.FC = () => {
     : null;
 
   // Paid-registration display: total to charge + a one-line refund summary.
+  // Post-credit, matching the confirmation sheet: the CTA and the sheet must
+  // never disagree one tap apart.
   const feeTotalLabel =
     isPaidTournament && feeQuote
-      ? formatPrice(feeQuote.totalCents, feeQuote.currency, { locale })
+      ? formatPrice(
+          Math.max(feeQuote.totalCents - (feeQuote.creditApplicableCents ?? 0), 0),
+          feeQuote.currency,
+          { locale }
+        )
       : null;
   const refundSummary = isPaidTournament ? refundPolicyLine(feeQuote, t, locale) : null;
   const registerBusy = registerPending || createRegistrationPayment.isPending;
@@ -2134,7 +2338,54 @@ export const TournamentDetail: React.FC = () => {
     hint: string | null;
     testID: string;
   } | null = (() => {
-    if (wasCancelled || isFinished || isLive) return null;
+    // Live phase: give the gate the dock. It is the one action that advances
+    // the viewer's own state while play is on.
+    if (needsGateAnswer) {
+      return {
+        label: t('tournamentDetail.availabilityGate.cta'),
+        icon: 'calendar-outline',
+        onPress: handleOpenAvailabilityGate,
+        disabled: false,
+        hint: phaseDeadlineAt ? formatDeadline(phaseDeadlineAt) : null,
+        testID: 'cta-availability-gate',
+      };
+    }
+    if (wasCancelled || isFinished) return null;
+    // Live phase, gate answered. The dock follows the scheduling funnel: the
+    // player's next step is the pairing room, the organizer's is the deadline
+    // that makes the funnel run at all.
+    if (isLive) {
+      // Knockout only: a pool player owes several games at once, so the pane
+      // lists the slate. One docked opponent would read as one game to play.
+      if (myNextMatch && myNextMatch.bracket_side !== 'pool' && myMatchP1 && myMatchP2) {
+        return {
+          label: t('tournamentDetail.dashboard.myMatch.organize'),
+          icon: 'chatbubbles-outline',
+          onPress: () => handleOpenRoundChat(myNextMatch.id),
+          disabled: openRoundChat.isPending,
+          hint: myNextMatchDeadline ? formatDeadline(myNextMatchDeadline) : null,
+          testID: 'cta-organize-my-game',
+        };
+      }
+      // Only once the query has answered: an empty array while it loads would
+      // flash this CTA at an organizer who already set every date.
+      if (
+        isOrganizer &&
+        adminActions.canSetDeadlines &&
+        roundDeadlinesLoaded &&
+        roundDeadlines.length === 0
+      ) {
+        return {
+          label: t('tournamentDetail.actions.setDeadlinesCta'),
+          icon: 'hourglass-outline',
+          onPress: handleSetDeadlines,
+          disabled: false,
+          hint: t('tournamentDetail.dashboard.nextStep.deadlinesDescription'),
+          testID: 'cta-set-deadlines-docked',
+        };
+      }
+      return null;
+    }
     const withFee = (base: string) => (feeTotalLabel ? `${base} · ${feeTotalLabel}` : base);
     const registerHint = [spotsLeftLabel, registerCloseHint, refundSummary]
       .filter(Boolean)
@@ -2233,6 +2484,20 @@ export const TournamentDetail: React.FC = () => {
           testID: 'cta-setup-bracket',
         };
       }
+    }
+    // Nothing left to convert: a registered player's remaining lever is filling
+    // the draw. Last on purpose, so it never outranks a lifecycle step.
+    if (canPlayerShare && myActiveRegistration) {
+      return {
+        label: t('tournamentDetail.invite.shareCta'),
+        icon: 'share-social-outline',
+        onPress: handleShareInviteLink,
+        disabled: false,
+        hint:
+          [spotsLeftLabel, registerCloseHint].filter(Boolean).join(' · ') ||
+          t('tournamentDetail.dashboard.inviteFriendsCta.description'),
+        testID: 'cta-invite-friends-docked',
+      };
     }
     return null;
   })();
@@ -2360,11 +2625,17 @@ export const TournamentDetail: React.FC = () => {
       : null;
 
   // Expectations the spec sheet leaves implicit and a registrant pays to find
-  // out otherwise: courts aren't included, games are self-scheduled, and a
-  // cancelled event refunds every paid entry (lt-settle-event-payments).
+  // out otherwise: courts aren't included, games are self-scheduled, what the
+  // deadline does if they are not, and that a cancelled event refunds every
+  // paid entry (lt-settle-event-payments). The deadline lines are here rather
+  // than only in the funnel because this is the screen someone reads BEFORE
+  // registering, and losing a game you never played is the thing most worth
+  // knowing in advance.
   const goodToKnowLines = [
     t('tournamentDetail.goodToKnow.courts'),
     t('tournamentDetail.goodToKnow.scheduling'),
+    t('tournamentDetail.goodToKnow.availabilityRule'),
+    t('tournamentDetail.goodToKnow.deadlineRule'),
     isPaidTournament ? t('tournamentDetail.goodToKnow.cancelRefund') : null,
   ].filter((l): l is string => !!l);
 
@@ -2618,17 +2889,18 @@ export const TournamentDetail: React.FC = () => {
             myBracketState={myBracketState}
             myNextMatch={myNextMatch}
             myNextMatchDeadline={myNextMatchDeadline}
+            myPoolPhase={myPoolPhase}
+            onEditAvailability={canEditGateAnswer ? handleOpenAvailabilityGate : null}
             myOpponentLabel={myOpponentLabel}
             myMatchP1={myMatchP1}
             myMatchP2={myMatchP2}
             handleBracketMatchTap={handleBracketMatchTap}
             handleOpenRoundChat={handleOpenRoundChat}
             openRoundChat={openRoundChat}
+            openRoundChatPendingId={openRoundChatPendingId}
             onWithdraw={onWithdraw}
             withdraw={withdraw}
             refundRegistration={refundRegistration}
-            canPlayerShare={canPlayerShare}
-            onInviteFriends={handleShareInviteLink}
             organizerName={organizerName}
             organizerRows={organizerRows}
             pendingRequestRows={pendingRequestRows}
@@ -2816,6 +3088,21 @@ export const TournamentDetail: React.FC = () => {
                 onPress={() => {
                   setShowActionsMenu(false);
                   handleShareInviteLink();
+                }}
+                colors={colors}
+              />
+            )}
+            {adminActions.canSetDeadlines && (
+              <MenuItem
+                icon="hourglass-outline"
+                label={t('tournamentDetail.actions.setDeadlines')}
+                testID="menu-set-deadlines"
+                showDivider={
+                  adminActions.canEdit || adminActions.canInvite || adminActions.canShareLink
+                }
+                onPress={() => {
+                  setShowActionsMenu(false);
+                  handleSetDeadlines();
                 }}
                 colors={colors}
               />

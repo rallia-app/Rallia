@@ -16,12 +16,13 @@ import {
   Pressable,
   FlatList,
   TextInput,
+  Switch,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { UseFormReturn, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView as SheetScrollView } from 'react-native-actions-sheet';
-import { Text } from '@rallia/shared-components';
+import { Text, Callout } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, accent, status } from '@rallia/design-system';
 import { lightHaptic } from '@rallia/shared-utils';
 import type { MatchFormSchemaData } from '@rallia/shared-types';
@@ -178,6 +179,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
   const timezone = useWatch({ control, name: 'timezone' });
   const duration = useWatch({ control, name: 'duration' });
   const customDurationMinutes = useWatch({ control, name: 'customDurationMinutes' });
+  const isRecurring = useWatch({ control, name: 'isRecurring' });
 
   // Get display label for selected timezone
   const selectedTimezoneOption = useMemo(() => {
@@ -228,6 +230,15 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
 
   // Format display time
   const formattedTime = formatTimeOfDay(timeValue, locale);
+
+  // Games posted under a day out fill at roughly half the rate
+  const isShortNotice = (() => {
+    if (!matchDate || !startTime) return false;
+    const [year, month, day] = matchDate.split('-').map(Number);
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const start = new Date(year, month - 1, day, hours, minutes, 0, 0);
+    return start.getTime() - new Date().getTime() < 24 * 60 * 60 * 1000;
+  })();
 
   // Temporary values for iOS picker (only commit on Done)
   const [tempDate, setTempDate] = useState(dateValue);
@@ -439,6 +450,13 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           />
         )}
       </View>
+
+      {/* Fill-rate nudge: a day of lead time roughly doubles the join rate */}
+      {!isLocked && isShortNotice && (
+        <View style={styles.fieldGroup}>
+          <Callout tone="success" message={t('matchCreation.nudges.postEarly')} />
+        </View>
+      )}
 
       {/* Timezone picker */}
       <View style={styles.fieldGroup}>
@@ -721,6 +739,32 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           </View>
         )}
       </View>
+
+      {/* Repeat weekly. The next game is created once this one ends, always
+          without a court, so the host gets alerted when booking opens. */}
+      <View style={styles.fieldGroup}>
+        <View style={[styles.toggleRow, { borderColor: colors.border }]}>
+          <View style={styles.toggleTextContainer}>
+            <Text size="base" weight="semibold" color={colors.text}>
+              {t('matchCreation.fields.isRecurring')}
+            </Text>
+            <Text size="xs" color={colors.textMuted}>
+              {isRecurring
+                ? t('matchCreation.fields.isRecurringOn')
+                : t('matchCreation.fields.isRecurringOff')}
+            </Text>
+          </View>
+          <Switch
+            value={isRecurring ?? false}
+            onValueChange={value => {
+              lightHaptic();
+              setValue('isRecurring', value, { shouldValidate: true, shouldDirty: true });
+            }}
+            trackColor={{ false: colors.border, true: colors.buttonActive }}
+            thumbColor={colors.buttonTextActive}
+          />
+        </View>
+      </View>
     </SheetScrollView>
   );
 };
@@ -751,6 +795,19 @@ const styles = StyleSheet.create({
   },
   lockedBannerText: {
     flex: 1,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+    gap: spacingPixels[3],
+  },
+  toggleTextContainer: {
+    flex: 1,
+    gap: spacingPixels[1],
   },
   fieldGroup: {
     marginBottom: spacingPixels[5],

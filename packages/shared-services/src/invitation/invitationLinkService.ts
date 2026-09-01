@@ -75,6 +75,20 @@ const LOCALE_PREFIX = /^\/(en|en-US|fr|fr-CA|fr-FR)\//;
  *   generateInvitationLink({ type: 'match', referralCode: 'ABCD1234', targetId: 'uuid', shareToken: 'tok' })
  *     → https://rallia.app/invite/ABCD1234?type=match&id=uuid&share=tok
  */
+/**
+ * Web-first signup link: /get-started reads ?ref= and attributes the referral
+ * server-side at account creation, so it survives what the store-install path
+ * loses (iOS especially). Prefer this wherever attribution matters more than
+ * the one-tap store handoff.
+ */
+export function generateWebSignupLink(
+  referralCode: string,
+  utm?: import('@rallia/shared-utils').UtmParams
+): string {
+  const url = `${BASE_URL}/get-started?ref=${encodeURIComponent(referralCode)}`;
+  return utm ? buildUtmUrl(url, utm) : url;
+}
+
 export function generateInvitationLink(params: InvitationLinkParams): string {
   const { type, referralCode, targetId, shareToken, sessionId, utm } = params;
   const base = `${BASE_URL}/invite/${encodeURIComponent(referralCode)}`;

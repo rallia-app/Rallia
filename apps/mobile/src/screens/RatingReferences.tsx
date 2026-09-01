@@ -15,14 +15,13 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  Animated,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { SheetManager } from 'react-native-actions-sheet';
-import { EmptyState, Text, Skeleton, useToast } from '@rallia/shared-components';
+import { EmptyState, SelectableChip, Text, Skeleton, useToast } from '@rallia/shared-components';
 import {
   supabase,
   Logger,
@@ -33,10 +32,10 @@ import { usePlayer } from '@rallia/shared-hooks';
 import { lightHaptic, getHumanName, getProfilePictureUrl } from '@rallia/shared-utils';
 import type { RatingReferencesScreenParams } from '@rallia/shared-types';
 import {
+  base,
   spacingPixels,
   radiusPixels,
   fontSizePixels,
-  primary,
   neutral,
   status as statusColors,
 } from '@rallia/design-system';
@@ -118,46 +117,6 @@ function daysUntil(isoDate: string): number {
 // =============================================================================
 // FILTER CHIP
 // =============================================================================
-
-interface ChipProps {
-  label: string;
-  isActive: boolean;
-  onPress: () => void;
-  isDark: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
-}
-
-function FilterChip({ label, isActive, onPress, isDark, icon }: ChipProps) {
-  const scaleAnim = useMemo(() => new Animated.Value(1), []);
-
-  const bgColor = isActive ? primary[500] : isDark ? neutral[800] : neutral[100];
-  const borderColor = isActive ? primary[400] : isDark ? neutral[700] : neutral[200];
-  const textColor = isActive ? '#ffffff' : isDark ? neutral[300] : neutral[600];
-
-  const handlePress = () => {
-    lightHaptic();
-    Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.95, duration: 50, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
-    ]).start();
-    onPress();
-  };
-
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
-        style={[styles.chip, { backgroundColor: bgColor, borderColor }]}
-        onPress={handlePress}
-        activeOpacity={0.85}
-      >
-        {icon && <Ionicons name={icon} size={14} color={textColor} style={styles.chipIcon} />}
-        <Text size="xs" weight={isActive ? 'semibold' : 'medium'} color={textColor}>
-          {label}
-        </Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
 
 // =============================================================================
 // SCREEN
@@ -609,16 +568,30 @@ const RatingReferences: React.FC = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipsContent}
         >
-          {FILTERS.map(option => (
-            <FilterChip
-              key={option.key}
-              label={t(`profile.referencesManage.filters.${option.key}`)}
-              icon={option.icon}
-              isActive={filter === option.key}
-              onPress={() => handleFilterPress(option.key)}
-              isDark={isDark}
-            />
-          ))}
+          {FILTERS.map(option => {
+            const isActive = filter === option.key;
+            return (
+              <SelectableChip
+                key={option.key}
+                label={t(`profile.referencesManage.filters.${option.key}`)}
+                selected={isActive}
+                animateOnPress
+                icon={
+                  option.icon ? (
+                    <Ionicons
+                      name={option.icon}
+                      size={14}
+                      color={isActive ? base.white : colors.textMuted}
+                    />
+                  ) : undefined
+                }
+                onPress={() => {
+                  void lightHaptic();
+                  handleFilterPress(option.key);
+                }}
+              />
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -719,18 +692,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[2],
     alignItems: 'center',
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
-    gap: spacingPixels[1],
-  },
-  chipIcon: {
-    marginRight: 2,
   },
   loadingContent: {
     paddingHorizontal: spacingPixels[5],

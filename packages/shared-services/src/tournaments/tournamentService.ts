@@ -768,6 +768,8 @@ export interface TournamentFeeQuote {
   refundPolicyKind: Enums<'refund_policy_kind_enum'>;
   refundPartialBps: number | null;
   refundCutoffAt: string | null;
+  /** Referral credit usable on THIS event (Rallia-run only; 0 elsewhere). */
+  creditApplicableCents: number;
 }
 
 /**
@@ -792,6 +794,7 @@ export async function getTournamentFeeQuote(
     organizerReceivesCents: row.organizer_receives_cents,
     feePayer: row.fee_payer,
     currency: row.currency,
+    creditApplicableCents: row.credit_applicable_cents ?? 0,
     refundPolicyKind: row.refund_policy_kind,
     refundPartialBps: row.refund_partial_bps,
     refundCutoffAt: row.refund_cutoff_at,
@@ -901,12 +904,16 @@ export class TournamentPaymentError extends Error {
 }
 
 export interface RegistrationPaymentIntent {
-  clientSecret: string;
+  /** Null when the charge was fully covered by account credit (no Stripe leg). */
+  clientSecret: string | null;
   paymentId: string;
   entryCents: number;
   serviceFeeCents: number;
   feeTaxCents: number;
   amountChargedCents: number;
+  creditAppliedCents: number;
+  /** True = nothing to charge; the registration is already finalized. */
+  fullyCovered: boolean;
   currency: string;
 }
 
@@ -948,15 +955,19 @@ export async function createTournamentRegistrationPayment(
     }
   }
   if (code) throw new TournamentPaymentError(code);
-  if (error || !data?.clientSecret) throw new Error(error?.message ?? 'no_client_secret');
+  if (error || (!data?.clientSecret && !data?.fullyCovered)) {
+    throw new Error(error?.message ?? 'no_client_secret');
+  }
 
   return {
-    clientSecret: data.clientSecret,
+    clientSecret: data.clientSecret ?? null,
     paymentId: data.paymentId,
     entryCents: data.entryCents,
     serviceFeeCents: data.serviceFeeCents,
     feeTaxCents: data.feeTaxCents,
     amountChargedCents: data.amountChargedCents,
+    creditAppliedCents: data.creditAppliedCents ?? 0,
+    fullyCovered: data.fullyCovered === true,
     currency: data.currency,
   };
 }
@@ -1311,6 +1322,57 @@ export async function setTournamentRoundDeadlines(
   return (data ?? []) as TournamentRoundDeadline[];
 }
 
+export type TournamentPhaseAvailability = Tables<'tournament_phase_availability'>;
+
+export type PhaseAvailabilityOutcome = 'confirmed' | 'edited' | 'skipped' | 'forfeited';
+
+/** Gate answers for one phase ('pool' normalises to round 0). RLS mirrors tournament visibility. */
+export async function getTournamentPhaseAvailability(
+  tournamentId: string,
+  bracketSide: 'pool' | 'main',
+  roundNumber: number
+): Promise<TournamentPhaseAvailability[]> {
+  const { data, error } = await supabase
+    .from('tournament_phase_availability')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .eq('bracket_side', bracketSide)
+    .eq('round_number', bracketSide === 'pool' ? 0 : roundNumber);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TournamentPhaseAvailability[];
+}
+
+export interface PhaseAvailabilityCell {
+  day: string;
+  hour: number;
+}
+
+export interface SubmitPhaseAvailabilityInput {
+  tournamentId: string;
+  bracketSide: 'pool' | 'main';
+  roundNumber: number;
+  outcome: PhaseAvailabilityOutcome;
+  grid: PhaseAvailabilityCell[];
+  /** IANA zone; the grid is declared in local time. */
+  timezone: string;
+}
+
+/** The scheduling gate: one answer per phase, upserted, grid snapshotted over the window. */
+export async function submitPhaseAvailability(
+  input: SubmitPhaseAvailabilityInput
+): Promise<TournamentPhaseAvailability> {
+  const { data, error } = await supabase.rpc('tournament_submit_phase_availability', {
+    p_tournament_id: input.tournamentId,
+    p_bracket_side: input.bracketSide,
+    p_round_number: input.roundNumber,
+    p_outcome: input.outcome,
+    p_grid: input.grid.map(c => ({ day: c.day, hour: c.hour })),
+    p_timezone: input.timezone,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentPhaseAvailability;
+}
+
 /** Organizer gives one match its own deadline (extension). */
 export async function extendTournamentMatchDeadline(
   tournamentMatchId: string,
@@ -1581,20 +1643,77 @@ export async function attachMatchToTournamentSlot(
 }
 
 /**
- * Organizer/admin authoritative result for a stalled or disputed bracket
- * match. Sets the winner (and optional score string), completes the match,
- * and advances the bracket. Used when an opponent never confirms a score or
- * a result is disputed. Does not modify any linked casual match row.
+ * What the organizer is recording. A real score is 'completed'; the other
+ * three say a game did not happen, which the app had no way to express before
+ * (Série 1 was settled by typing a generic 8-6 on 39% of its pairings).
+ * 'cancelled' takes no winner and is refused on a knockout row, where a slot
+ * still has to send somebody forward.
+ */
+export type TournamentMatchOutcome = 'completed' | 'walkover' | 'retired' | 'cancelled';
+
+/**
+ * Organizer/admin authoritative OUTCOME for a stalled or disputed bracket
+ * match. Sets the winner (and optional score string), settles the match in the
+ * shape the outcome names, and advances the bracket when there is a winner.
+ * A walkover is stamped with the format's forfeit score (8-0, or 6-0 6-0),
+ * fixed server-side whatever score is sent. Does not modify any linked casual
+ * match row.
  */
 export async function overrideTournamentMatchScore(
   tournamentMatchId: string,
-  winnerRegistrationId: string,
-  score?: string
+  winnerRegistrationId: string | null,
+  score?: string,
+  outcome: TournamentMatchOutcome = 'completed'
 ): Promise<TournamentMatch> {
   const { data, error } = await supabase.rpc('tournament_override_score', {
     p_tournament_match_id: tournamentMatchId,
-    p_winner_registration_id: winnerRegistrationId,
+    p_winner_registration_id: winnerRegistrationId ?? undefined,
     p_score: score,
+    p_outcome: outcome,
+  });
+  if (error) throw new Error(error.message);
+  return data as TournamentMatch;
+}
+
+/**
+ * Whether a pairing still carries an automated decision this caller can undo.
+ * `decided` goes false once a restore has been applied, so the control stops
+ * offering itself; `restorable` additionally requires the caller to be the
+ * organizer and the bracket not to have moved past the pairing.
+ */
+export interface MatchRestoreState {
+  decided: boolean;
+  restorable: boolean;
+  rule?: string;
+  windowOpen?: boolean;
+  isOrganizer?: boolean;
+}
+
+export async function getMatchRestoreState(tournamentMatchId: string): Promise<MatchRestoreState> {
+  const { data, error } = await supabase.rpc('lt_match_restore_state', {
+    p_tournament_match_id: tournamentMatchId,
+  });
+  if (error) throw new Error(error.message);
+  const row = (data ?? {}) as Record<string, unknown>;
+  return {
+    decided: row.decided === true,
+    restorable: row.restorable === true,
+    rule: typeof row.rule === 'string' ? row.rule : undefined,
+    windowOpen: row.window_open === true,
+    isOrganizer: row.is_organizer === true,
+  };
+}
+
+/**
+ * Undo an automated decision: the pairing returns to pending, whoever it
+ * advanced comes back out of the next slot, and the reputation events it wrote
+ * are deleted rather than offset, because they recorded a judgement that turned
+ * out to be wrong. Organizer or admin only, and only while the bracket has not
+ * moved past the pairing.
+ */
+export async function restoreTournamentMatch(tournamentMatchId: string): Promise<TournamentMatch> {
+  const { data, error } = await supabase.rpc('lt_restore_tournament_match', {
+    p_tournament_match_id: tournamentMatchId,
   });
   if (error) throw new Error(error.message);
   return data as TournamentMatch;

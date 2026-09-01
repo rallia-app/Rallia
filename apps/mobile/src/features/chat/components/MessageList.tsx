@@ -275,6 +275,19 @@ function MessageListComponent(
           return <MatchOrganizerCard message={item.message} />;
         }
 
+        // Pool room welcome: a system post, not the organizer speaking. The
+        // localized line is rendered here; the stored French content is the
+        // fallback shared by every reader.
+        if (item.message.message_type === 'pool_room_welcome') {
+          return (
+            <View style={styles.systemNote}>
+              <Text size="xs" color={colors.textMuted} style={styles.systemNoteText}>
+                {t('chat.poolRoom.welcome')}
+              </Text>
+            </View>
+          );
+        }
+
         // System notes (e.g. "Alex updated their availability") render as a
         // centered muted line, localized here from metadata rather than from the
         // stored content — one message row is shared by readers whose locales

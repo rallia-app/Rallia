@@ -4,6 +4,7 @@
  * still lacks, as stable codes the clients localize.
  */
 
+import { requireSession } from '../auth';
 import { supabase } from '../supabase';
 import { Logger } from '../logger';
 
@@ -12,6 +13,9 @@ import { Logger } from '../logger';
  * No playerId = the signed-in player.
  */
 export async function getOnboardingGaps(playerId?: string | null): Promise<string[]> {
+  // Anon is revoked on this function: without a session it answers 42501.
+  await requireSession('get_onboarding_gaps');
+
   const { data, error } = await supabase.rpc('get_onboarding_gaps', {
     p_player_id: playerId ?? undefined,
   });

@@ -275,6 +275,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   match_new_available: 'add-circle-outline',
   match_spot_opened: 'enter-outline',
   court_booking_nudge: 'calendar-outline',
+  recurring_court_opened: 'repeat-outline',
   match_last_minute_spots: 'flash-outline',
   match_unfilled_recovery: 'refresh-outline',
   play_rhythm_nudge: 'repeat-outline',
@@ -356,6 +357,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<ExtendedNotificationTypeEnum, strin
   tournament_round_deadline_soon: 'alarm-outline',
   tournament_deadline_extended: 'time-outline',
   tournament_match_walkover: 'flag-outline',
+  tournament_match_cancelled: 'remove-circle-outline',
   tournament_dispute_escalated: 'alert-circle-outline',
   tournament_updated: 'create-outline',
   tournament_cancelled: 'close-circle-outline',
@@ -396,6 +398,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   match_new_available: '#4DB8A8', // Teal
   match_spot_opened: '#4CAF50', // Green
   court_booking_nudge: '#FF9800', // Orange
+  recurring_court_opened: '#FF9800', // Orange (same urgency)
   match_last_minute_spots: '#F44336', // Red (urgency)
   match_unfilled_recovery: '#4DB8A8', // Teal (supportive)
   play_rhythm_nudge: '#9C27B0', // Purple (habit)
@@ -477,6 +480,7 @@ export const NOTIFICATION_TYPE_COLORS: Record<ExtendedNotificationTypeEnum, stri
   tournament_round_deadline_soon: '#E8863A', // Orange
   tournament_deadline_extended: '#4DB8A8', // Teal
   tournament_match_walkover: '#E8863A', // Orange
+  tournament_match_cancelled: '#8A8F98', // Neutral: nobody is at fault
   tournament_dispute_escalated: '#D9534F', // Red
   tournament_updated: '#FF9800', // Orange — details changed
   tournament_cancelled: '#F44336', // Red
@@ -515,6 +519,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   match_new_available: 'New Game in Group',
   match_spot_opened: 'Spot Opened',
   court_booking_nudge: 'Book Your Court',
+  recurring_court_opened: 'Recurring Game Courts',
   match_last_minute_spots: 'Starting Soon',
   match_unfilled_recovery: 'Game Recovery',
   play_rhythm_nudge: 'Usual Slot Open',
@@ -592,8 +597,11 @@ export const NOTIFICATION_TYPE_LABELS: Record<ExtendedNotificationTypeEnum, stri
   tournament_match_ready: 'Next Match',
   tournament_deadline_changed: 'Deadline Updated',
   tournament_round_deadline_soon: 'Deadline Soon',
+  // RETIRED 2026-08-31: the machine no longer extends anything. Kept so
+  // rows sent before the ladder rewrite still render. Do not send new ones.
   tournament_deadline_extended: 'Deadline Extended',
   tournament_match_walkover: 'Walkover',
+  tournament_match_cancelled: 'Game Cancelled',
   tournament_dispute_escalated: 'Dispute',
   tournament_updated: 'Tournament Updated',
   tournament_cancelled: 'Tournament Cancelled',
@@ -633,6 +641,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   match_new_available: 'match',
   match_spot_opened: 'match',
   court_booking_nudge: 'match',
+  recurring_court_opened: 'match',
   match_last_minute_spots: 'match',
   match_unfilled_recovery: 'match',
   play_rhythm_nudge: 'match',
@@ -721,6 +730,7 @@ export const NOTIFICATION_TYPE_CATEGORIES: Record<
   tournament_round_deadline_soon: 'leagues',
   tournament_deadline_extended: 'leagues',
   tournament_match_walkover: 'leagues',
+  tournament_match_cancelled: 'leagues',
   tournament_dispute_escalated: 'leagues',
   tournament_updated: 'leagues',
   tournament_cancelled: 'leagues',
@@ -799,6 +809,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   match_new_available: { email: false, push: true, sms: false },
   match_spot_opened: { email: false, push: true, sms: false },
   court_booking_nudge: { email: false, push: true, sms: false },
+  recurring_court_opened: { email: false, push: true, sms: false },
   match_last_minute_spots: { email: false, push: true, sms: false },
   match_unfilled_recovery: { email: false, push: true, sms: false },
   play_rhythm_nudge: { email: false, push: true, sms: false },
@@ -890,6 +901,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
   tournament_round_deadline_soon: { email: false, push: true, sms: false },
   tournament_deadline_extended: { email: false, push: true, sms: false },
   tournament_match_walkover: { email: false, push: true, sms: false },
+  tournament_match_cancelled: { email: false, push: true, sms: false },
   tournament_dispute_escalated: { email: false, push: true, sms: false },
   tournament_updated: { email: false, push: true, sms: false },
   tournament_cancelled: { email: true, push: true, sms: false },
@@ -932,6 +944,7 @@ export const MATCH_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnum[] =
   'match_new_available',
   'match_spot_opened',
   'court_booking_nudge',
+  'recurring_court_opened',
   'match_last_minute_spots',
   'play_rhythm_nudge',
   'nearby_match_available',
@@ -981,6 +994,7 @@ export const TOURNAMENT_NOTIFICATION_TYPES: readonly ExtendedNotificationTypeEnu
   'tournament_round_deadline_soon',
   'tournament_deadline_extended',
   'tournament_match_walkover',
+  'tournament_match_cancelled',
   'tournament_dispute_escalated',
   'tournament_updated',
   'tournament_cancelled',

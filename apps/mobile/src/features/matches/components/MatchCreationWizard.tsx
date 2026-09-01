@@ -883,6 +883,8 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
         values.visibility === 'private' ? (values.visibleInCommunities ?? true) : true,
       joinMode: values.joinMode,
       notes: values.notes,
+      // Edits never change a series: recurrence is set when the game is created.
+      isRecurring: isEditMode ? undefined : values.isRecurring,
     };
 
     if (isEditMode && editMatch) {

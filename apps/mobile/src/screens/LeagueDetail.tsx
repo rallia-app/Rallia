@@ -82,6 +82,7 @@ import {
   useWithdrawFromSeason,
   useRemoveSeasonMember,
   usePublishSession,
+  useMySessionPresence,
   useProfilesByIds,
   usePlayersRatingReputation,
   useMyPayoutAccount,
@@ -703,6 +704,25 @@ export const LeagueDetail: React.FC = () => {
 
   const { data: seasonSessions = [] } = useSeasonSessions(openSeasonId);
 
+  const draftSessions = useMemo(
+    () => seasonSessions.filter(s => s.status === 'draft'),
+    [seasonSessions]
+  );
+  // The session a member has to answer next: published, still ahead of us, and
+  // soonest first. Only that one is worth a docked CTA.
+  const nextPublishedSession = useMemo(() => {
+    const now = Date.now();
+    return (
+      seasonSessions
+        .filter(s => s.status === 'published' && new Date(s.scheduled_at).getTime() > now)
+        .sort(
+          (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+        )[0] ?? null
+    );
+  }, [seasonSessions]);
+  const { data: myNextSessionPresence, isSuccess: myNextSessionPresenceLoaded } =
+    useMySessionPresence(nextPublishedSession?.id, userId);
+
   const { data: mySeasonMembership } = useMySeasonMembership(openSeasonId, userId);
   const isEnrolledInSeason = mySeasonMembership?.status === 'enrolled';
   const canParticipateInSeason = isOrganizer || myMembership?.status === 'active';
@@ -768,6 +788,12 @@ export const LeagueDetail: React.FC = () => {
     // A fee-waived season (0% override) still bills player_pays, so the fee
     // lines have to key off the amount, not the mode.
     const chargesServiceFee = playerPaysFee && seasonFeeQuote.serviceFeeCents > 0;
+    const seasonCreditCents = seasonFeeQuote.creditApplicableCents ?? 0;
+    const seasonPayableCents = Math.max(seasonFeeQuote.totalCents - seasonCreditCents, 0);
+    const seasonCreditLine =
+      seasonCreditCents > 0
+        ? t('leagueDetail.paid.breakdownCredit').replace('{amount}', money(seasonCreditCents))
+        : null;
     const breakdown = playerPaysFee
       ? ([
           t('leagueDetail.paid.breakdownEntry').replace(
@@ -786,10 +812,8 @@ export const LeagueDetail: React.FC = () => {
                 money(seasonFeeQuote.feeTaxCents)
               )
             : null,
-          t('leagueDetail.paid.breakdownTotal').replace(
-            '{amount}',
-            money(seasonFeeQuote.totalCents)
-          ),
+          seasonCreditLine,
+          t('leagueDetail.paid.breakdownTotal').replace('{amount}', money(seasonPayableCents)),
         ]
           .filter(Boolean)
           .join('\n') as string)
@@ -799,11 +823,14 @@ export const LeagueDetail: React.FC = () => {
             money(seasonFeeQuote.entryCents)
           ),
           t('leagueDetail.paid.feeCoveredByOrganizer'),
+          seasonCreditLine,
           t('leagueDetail.paid.breakdownTotalTaxesIncluded').replace(
             '{amount}',
-            money(seasonFeeQuote.totalCents)
+            money(seasonPayableCents)
           ),
-        ].join('\n');
+        ]
+          .filter(Boolean)
+          .join('\n');
     const lines = [
       breakdown,
       seasonRefundPolicyLine(seasonFeeQuote, t, locale),
@@ -821,19 +848,22 @@ export const LeagueDetail: React.FC = () => {
 
     try {
       const intent = await createSeasonPayment({ seasonId: openSeasonId });
-      const { error: initError } = await initPaymentSheet({
-        paymentIntentClientSecret: intent.clientSecret,
-        merchantDisplayName: 'Rallia',
-        applePay: { merchantCountryCode: 'CA' },
-        googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
-      });
-      if (initError) throw new Error(initError.message);
+      // Fully covered by referral credit: already finalized server-side.
+      if (!intent.fullyCovered) {
+        const { error: initError } = await initPaymentSheet({
+          paymentIntentClientSecret: intent.clientSecret as string,
+          merchantDisplayName: 'Rallia',
+          applePay: { merchantCountryCode: 'CA' },
+          googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: __DEV__ },
+        });
+        if (initError) throw new Error(initError.message);
 
-      const { error: payError } = await presentPaymentSheet();
-      if (payError) {
-        // Cancelling is not a failure: the 15-min reaper frees the slot.
-        if (payError.code === 'Canceled') return;
-        throw new Error(payError.message);
+        const { error: payError } = await presentPaymentSheet();
+        if (payError) {
+          // Cancelling is not a failure: the 15-min reaper frees the slot.
+          if (payError.code === 'Canceled') return;
+          throw new Error(payError.message);
+        }
       }
 
       successHaptic();
@@ -1895,6 +1925,20 @@ export const LeagueDetail: React.FC = () => {
     testID: string;
   } | null = (() => {
     if (league.status === 'closed') return null;
+    // Paused: nobody can join and no session can be added, so resuming is the
+    // only move on the board. It used to hide in the quiet utilities list.
+    if (isOrganizer && league.status === 'paused') {
+      return {
+        label: isResuming
+          ? t('leagueDetail.lifecycle.resuming')
+          : t('leagueDetail.lifecycle.resume'),
+        icon: 'play-circle-outline',
+        onPress: handleResumeLeague,
+        disabled: isResuming,
+        hint: t('leagueDetail.lifecycle.pausedBanner'),
+        testID: 'cta-resume-league-docked',
+      };
+    }
     // Organizer-sent invite: accept is the conversion moment.
     if (!isOrganizer && myMembership?.status === 'pending' && myMembership.invited_by) {
       return {
@@ -1948,10 +1992,15 @@ export const LeagueDetail: React.FC = () => {
           : isPaidSeason && seasonFeeQuote
             ? t('leagueDetail.paid.enrollFor').replace(
                 '{amount}',
-                formatPrice(seasonFeeQuote.totalCents, seasonFeeQuote.currency, {
-                  locale,
-                  trimZeroCents: true,
-                })
+                // Post-credit, matching the confirmation dialog.
+                formatPrice(
+                  Math.max(
+                    seasonFeeQuote.totalCents - (seasonFeeQuote.creditApplicableCents ?? 0),
+                    0
+                  ),
+                  seasonFeeQuote.currency,
+                  { locale, trimZeroCents: true }
+                )
               )
             : t('leagueDetail.roster.enroll'),
         icon: 'person-add-outline',
@@ -1997,6 +2046,54 @@ export const LeagueDetail: React.FC = () => {
           testID: 'cta-open-season-docked',
         };
       }
+      if (openSeason) {
+        // A season with no session on the calendar produces no games at all,
+        // and a draft session is invisible to members until it is published.
+        // Both steps used to live only at the bottom of the Sessions tab.
+        if (seasonSessions.length === 0) {
+          return {
+            label: t('leagueDetail.sessions.submit'),
+            icon: 'calendar-outline',
+            onPress: handleOpenCreateSession,
+            disabled: false,
+            hint: t('leagueDetail.sessions.createSessionCta.description'),
+            testID: 'cta-create-session-docked',
+          };
+        }
+        if (draftSessions.length > 0) {
+          return {
+            label: t('leagueDetail.sessions.publishNamed').replace('{name}', draftSessions[0].name),
+            icon: 'megaphone-outline',
+            onPress: () => handlePublishSession(draftSessions[0].id, draftSessions[0].version),
+            disabled: isPublishingSession,
+            hint: t('leagueDetail.sessions.publishCta.description'),
+            testID: 'cta-publish-session-docked',
+          };
+        }
+      }
+    }
+    // Members: the next session only fills up if people answer it. Last in the
+    // chain, so joining or enrolling always wins the dock first.
+    if (
+      canParticipateInSeason &&
+      nextPublishedSession &&
+      // No row yet means "never answered"; undefined just means still loading,
+      // and treating that as unanswered flashes the CTA at a confirmed member.
+      myNextSessionPresenceLoaded &&
+      (!myNextSessionPresence || myNextSessionPresence.status === 'pending') &&
+      !(
+        nextPublishedSession.confirmation_deadline_at &&
+        new Date(nextPublishedSession.confirmation_deadline_at).getTime() < Date.now()
+      )
+    ) {
+      return {
+        label: t('leagueDetail.sessions.confirmSpot'),
+        icon: 'checkmark-circle-outline',
+        onPress: () => handleOpenSession(nextPublishedSession.id, nextPublishedSession.name),
+        disabled: false,
+        hint: `${nextPublishedSession.name} · ${sessionWhen(nextPublishedSession)}`,
+        testID: 'cta-confirm-session-docked',
+      };
     }
     return null;
   })();
@@ -2280,7 +2377,9 @@ export const LeagueDetail: React.FC = () => {
             testID={primaryAction.testID}
           >
             <Ionicons name={primaryAction.icon} size={20} color="#ffffff" />
-            <Text size="base" weight="semibold" color="#ffffff">
+            {/* A session name rides in the label, so it truncates rather than
+                wrapping the bar taller than the scroll padding allows for. */}
+            <Text size="base" weight="semibold" color="#ffffff" numberOfLines={1}>
               {primaryAction.label}
             </Text>
           </TouchableOpacity>

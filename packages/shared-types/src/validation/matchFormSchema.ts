@@ -103,6 +103,7 @@ export const step2Schema = z
     duration: matchDurationSchema,
     customDurationMinutes: z.number().min(15).max(480).optional(),
     timezone: z.string().min(1, 'Timezone is required'),
+    isRecurring: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     // Custom duration validation
@@ -190,6 +191,8 @@ export const matchFormSchema = z
     timezone: z.string().min(1, 'Timezone is required'), // IANA timezone (auto-detected)
     duration: matchDurationSchema,
     customDurationMinutes: z.number().min(15).max(480).optional(),
+    /** Repeat weekly. The next game is created once this one ends. */
+    isRecurring: z.boolean().optional(),
 
     // Step 3: Preferences (includes format and player expectation)
     format: matchFormatSchema,

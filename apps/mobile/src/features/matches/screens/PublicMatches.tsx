@@ -26,6 +26,10 @@ import {
   useRatingScoresForSport,
   useSortedNearbyMatches,
   useFavoriteFacilities,
+  buildForYouPreset,
+  isForYouPresetActive,
+  matchesForYouLocation,
+  DEFAULT_PUBLIC_MATCH_FILTERS,
   type MatchScoringPreferences,
   type PublicMatch,
 } from '@rallia/shared-hooks';
@@ -114,6 +118,7 @@ export default function PublicMatches() {
     setSpecificTime,
     setReputation,
     setRating,
+    applyFilters,
     resetFilters,
     clearSearch,
   } = usePublicMatchFilters();
@@ -249,8 +254,37 @@ export default function PublicMatches() {
     ]
   );
 
+  // "For you" preset: rating and joinability as real server-side filters;
+  // location is an OR (travel range OR favorite facility) the server distance
+  // filter can't express, so it runs client-side on the fetched pages — the
+  // same trade-off favoritesOnly makes above.
+  const forYouPreset = useMemo(
+    () => buildForYouPreset({ playerRatingScoreId, maxTravelDistanceKm }),
+    [playerRatingScoreId, maxTravelDistanceKm]
+  );
+  const forYouActive = isForYouPresetActive(filters, forYouPreset);
+
+  const forYouMatches = useMemo(() => {
+    if (!forYouActive) return filteredMatches;
+    return filteredMatches.filter(m =>
+      matchesForYouLocation(m, { maxTravelDistanceKm, favoriteFacilityIds })
+    );
+  }, [filteredMatches, forYouActive, maxTravelDistanceKm, favoriteFacilityIds]);
+
   // Sort: chronological primary, relevance score as tiebreaker for same date+time
-  const sortedMatches = useSortedNearbyMatches(filteredMatches, scoringPreferences);
+  const sortedMatches = useSortedNearbyMatches(forYouMatches, scoringPreferences);
+
+  const handleForYouPress = useCallback(() => {
+    const next = !forYouActive;
+    Analytics.filterApplied({
+      filter_type: 'for_you',
+      value: next ? 'on' : 'off',
+      screen: 'public_matches',
+    });
+    const source = next ? forYouPreset : DEFAULT_PUBLIC_MATCH_FILTERS;
+    const { rating, distance, spotsAvailable } = source;
+    applyFilters({ rating, distance, spotsAvailable });
+  }, [forYouActive, forYouPreset, applyFilters]);
 
   // Translate section labels once per locale change, not per match.
   const upcomingSectionLabels = useMemo<Record<UpcomingDateSection, string>>(
@@ -521,20 +555,14 @@ export default function PublicMatches() {
     const incoming = route.params?.initialFilters;
     if (!incoming) return;
     resetFilters();
-    if (incoming.ratingScoreId) setRating([incoming.ratingScoreId]);
-    if (incoming.distanceKm) setDistance(incoming.distanceKm as DistanceFilter);
-    if (incoming.dateRange) setDateRange(incoming.dateRange);
-    if (incoming.spotsAvailable) setSpotsAvailable(incoming.spotsAvailable);
+    applyFilters({
+      ...(incoming.ratingScoreId ? { rating: [incoming.ratingScoreId] } : {}),
+      ...(incoming.distanceKm ? { distance: incoming.distanceKm as DistanceFilter } : {}),
+      ...(incoming.dateRange ? { dateRange: incoming.dateRange } : {}),
+      ...(incoming.spotsAvailable ? { spotsAvailable: incoming.spotsAvailable } : {}),
+    });
     navigation.setParams({ initialFilters: undefined } as never);
-  }, [
-    route.params?.initialFilters,
-    navigation,
-    resetFilters,
-    setRating,
-    setDistance,
-    setDateRange,
-    setSpotsAvailable,
-  ]);
+  }, [route.params?.initialFilters, navigation, resetFilters, applyFilters]);
 
   // "Create your own game" CTA — shared by the empty state and the end-of-list footer.
   const handleCreateGamePress = useCallback(
@@ -757,6 +785,9 @@ export default function PublicMatches() {
         )}
         ratingOptions={ratingScores}
         isAuthenticated={!!session?.user}
+        showForYou={!!session?.user && forYouPreset.isMeaningful}
+        forYouActive={forYouActive}
+        onForYouPress={handleForYouPress}
         onReset={() => {
           Analytics.filterApplied({
             filter_type: 'reset',

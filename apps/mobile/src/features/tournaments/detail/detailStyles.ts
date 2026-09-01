@@ -556,6 +556,28 @@ export const styles = StyleSheet.create({
   roundChatBtn: {
     marginTop: spacingPixels[4],
   },
+  poolSlateHeader: {
+    padding: spacingPixels[4],
+    gap: spacingPixels[1],
+  },
+  poolSlateRow: {
+    borderTopWidth: 1,
+  },
+  poolSlateRowMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+  },
+  poolSlateRowText: {
+    flex: 1,
+    gap: spacingPixels[0.5],
+  },
+  editAvailabilityLink: {
+    alignItems: 'center',
+    paddingVertical: spacingPixels[3],
+  },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',

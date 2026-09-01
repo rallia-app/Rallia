@@ -25,6 +25,8 @@ import {
   Platform,
   Animated as RNAnimated,
   Easing,
+  Switch,
+  Alert,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import MapView, { Marker } from 'react-native-maps';
@@ -78,6 +80,8 @@ import {
   useReferral,
   useMatchActions,
   useConfirmMatchScore,
+  useMatchContestState,
+  useContestMatchResult,
   useAcceptRebuttalScore,
   useDisputeRebuttalScore,
 } from '@rallia/shared-hooks';
@@ -91,6 +95,9 @@ import {
   supabase,
   listTimeSuggestionsForMatch,
   respondToTimeSuggestion,
+  stopRecurrence,
+  getRecurrence,
+  Logger,
   type MatchTimeSuggestionWithSuggester,
   type DeclineReason,
 } from '@rallia/shared-services';
@@ -815,6 +822,14 @@ export const MatchDetailSheet: React.FC = () => {
   const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
   const [showKickModal, setShowKickModal] = useState(false);
   const [kickingParticipantId, setKickingParticipantId] = useState<string | null>(null);
+  const [showStopRecurrenceModal, setShowStopRecurrenceModal] = useState(false);
+  // Cancel dialog: whether the host also wants the series to stop. Defaults off
+  // so cancelling one week keeps meaning "not this week".
+  const [stopSeriesOnCancel, setStopSeriesOnCancel] = useState(false);
+  const [isStoppingRecurrence, setIsStoppingRecurrence] = useState(false);
+  // Whether this game's series is still live. Only the series owner can read
+  // the row, so a null result means "not the owner" or "no series".
+  const [isSeriesLive, setIsSeriesLive] = useState(false);
   const [showCancelInviteModal, setShowCancelInviteModal] = useState(false);
   const [cancellingInvitationId, setCancellingInvitationId] = useState<string | null>(null);
   const [showDeclineInviteModal, setShowDeclineInviteModal] = useState(false);
@@ -1239,6 +1254,37 @@ export const MatchDetailSheet: React.FC = () => {
     }
   }, [playerId, selectedMatch, confirmMutation, toast, t, updateSelectedMatch]);
 
+  // A declared score is final the moment it is entered, so this window is the
+  // only counterweight the other side has. Contesting stops the resolution
+  // ladder on a tournament pairing and hands it to the organizer: a contested
+  // result is never decided by the machine.
+  const { state: contestState } = useMatchContestState(selectedMatch?.id);
+  const contestMutation = useContestMatchResult();
+
+  const handleContestScore = useCallback(() => {
+    if (!selectedMatch?.id) return;
+    mediumHaptic();
+    Alert.alert(t('matchDetail.contestScoreTitle'), t('matchDetail.contestScoreBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('matchDetail.contestScoreCta'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await contestMutation.mutateAsync({ matchId: selectedMatch.id });
+            successHaptic();
+            toast.success(t('matchDetail.contestScoreDone'));
+            const refreshed = await getMatchWithDetails(selectedMatch.id);
+            if (refreshed) updateSelectedMatch(refreshed as MatchDetailData);
+          } catch {
+            errorHaptic();
+            toast.error(t('matchDetail.contestScoreError'));
+          }
+        },
+      },
+    ]);
+  }, [selectedMatch, contestMutation, toast, t, updateSelectedMatch]);
+
   // Handle proposing a different score (rebuttal) - opens score sheet in rebuttal mode
   const handleProposeRebuttal = useCallback(async () => {
     if (!selectedMatch?.result) return;
@@ -1363,6 +1409,23 @@ export const MatchDetailSheet: React.FC = () => {
     }
   }, [selectedMatch, playerId, handleOpenFeedback, autoActionRef]);
 
+  // Is this game part of a series that is still running? RLS scopes the row to
+  // the series owner, so a non-host simply reads nothing.
+  useEffect(() => {
+    const recurrenceId = selectedMatch?.recurrence_id;
+    if (!recurrenceId || playerId !== selectedMatch?.created_by) {
+      setIsSeriesLive(false);
+      return;
+    }
+    let cancelled = false;
+    void getRecurrence(recurrenceId).then(recurrence => {
+      if (!cancelled) setIsSeriesLive(Boolean(recurrence) && recurrence?.stopped_at == null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMatch?.recurrence_id, selectedMatch?.created_by, playerId]);
+
   // Handle opening the match chat conversation
   const handleOpenChat = useCallback(async () => {
     if (!matchConversationId || !selectedMatch) return;
@@ -1440,14 +1503,55 @@ export const MatchDetailSheet: React.FC = () => {
   const handleCancelMatch = useCallback(() => {
     if (!selectedMatch) return;
     mediumHaptic();
+    setStopSeriesOnCancel(false);
     setShowCancelModal(true);
   }, [selectedMatch]);
 
   // Confirm cancel match
-  const handleConfirmCancel = useCallback(() => {
+  const handleConfirmCancel = useCallback(async () => {
     if (!playerId) return;
+    const recurrenceId = selectedMatch?.recurrence_id;
+
+    // Stop the series BEFORE cancelling. If this fails we leave the game alone
+    // rather than land in the exact state this flow exists to prevent: game
+    // cancelled while next week's is still on its way.
+    if (stopSeriesOnCancel && recurrenceId) {
+      try {
+        await stopRecurrence(recurrenceId, playerId);
+        setIsSeriesLive(false);
+      } catch (error) {
+        Logger.error(
+          'MatchDetailSheet: stop recurrence during cancel failed',
+          error instanceof Error ? error : undefined
+        );
+        toast.error(t('matchDetail.recurring.stopError'));
+        return;
+      }
+    }
+
     cancelMatch(playerId);
-  }, [playerId, cancelMatch]);
+  }, [playerId, cancelMatch, selectedMatch, stopSeriesOnCancel, toast, t]);
+
+  // Stop a recurring series. Games already created stay; no new ones appear.
+  const handleConfirmStopRecurrence = useCallback(async () => {
+    const recurrenceId = selectedMatch?.recurrence_id;
+    if (!recurrenceId || !playerId) return;
+    setIsStoppingRecurrence(true);
+    try {
+      await stopRecurrence(recurrenceId, playerId);
+      setIsSeriesLive(false);
+      setShowStopRecurrenceModal(false);
+      toast.success(t('matchDetail.recurring.stopSuccess'));
+    } catch (error) {
+      Logger.error(
+        'MatchDetailSheet: stop recurrence failed',
+        error instanceof Error ? error : undefined
+      );
+      toast.error(t('matchDetail.recurring.stopError'));
+    } finally {
+      setIsStoppingRecurrence(false);
+    }
+  }, [selectedMatch, playerId, toast, t]);
 
   // Handle accept join request (host only)
   const handleAcceptRequest = useCallback(
@@ -2382,6 +2486,22 @@ export const MatchDetailSheet: React.FC = () => {
 
       // Score confirmation / rebuttal actions (only when score exists and is unresolved)
       if (hasResult && match.result) {
+        if (contestState?.contestable) {
+          // One-way registration: there is nothing to confirm, the score already
+          // stands. What the other side gets is a window to say it is wrong.
+          actions.push(
+            <Button
+              key="contest-score"
+              variant="outline"
+              onPress={handleContestScore}
+              style={styles.actionButton}
+              loading={contestMutation.isPending}
+              leftIcon={<Ionicons name="flag-outline" size={18} color={colors.text} />}
+            >
+              {t('matchDetail.contestScore')}
+            </Button>
+          );
+        }
         if (scoreNeedsConfirmation) {
           actions.push(
             <Button
@@ -4912,6 +5032,30 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
                 : t('matchActions.suggestDifferentTime')}
             </Button>
           )}
+          {isCreator && isSeriesLive && (
+            <View style={[styles.recurringRow, { borderColor: colors.border }]}>
+              <Ionicons name="repeat-outline" size={18} color={colors.primary} />
+              <View style={styles.recurringTextContainer}>
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {t('matchDetail.recurring.title')}
+                </Text>
+                <Text size="xs" color={colors.textMuted}>
+                  {t('matchDetail.recurring.subtitle')}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  lightHaptic();
+                  setShowStopRecurrenceModal(true);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text size="sm" weight="semibold" color={colors.primary}>
+                  {t('matchDetail.recurring.stop')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <View
             style={[
               styles.actionButtonsContainer,
@@ -5001,12 +5145,54 @@ L.marker([${resolvedLatitude},${resolvedLongitude}],{icon:icon,interactive:false
               })
             );
           }
+          // Spell out that cancelling one week is not the same as stopping the
+          // series, so the default choice is never a surprise.
+          if (isSeriesLive && !stopSeriesOnCancel) {
+            warnings.push(t('matchDetail.recurring.cancelKeepsRepeating'));
+          }
           return warnings.length > 0 ? warnings.join('\n\n') : undefined;
         })()}
-        confirmLabel={t('matches.cancelMatch')}
+        extraContent={
+          isSeriesLive ? (
+            <View style={[styles.recurringRow, { borderColor: colors.border }]}>
+              <View style={styles.recurringTextContainer}>
+                <Text size="sm" weight="semibold" color={colors.text}>
+                  {t('matchDetail.recurring.alsoStopTitle')}
+                </Text>
+                <Text size="xs" color={colors.textMuted}>
+                  {t('matchDetail.recurring.alsoStopSubtitle')}
+                </Text>
+              </View>
+              <Switch
+                value={stopSeriesOnCancel}
+                onValueChange={value => {
+                  lightHaptic();
+                  setStopSeriesOnCancel(value);
+                }}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={base.white}
+              />
+            </View>
+          ) : undefined
+        }
+        confirmLabel={
+          stopSeriesOnCancel ? t('matchDetail.recurring.cancelAndStop') : t('matches.cancelMatch')
+        }
         cancelLabel={t('common.goBack')}
         destructive
         isLoading={isCancelling}
+      />
+
+      {/* Stop Recurring Series Confirmation Modal */}
+      <ConfirmationModal
+        visible={showStopRecurrenceModal}
+        onClose={() => setShowStopRecurrenceModal(false)}
+        onConfirm={handleConfirmStopRecurrence}
+        title={t('matchDetail.recurring.stopConfirmTitle')}
+        message={t('matchDetail.recurring.stopConfirmMessage')}
+        confirmLabel={t('matchDetail.recurring.stop')}
+        cancelLabel={t('common.goBack')}
+        isLoading={isStoppingRecurrence}
       />
 
       {/* Reject Request Confirmation Modal */}
@@ -5721,6 +5907,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacingPixels[1],
+  },
+  recurringRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+    borderWidth: 1,
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[2],
+  },
+  recurringTextContainer: {
+    flex: 1,
     gap: spacingPixels[1],
   },
   // Footer buttons: same pattern as MatchCreationWizard nextButton – paddingVertical, no fixed height, so content is not clipped

@@ -4,6 +4,8 @@
  * @module chatTypes
  */
 
+import type { Enums } from '@rallia/shared-types';
+
 // ============================================================================
 // CORE TYPES
 // ============================================================================
@@ -55,7 +57,12 @@ export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
  * posted by the "Rallia" sender (see migration 20260605120000) and rendered as
  * rich cards instead of text bubbles.
  */
-export type MessageType = 'user' | 'court_booking_prompt' | 'court_booked' | 'match_organizer';
+export type MessageType =
+  | 'user'
+  | 'court_booking_prompt'
+  | 'court_booked'
+  | 'match_organizer'
+  | 'pool_room_welcome';
 
 /** metadata for a 'court_booking_prompt' system message. */
 export interface CourtBookingPromptMetadata {
@@ -147,6 +154,12 @@ export interface MatchOrganizerMetadata {
   /** True when no option was free for every participant — options is empty. */
   no_overlap?: boolean;
   options: MatchOrganizerOption[];
+  /**
+   * True when the options were generated from the phase snapshots, i.e. the
+   * event is on the scheduling funnel. A mutual option on such a card is
+   * pre-agreed and books in one tap; elsewhere it still collects two thumbs.
+   */
+  funnel?: boolean;
   /** Set once a game is created from this card (flips the card to a final state). */
   created_match_id?: string | null;
   confirmed_option_index?: number | null;
@@ -176,6 +189,8 @@ export interface Conversation {
   picture_url: string | null;
   match_id: string | null;
   tournament_id?: string | null;
+  /** Set on a pool room — the group chat for one pool of a tournament. */
+  tournament_pool_number?: number | null;
   /** Set on a tournament "round chat" — the per-pairing chat for a bracket match. */
   tournament_match_id?: string | null;
   /** Set on a league "pairing chat" — the per-pairing chat for a session sheet match. */
@@ -420,6 +435,8 @@ export interface ConversationPreview {
   network_type?: string | null; // 'friends', 'player_group', 'club', 'community', 'public', 'private'
   // Tournament-linked chat info
   tournament_id?: string | null;
+  /** Set on a pool room; the list renders "{name} · Poule {n}" from it. */
+  tournament_pool_number?: number | null;
   tournament_info?: {
     name: string;
     sport_name: string;
@@ -514,3 +531,41 @@ export interface SearchMessageResult {
   sender_name: string;
   rank: number;
 }
+
+/**
+ * One pairing's score-entry context (lt_pairing_score_context), as read from a
+ * pairing chat. `can_self_score` mirrors the participant guards of the write
+ * RPCs; `reason` names why it is false, for copy.
+ */
+export type PairingScoreContext =
+  | {
+      kind: 'tournament';
+      can_self_score: boolean;
+      reason: string | null;
+      tournament_match_id: string;
+      tournament_id: string;
+      player1_registration_id: string;
+      player2_registration_id: string;
+      player1_name: string;
+      player2_name: string;
+      sport_name: string | null;
+      match_format: Enums<'match_format'> | null;
+      points_per_game: number | null;
+      is_final: boolean;
+      is_pool_match: boolean;
+    }
+  | {
+      kind: 'session';
+      can_self_score: boolean;
+      reason: string | null;
+      session_match_id: string;
+      session_id: string;
+      season_id: string;
+      version_was: number;
+      team_a_name: string;
+      team_b_name: string;
+      sport_name: string | null;
+      match_format: Enums<'match_format'> | null;
+      points_per_game: number | null;
+      is_decider: boolean;
+    };

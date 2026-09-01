@@ -40,6 +40,9 @@ import { TournamentEditActionSheet } from '#/features/tournaments/components/Tou
 import { TournamentInviteSheet } from '#/features/tournaments/components/TournamentInviteSheet';
 import { TournamentInvitePlayersActionSheet } from '#/features/tournaments/components/TournamentInvitePlayersSheet';
 import { TournamentCoOrganizerActionSheet } from '#/features/tournaments/components/TournamentCoOrganizerSheet';
+import { TournamentDeadlinesActionSheet } from '#/features/tournaments/components/TournamentDeadlinesSheet';
+import { TournamentAvailabilityGateSheet } from '#/features/tournaments/components/TournamentAvailabilityGateSheet';
+import { TournamentRulesActionSheet } from '#/features/tournaments/components/TournamentRulesSheet';
 import { LeagueInvitePlayersActionSheet } from '#/features/leagues/components/LeagueInvitePlayersSheet';
 import { LeagueInviteSheet } from '#/features/leagues/components/LeagueInviteSheet';
 import { LeagueEditActionSheet } from '#/features/leagues/components/LeagueFormSheets';
@@ -228,6 +231,11 @@ declare module 'react-native-actions-sheet' {
         messageId: string;
         /** Invalidated so the card re-renders with the new option. */
         conversationId: string;
+        /**
+         * Set to counter a tentative funnel booking instead of adding a plain
+         * option: the pairing whose game is cancelled and re-offered.
+         */
+        reproposeForPairing?: string;
       };
     }>;
     'match-organizer-setup': SheetDefinition<{
@@ -366,6 +374,13 @@ declare module 'react-native-actions-sheet' {
         // The final decides the champion and releases ranking points, so the
         // sheet asks for confirmation before submitting.
         isFinal?: boolean;
+        // A pool row can be cancelled outright; a bracket slot cannot, since
+        // somebody still has to advance. Drives which outcomes are offered.
+        isPoolMatch?: boolean;
+        // Participants self-report on their own pairing (fresh completed
+        // results only, server-enforced); organizers keep the override copy
+        // and the outcome picker.
+        mode?: 'organizer' | 'participant';
         onSuccess?: () => void;
         onDismiss?: () => void;
       };
@@ -378,6 +393,9 @@ declare module 'react-native-actions-sheet' {
         entryFormat: import('@rallia/shared-types').Enums<'entry_format'>;
         team1UserIds: string[];
         team2UserIds: string[];
+        // When set, the sheet offers manual score entry (no game was created
+        // for this matchup); it hides itself before invoking.
+        onManualEntry?: () => void;
         onSuccess?: () => void;
         onDismiss?: () => void;
       };
@@ -389,9 +407,13 @@ declare module 'react-native-actions-sheet' {
         matchId: string;
         /** That row's round: a trade only happens inside the same round. */
         round: number;
-        /** The player leaving their pairing. */
-        userOut: string;
-        userOutName: string;
+        /**
+         * Who the organizer may take out, in row order. Opening from a side's
+         * name narrows it to that side; opening from the row's swap icon
+         * offers everyone on the pairing. The sheet preselects the first and
+         * only shows a picker when there is more than one.
+         */
+        userOutOptions: string[];
         /** Guards the swap against a stale copy of the sheet. */
         sessionVersion: number;
       };
@@ -405,6 +427,9 @@ declare module 'react-native-actions-sheet' {
         entryFormat: import('@rallia/shared-types').Enums<'entry_format'>;
         team1UserIds: string[];
         team2UserIds: string[];
+        // When set, the sheet offers manual score entry (no game was created
+        // for this pairing); it hides itself before invoking.
+        onManualEntry?: () => void;
         onSuccess?: () => void;
         onDismiss?: () => void;
       };
@@ -424,6 +449,9 @@ declare module 'react-native-actions-sheet' {
         // True when this result leaves no playable match behind, so it closes
         // the session: the sheet confirms before writing it.
         isDecider?: boolean;
+        // Participants self-report on their own pairing (fresh results only,
+        // server-enforced); organizers keep the override/correction copy.
+        mode?: 'organizer' | 'participant';
         onSuccess?: () => void;
         onDismiss?: () => void;
       };
@@ -466,6 +494,36 @@ declare module 'react-native-actions-sheet' {
         organizerId: string;
       };
     }>;
+    'tournament-deadlines': SheetDefinition<{
+      payload: {
+        tournamentId: string;
+        /** Offer the pool-phase row (one deadline for the whole round robin). */
+        hasPoolPhase: boolean;
+        /** Knockout round numbers that exist, ascending. */
+        knockoutRounds: number[];
+        /** Highest knockout round, so rounds can be named final / semifinal. */
+        totalRounds: number;
+      };
+    }>;
+    'tournament-availability-gate': SheetDefinition<{
+      payload: {
+        tournamentId: string;
+        /** 'pool' answers the whole round robin (round 0). */
+        bracketSide: 'pool' | 'main';
+        roundNumber: number;
+        /** Header label, e.g. the phase or round name. */
+        phaseLabel?: string;
+        /** ISO deadline closing the phase window. */
+        deadlineAt?: string | null;
+        /** Organizer's suggested minimum hours; advisory only. */
+        minHours?: number | null;
+        /** Seed from a previous answer's snapshot ("monday-18" keys) instead of the weekly grid. */
+        initialCells?: string[];
+      };
+    }>;
+    /** What the app does at a round deadline. Takes no payload: the rules are
+        the same for every event. */
+    'tournament-rules': SheetDefinition<{ payload?: Record<string, never> }>;
     'league-invite': SheetDefinition<{
       payload: {
         leagueId: string;
@@ -1015,6 +1073,9 @@ export const Sheets = () => {
         'tournament-invite': TournamentInviteSheet,
         'tournament-invite-players': TournamentInvitePlayersActionSheet,
         'tournament-co-organizers': TournamentCoOrganizerActionSheet,
+        'tournament-deadlines': TournamentDeadlinesActionSheet,
+        'tournament-availability-gate': TournamentAvailabilityGateSheet,
+        'tournament-rules': TournamentRulesActionSheet,
         'league-invite': LeagueInviteSheet,
         'league-invite-players': LeagueInvitePlayersActionSheet,
         'league-edit': LeagueEditActionSheet,

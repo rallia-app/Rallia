@@ -40,6 +40,7 @@ export type {
   UpdateConversationInput,
   PlayerOnlineStatus,
   SearchMessageResult,
+  PairingScoreContext,
 } from './chatTypes';
 
 export { isGroupConversationType } from './chatTypes';
@@ -58,6 +59,7 @@ export {
   getTournamentChat,
   getOrCreateTournamentRoundChat,
   getOrCreateSessionPairingChat,
+  getPairingScoreContext,
   syncMatchConversationTitle,
   updateConversation,
   getConversationByNetworkId,
@@ -130,6 +132,13 @@ export {
   removeMatchTimeVote,
   toggleMatchTimeVote,
   createCasualMatch,
+  bookMutualOption,
+  acceptPairingBooking,
+  reproposePairingSlot,
+  declarePairingForfeit,
+  pingPairingOpponent,
+  getPairingBooking,
+  type PairingBooking,
   getTournamentMatchSportId,
   getSessionMatchSportId,
   type OrganizerSport,

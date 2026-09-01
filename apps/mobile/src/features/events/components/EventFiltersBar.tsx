@@ -15,12 +15,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { SelectableChip, Text } from '@rallia/shared-components';
 import {
+  base,
   spacingPixels,
   radiusPixels,
   primary,
-  neutral,
   secondary,
   duration as animDuration,
   lightTheme,
@@ -29,7 +29,7 @@ import {
 import { useTheme } from '@rallia/shared-hooks';
 import type { EventFormat, EventPhase } from '@rallia/shared-services';
 
-import { useTranslation, type TranslationKey } from '../../../hooks';
+import { useThemeStyles, useTranslation, type TranslationKey } from '../../../hooks';
 import { selectionHaptic, lightHaptic } from '../../../utils/haptics';
 import { EVENT_KINDS, EVENT_FORMAT_LABEL_KEY } from '../eventKinds';
 
@@ -63,52 +63,6 @@ interface EventFiltersBarProps {
   onReset: () => void;
   hasActiveFilters: boolean;
 }
-
-// =============================================================================
-// FILTER CHIP (mirrors MatchFiltersBar)
-// =============================================================================
-
-const FilterChip: React.FC<{
-  value: string;
-  isActive: boolean;
-  onPress: () => void;
-  isDark: boolean;
-  hasDropdown?: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
-}> = ({ value, isActive, onPress, isDark, hasDropdown = true, icon }) => {
-  const scaleAnim = useMemo(() => new Animated.Value(1), []);
-
-  const bgColor = isActive ? primary[500] : isDark ? neutral[800] : neutral[100];
-  const borderColor = isActive ? primary[400] : isDark ? neutral[700] : neutral[200];
-  const textColor = isActive ? '#ffffff' : isDark ? neutral[300] : neutral[600];
-
-  const handlePress = () => {
-    void lightHaptic();
-    Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.95, duration: 50, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
-    ]).start();
-    onPress();
-  };
-
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
-        style={[styles.chip, { backgroundColor: bgColor, borderColor }]}
-        onPress={handlePress}
-        activeOpacity={0.85}
-      >
-        {icon && <Ionicons name={icon} size={14} color={textColor} style={styles.chipIcon} />}
-        <Text size="xs" weight={isActive ? 'semibold' : 'medium'} color={textColor}>
-          {value}
-        </Text>
-        {hasDropdown && (
-          <Ionicons name="chevron-down" size={12} color={textColor} style={styles.chipChevron} />
-        )}
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
 
 // =============================================================================
 // FILTER DROPDOWN MODAL (mirrors MatchFiltersBar)
@@ -268,6 +222,7 @@ export const EventFiltersBar: React.FC<EventFiltersBarProps> = ({
   hasActiveFilters,
 }) => {
   const { theme } = useTheme();
+  const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
 
@@ -276,6 +231,9 @@ export const EventFiltersBar: React.FC<EventFiltersBarProps> = ({
 
   const getFormatLabel = (value: EventFormatFilter) =>
     value === 'all' ? t('eventList.filters.allFormats') : t(EVENT_FORMAT_LABEL_KEY[value]);
+
+  /** Chip icons track the label colour the chip renders at. */
+  const chipTint = (selected: boolean) => (selected ? base.white : colors.textMuted);
 
   const getPhaseLabel = (value: EventPhaseFilter) =>
     value === 'all'
@@ -315,35 +273,51 @@ export const EventFiltersBar: React.FC<EventFiltersBarProps> = ({
           </TouchableOpacity>
         )}
 
-        <FilterChip
-          value={format === 'all' ? t('eventList.filters.format') : getFormatLabel(format)}
-          isActive={format !== 'all'}
-          onPress={() => setShowFormatDropdown(true)}
-          isDark={isDark}
+        <SelectableChip
+          label={format === 'all' ? t('eventList.filters.format') : getFormatLabel(format)}
+          selected={format !== 'all'}
+          animateOnPress
+          trailingIcon={
+            <Ionicons name="chevron-down" size={12} color={chipTint(format !== 'all')} />
+          }
+          onPress={() => {
+            void lightHaptic();
+            setShowFormatDropdown(true);
+          }}
         />
-        <FilterChip
-          value={phase === 'all' ? t('eventList.filters.phase') : getPhaseLabel(phase)}
-          isActive={phase !== 'all'}
-          onPress={() => setShowPhaseDropdown(true)}
-          isDark={isDark}
+        <SelectableChip
+          label={phase === 'all' ? t('eventList.filters.phase') : getPhaseLabel(phase)}
+          selected={phase !== 'all'}
+          animateOnPress
+          trailingIcon={
+            <Ionicons name="chevron-down" size={12} color={chipTint(phase !== 'all')} />
+          }
+          onPress={() => {
+            void lightHaptic();
+            setShowPhaseDropdown(true);
+          }}
         />
         {showMyRatingFilter && (
-          <FilterChip
-            value={t('eventList.filters.myRating')}
-            isActive={myRatingOnly}
-            onPress={() => onMyRatingChange(!myRatingOnly)}
-            isDark={isDark}
-            hasDropdown={false}
-            icon="analytics"
+          <SelectableChip
+            label={t('eventList.filters.myRating')}
+            selected={myRatingOnly}
+            animateOnPress
+            icon={<Ionicons name="analytics" size={14} color={chipTint(myRatingOnly)} />}
+            onPress={() => {
+              void lightHaptic();
+              onMyRatingChange(!myRatingOnly);
+            }}
           />
         )}
-        <FilterChip
-          value={t('eventList.filters.openSpots')}
-          isActive={openSpotsOnly}
-          onPress={() => onOpenSpotsChange(!openSpotsOnly)}
-          isDark={isDark}
-          hasDropdown={false}
-          icon="people-outline"
+        <SelectableChip
+          label={t('eventList.filters.openSpots')}
+          selected={openSpotsOnly}
+          animateOnPress
+          icon={<Ionicons name="people-outline" size={14} color={chipTint(openSpotsOnly)} />}
+          onPress={() => {
+            void lightHaptic();
+            onOpenSpotsChange(!openSpotsOnly);
+          }}
         />
       </ScrollView>
 
@@ -379,21 +353,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     gap: spacingPixels[2],
     alignItems: 'center',
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
-    gap: spacingPixels[1],
-  },
-  chipIcon: {
-    marginRight: 2,
-  },
-  chipChevron: {
-    marginLeft: 2,
   },
   resetChip: {
     flexDirection: 'row',

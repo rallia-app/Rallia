@@ -5,6 +5,7 @@
  */
 
 export * from './matchService';
+export * from './recurrenceService';
 export * from './matchTimeSuggestionService';
 export * from './suggestionService';
 export * from './matchScoring';

@@ -41,10 +41,9 @@
 -- or through the Supabase MCP execute_sql as a single call (implicit txn, which
 -- is what keeps the pg_temp helpers alive).
 -- session_replication_role = replica suppresses the push dispatch: notification
--- ROWS still land, no real push wave leaves for the fixture players.
+-- ROWS still land, no real push wave leaves for the fixture players. It is set
+-- AFTER the cleanup on purpose; see the note there.
 -- ============================================================================
-
-SET LOCAL session_replication_role = replica;
 
 -- ---------------------------------------------------------------------------
 -- Cleanup
@@ -57,6 +56,14 @@ DELETE FROM notification
                        JOIN seasons se ON se.id = s.season_id
                        JOIN leagues l ON l.id = se.league_id WHERE l.name LIKE '[JDL v3]%');
 DELETE FROM leagues WHERE name LIKE '[JDL v3]%';
+
+-- IMPORTANT: session_replication_role = replica also disables the SYSTEM
+-- triggers that implement foreign keys, so ON DELETE CASCADE silently does
+-- nothing while it is set. The DELETEs below therefore run in normal mode and
+-- replica is switched on only around the CREATION, which is the only part that
+-- would otherwise dispatch a push. Setting it earlier orphans every season,
+-- session, match, member and conversation under the rows being removed.
+SET LOCAL session_replication_role = replica;
 
 -- ---------------------------------------------------------------------------
 -- Helpers

@@ -7,3 +7,4 @@
 export { MatchOutcomeStep } from './MatchOutcomeStep';
 export { OpponentFeedbackStep } from './OpponentFeedbackStep';
 export { ReportIssueActionSheet } from './ReportIssueSheet';
+export { CoPlayerGamesSection } from './CoPlayerGamesSection';

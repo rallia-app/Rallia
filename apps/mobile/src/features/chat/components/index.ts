@@ -5,6 +5,7 @@
 export { MessageBubble } from './MessageBubble';
 export { MessageInput } from './MessageInput';
 export { MatchOrganizerBanner } from './MatchOrganizerBanner';
+export { ChatActionBanner } from './ChatActionBanner';
 export { MessageList } from './MessageList';
 export type { MessageListRef } from './MessageList';
 export { ChatHeader } from './ChatHeader';
@@ -14,6 +15,7 @@ export { ChatAgreementActionSheet as ChatAgreementModal } from './ChatAgreementM
 
 // Enhanced chat components
 export { AnnouncementNotice } from './AnnouncementNotice';
+export { PoolRoomLockedNotice } from './PoolRoomLockedNotice';
 export { MessageActionsSheet } from './MessageActionsSheet';
 export { ReplyBanner } from './ReplyBanner';
 export { ConversationActionsSheet } from './ConversationActionsSheet';

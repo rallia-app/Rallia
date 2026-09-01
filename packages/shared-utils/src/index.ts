@@ -21,3 +21,4 @@ export * from './utm';
 export * from './fees';
 export * from './ids';
 export * from './onboarding';
+export * from './dispatchGuard';

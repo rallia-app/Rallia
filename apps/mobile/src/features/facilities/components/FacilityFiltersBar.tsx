@@ -6,7 +6,12 @@
 
 import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
-import { Text, LocationSelector, type LocationMode } from '@rallia/shared-components';
+import {
+  Text,
+  LocationSelector,
+  SelectableChip,
+  type LocationMode,
+} from '@rallia/shared-components';
 import {
   useTheme,
   type FacilityFilters,
@@ -20,10 +25,10 @@ import {
   type FacilityHourRange,
 } from '@rallia/shared-hooks';
 import {
+  base,
   spacingPixels,
   radiusPixels,
   primary,
-  neutral,
   secondary,
   duration as animDuration,
   lightTheme,
@@ -31,7 +36,7 @@ import {
 } from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useTranslation } from '#/hooks';
+import { useThemeStyles, useTranslation } from '#/hooks';
 import { selectionHaptic, lightHaptic } from '#/utils/haptics';
 
 // =============================================================================
@@ -135,76 +140,6 @@ interface DayOption {
 // =============================================================================
 // FILTER CHIP COMPONENT
 // =============================================================================
-
-interface FilterChipProps {
-  value: string;
-  isActive: boolean;
-  onPress: () => void;
-  isDark: boolean;
-  hasDropdown?: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
-}
-
-function FilterChip({
-  value,
-  isActive,
-  onPress,
-  isDark,
-  hasDropdown = true,
-  icon,
-}: FilterChipProps) {
-  const scaleAnim = useMemo(() => new Animated.Value(1), []);
-
-  const bgColor = isActive ? primary[500] : isDark ? neutral[800] : neutral[100];
-  const borderColor = isActive ? primary[400] : isDark ? neutral[700] : neutral[200];
-  const textColor = isActive ? '#ffffff' : isDark ? neutral[300] : neutral[600];
-
-  const handlePress = () => {
-    lightHaptic();
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    onPress();
-  };
-
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
-        style={[
-          styles.chip,
-          {
-            backgroundColor: bgColor,
-            borderColor: borderColor,
-          },
-        ]}
-        onPress={handlePress}
-        activeOpacity={0.85}
-      >
-        {icon && <Ionicons name={icon} size={14} color={textColor} style={styles.chipIcon} />}
-        <Text size="xs" weight={isActive ? 'semibold' : 'medium'} color={textColor}>
-          {value}
-        </Text>
-        {hasDropdown && (
-          <Ionicons
-            name="chevron-down-outline"
-            size={12}
-            color={textColor}
-            style={styles.chipChevron}
-          />
-        )}
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
 
 // =============================================================================
 // FILTER DROPDOWN MODAL COMPONENT
@@ -423,9 +358,6 @@ function AvailabilityFilterDropdown({
     itemBorder: themeColors.border,
     overlayBg: 'rgba(0, 0, 0, 0.5)',
     checkmark: primary[500],
-    presetInactiveBg: isDark ? neutral[800] : neutral[100],
-    presetInactiveBorder: isDark ? neutral[700] : neutral[200],
-    presetInactiveText: isDark ? neutral[300] : neutral[600],
   };
 
   useEffect(() => {
@@ -509,31 +441,14 @@ function AvailabilityFilterDropdown({
               {presetSectionLabel}
             </Text>
             <View style={styles.availabilityPresetRow}>
-              {presetOptions.map(preset => {
-                const isSelected = selectedPreset === preset;
-                return (
-                  <TouchableOpacity
-                    key={preset}
-                    style={[
-                      styles.availabilityPresetPill,
-                      {
-                        backgroundColor: isSelected ? primary[500] : colors.presetInactiveBg,
-                        borderColor: isSelected ? primary[400] : colors.presetInactiveBorder,
-                      },
-                    ]}
-                    onPress={() => handleSelectPreset(preset)}
-                    activeOpacity={0.85}
-                  >
-                    <Text
-                      size="xs"
-                      weight={isSelected ? 'semibold' : 'medium'}
-                      color={isSelected ? '#ffffff' : colors.presetInactiveText}
-                    >
-                      {getPresetLabel(preset)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+              {presetOptions.map(preset => (
+                <SelectableChip
+                  key={preset}
+                  label={getPresetLabel(preset)}
+                  selected={selectedPreset === preset}
+                  onPress={() => handleSelectPreset(preset)}
+                />
+              ))}
             </View>
           </View>
 
@@ -616,6 +531,7 @@ export default function FacilityFiltersBar({
   showFavoritesFilter = true,
 }: FacilityFiltersBarProps) {
   const { theme } = useTheme();
+  const { colors } = useThemeStyles();
   const { t, locale } = useTranslation();
   const isDark = theme === 'dark';
 
@@ -1090,17 +1006,29 @@ export default function FacilityFiltersBar({
         )}
 
         {/* Filter Chips — sorted with active filters first */}
-        {filterChips.map(chip => (
-          <FilterChip
-            key={chip.key}
-            value={chip.value}
-            isActive={chip.isActive}
-            onPress={chip.onPress}
-            isDark={isDark}
-            icon={chip.icon}
-            hasDropdown={chip.hasDropdown}
-          />
-        ))}
+        {filterChips.map(chip => {
+          const chipTint = chip.isActive ? base.white : colors.textMuted;
+          return (
+            <SelectableChip
+              key={chip.key}
+              label={chip.value}
+              selected={chip.isActive}
+              animateOnPress
+              icon={
+                chip.icon ? <Ionicons name={chip.icon} size={14} color={chipTint} /> : undefined
+              }
+              trailingIcon={
+                chip.hasDropdown === false ? undefined : (
+                  <Ionicons name="chevron-down-outline" size={12} color={chipTint} />
+                )
+              }
+              onPress={() => {
+                lightHaptic();
+                chip.onPress();
+              }}
+            />
+          );
+        })}
       </ScrollView>
 
       {/* =================================================================== */}
@@ -1244,21 +1172,6 @@ const styles = StyleSheet.create({
   locationSelectorWrapper: {
     marginRight: spacingPixels[1],
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
-    gap: spacingPixels[1],
-  },
-  chipIcon: {
-    marginRight: 2,
-  },
-  chipChevron: {
-    marginLeft: 2,
-  },
   resetChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1321,12 +1234,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacingPixels[2],
-  },
-  availabilityPresetPill: {
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
   },
   availabilitySpecificHeader: {
     paddingHorizontal: spacingPixels[4],

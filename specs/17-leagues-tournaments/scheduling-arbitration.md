@@ -148,7 +148,10 @@ with a concrete time on the table instead of a menu and silence.
 Runs inside `lt_resolve_due_tournament_matches` at the effective deadline,
 replacing the binary effort split of
 [round-deadlines.md § Step 1](./round-deadlines.md#step-1--effort-split).
-Step 0 (attached game earns automatic grace) is unchanged.
+Step 0's automatic grace is **removed** (2026-08-31): an attached game no longer
+buys 72 hours past the deadline, and an agreed-but-unplayed game is decided on
+the same signals as any other. See
+[unplayed-match-resolution.md](./unplayed-match-resolution.md) § 6, R3.
 
 Per side, three graded signals, each scored 0 / 1 / 2, total **S ∈ 0..6**:
 
@@ -167,19 +170,19 @@ read.
 
 At the deadline:
 
-| Situation                    | Resolution                                                                                                                                                                                |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| One side S >= 2, other S < 2 | Walkover for the higher side (existing mechanics: `status='walkover'`, `score='W/O'`, advance, reputation event on loser).                                                                |
-| Both S < 2                   | Double walkover (existing `lt_advance_double_walkover`).                                                                                                                                  |
-| Both S >= 2                  | One automatic extension (existing, unchanged). At the extended deadline, if still unresolved: **gap rule**: if `abs(S_a - S_b) >= 2`, walkover for the higher side; else double walkover. |
+| Situation                    | Resolution                                                                                                                                                                                                                                         |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One side S >= 2, other S < 2 | Walkover for the higher side (existing mechanics: `status='walkover'`, `score='W/O'`, advance, reputation event on loser).                                                                                                                         |
+| Both S < 2                   | Double walkover (existing `lt_advance_double_walkover`).                                                                                                                                                                                           |
+| Both S >= 2                  | **Gap rule, at the deadline itself**: if `abs(S_a - S_b) >= Δgap`, walkover for the higher side; else the game is cancelled with nobody at fault. Δgap is 2 in a round robin, 1 in a knockout. There is no extension: the deadline is a hard stop. |
 
 The gap rule is the deliberate change from the earlier "never pick more
 effort" stance: Jean explicitly wants the stalemate branch decided on
 timeliness, volume and reactivity. The threshold of 2 keeps the old caution:
 the machine only picks a winner when the behavioral gap is unambiguous, and
 the justification (below) shows exactly which signals made the difference.
-Scores are recomputed at the extended deadline, so a player who wakes up
-during the extension can still save themselves.
+Scores are computed once, at the deadline: there is no second window to wake up
+in, because the two weeks they had were the two weeks they had.
 
 ### Justification, shown, not just audited
 
@@ -247,13 +250,16 @@ forcing it.
 
 Effect of a qualified weather cancel:
 
-- The linked game is cancelled without penalty; the Step 0 grace override is
-  replaced by a fresh override of `cancelled_slot + 72h` (capped at nothing;
-  `end_date` remains informational).
+- The linked game is cancelled without penalty, and **the deadline does not
+  move**: the automatic `cancelled_slot + 72h` override this once specified is
+  removed with the rest of the grace (2026-08-31). Cancelling for weather
+  protects the pair from a forfeit ruling, not from the clock. If the round
+  genuinely cannot be replayed in time, the organizer moves the deadline while
+  it is still ahead, which is the one accommodation left.
 - **Near-deadline case** (Jean's 2.a): if the effective deadline is less than
   48h away at cancel time, both players are prompted once: "Pas le temps de
   rejouer? Tu peux concéder le match." wired to `tournament_declare_forfeit`.
-  If neither concedes, the ladder decides at the (extended) deadline as usual.
+  If neither concedes, the ladder decides at the deadline as usual.
   The decision process stays visible on the match sheet throughout.
 
 ## Score conventions for short formats
@@ -370,9 +376,11 @@ evidence).
 
 1. `min_availability_hours` default (recommended 6) and whether organizers can
    set it per tournament at creation or it stays a global constant in v1.
-2. Gap-rule threshold (recommended 2) and whether the extension is skipped
-   entirely when `abs(S_a - S_b) >= 4` at the first deadline (recommended no:
-   one extension always, predictability beats speed).
+2. ~~Gap-rule threshold and whether the extension is skipped~~ **Decided
+   2026-08-31**: Δgap is 2 in a round robin and 1 in a knockout, and there is
+   no extension at all. Jean's position is that a system built to enforce a
+   deadline cannot also hand out reprieves, so the question of when to skip the
+   extension became moot when the extension was removed.
 3. Final weather thresholds and the provider question (joins the Momentum
    Harvesting weather decision).
 4. Whether `skipped` gate outcomes should cost a timeliness point relative to

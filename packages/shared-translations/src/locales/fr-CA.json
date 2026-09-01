@@ -3,20 +3,23 @@
     "badge": "1000 joueurs",
     "title": "1000 joueurs. Une communauté.",
     "body1": "Il y a quelques mois, Rallia n'était qu'une idée entre deux passionnés tannés de chercher quelqu'un pour jouer.",
-    "body2": "Aujourd'hui, vous êtes 1000 à avoir embarqué. À jouer, à organiser vos parties, à faire vivre le tennis et le pickleball récréatif à Montréal.",
+    "body2": "Aujourd'hui, vous êtes 1000 à avoir embarqué. À jouer, à organiser vos parties, à faire vivre le tennis et le pickleball récréatif dans le Grand Montréal.",
     "body2b": "Et tu en fais partie.",
     "body3": "Merci d'y avoir cru. Merci d'avoir joué. Merci d'être là.",
     "signature": "Jean & Mathis",
     "continueCta": "Continuer",
     "ctaTitle": "Et si on était 2000?",
-    "ctaSubtitle": "Partage Rallia avec quelqu'un avec qui tu aimerais jouer. Ta prochaine partie se trouve peut-être déjà dans tes contacts.",
-    "prize": "À gagner : {prize}",
+    "ctaSubtitle": "Partage Rallia avec quelqu'un avec qui tu aimerais jouer. Tes contacts, tes réseaux sociaux, tes groupes de joueurs : ta prochaine partie se trouve peut-être déjà là.",
+    "creditPledge": "Ramène 5 nouveaux joueurs et obtiens 10 $ de crédit sur les événements Rallia.",
     "yourCode": "Ton code",
     "shareCta": "Partager Rallia",
     "copyLink": "Copier mon lien",
     "copyCode": "Copier mon code",
     "shareTitle": "Rejoins-moi sur Rallia",
-    "shareMessage": "On est déjà 1000 à jouer sur Rallia à Montréal. Trouve-toi une partie, ça prend deux minutes : {link}"
+    "shareMessage": "On est déjà 1000 à jouer sur Rallia dans le Grand Montréal. Trouve-toi une partie, ça prend deux minutes : {link}",
+    "socialTitle": "Suis la suite de l'aventure",
+    "socialSubtitle": "Nouveautés, événements et moments forts de la communauté : tout se passe sur nos réseaux. Abonne-toi pour ne rien manquer.",
+    "doneCta": "Terminer"
   },
   "suggestionCard": {
     "courtsAvailable": "{count} terrains disponibles"
@@ -245,6 +248,7 @@
       "match_new_available": "Nouvelle partie de groupe",
       "match_spot_opened": "Place libérée",
       "court_booking_nudge": "Réserver ton terrain",
+      "recurring_court_opened": "Terrains de ta partie récurrente",
       "match_last_minute_spots": "Ça commence bientôt",
       "match_unfilled_recovery": "Relance de partie",
       "play_rhythm_nudge": "Créneau habituel libre",
@@ -468,6 +472,10 @@
       "court_booking_nudge": {
         "title": "Des terrains sont libres à {facilityName}",
         "body": "Une partie avec terrain réservé attire les joueurs plus vite. Réserve le tien pendant qu'il est libre."
+      },
+      "recurring_court_opened": {
+        "title": "Les terrains viennent d'ouvrir à {facilityName}",
+        "body": "Les réservations viennent d'ouvrir pour ta partie récurrente. Réserve ton terrain avant qu'il parte."
       },
       "match_last_minute_spots": {
         "title": "Ça commence bientôt · {sportName} à {locationName}",
@@ -726,6 +734,7 @@
     "deleteAccountBlockedTitle": "Compte encore lié à des événements",
     "deleteAccountBlockedMessage": "Votre compte est lié à des tournois ou des ligues (inscriptions, résultats ou paiements). Retirez-vous d'abord des événements en cours, puis écrivez-nous à contact@rallia.ca et nous finaliserons la suppression pour vous.",
     "contactSupport": "Contacter le support",
+    "previewMilestone1000": "Ouvrir l'annonce des 1000 joueurs",
     "appInfo": "Info de l'app",
     "version": "Version",
     "environment": "Environnement",
@@ -2362,6 +2371,17 @@
     "announcement": {
       "subtitle": "Annonces officielles",
       "readOnly": "Seul Rallia publie ici"
+    },
+    "poolRoom": {
+      "subtitle": "Poule {n}",
+      "welcome": "Bienvenue dans ta poule. Donne tes disponibilités pour débloquer tes conversations de partie. Ce qui s'écrit ici n'entre pas dans les décisions automatiques à l'échéance.",
+      "lockedNotice": "La lecture est ouverte à tous. Pour écrire ici et planifier tes parties, donne d'abord tes dispos.",
+      "lockedCta": "Donner mes dispos"
+    },
+    "pairingScore": {
+      "title": "Entrer le score",
+      "subtitle": "Déjà joué? Inscris le résultat ici",
+      "saved": "Résultat enregistré 🙌"
     }
   },
   "map": {
@@ -3358,7 +3378,16 @@
       "previewSuggestions": "Suggestions d'heures pour jouer",
       "staleOption": "Plus disponible",
       "likedBy": "{name} aime ce moment",
-      "likedByCount": "{count} joueurs aiment ce moment"
+      "likedByCount": "{count} joueurs aiment ce moment",
+      "tentative": "Partie proposée",
+      "tentativeWaiting": "En attente de la confirmation de {name}. Sans réponse, elle tient dans 24 h.",
+      "tentativeAsk": "{name} a créé cette partie. Confirme, ou propose un autre moment.",
+      "tentativeAccept": "Ça marche",
+      "tentativeRepropose": "Proposer un autre moment",
+      "forfeitCta": "Je dois déclarer forfait",
+      "forfeitConfirmTitle": "Déclarer forfait?",
+      "forfeitConfirmBody": "Ton adversaire gagne par forfait et le résultat est final. À faire seulement si tu ne peux vraiment pas jouer.",
+      "forfeitConfirm": "Déclarer forfait"
     },
     "banner": {
       "title": "Organiser une partie",
@@ -3406,7 +3435,10 @@
       "systemNote": "{name} a proposé un autre moment",
       "errorPast": "Choisis un moment à venir.",
       "errorSettled": "La partie est déjà créée pour cette rencontre.",
-      "errorGeneric": "Impossible de proposer ce moment. Réessaie."
+      "errorGeneric": "Impossible de proposer ce moment. Réessaie.",
+      "errorReproposalSpent": "Tu as déjà proposé un autre moment pour cette partie.",
+      "errorWindowClosed": "La partie est confirmée. Pour la changer, annule-la.",
+      "errorPastDeadline": "Ce moment est après l'échéance de ce tour."
     }
   },
   "matchShare": {
@@ -3418,6 +3450,19 @@
     }
   },
   "matchDetail": {
+    "recurring": {
+      "title": "Se répète chaque semaine",
+      "subtitle": "La partie de la semaine prochaine est créée dès que celle-ci se termine.",
+      "stop": "Arrêter",
+      "stopConfirmTitle": "Arrêter la répétition?",
+      "stopConfirmMessage": "Les parties déjà créées restent à ton horaire. Aucune nouvelle ne sera créée.",
+      "stopSuccess": "Cette partie ne se répète plus.",
+      "stopError": "Impossible d'arrêter la répétition. Réessaie.",
+      "cancelKeepsRepeating": "La partie de la semaine prochaine sera quand même créée. Active l'option ci-dessous pour arrêter aussi la répétition.",
+      "alsoStopTitle": "Arrêter aussi la répétition",
+      "alsoStopSubtitle": "Aucune nouvelle partie ne sera créée après celle-ci.",
+      "cancelAndStop": "Annuler et arrêter"
+    },
     "title": "Détails de la partie",
     "preferences": "Préférences",
     "chat": "Chat",
@@ -3582,7 +3627,13 @@
       "acceptSuccess": "Partie reprogrammée",
       "declineSuccess": "Proposition refusée",
       "errorMatchFull": "La partie s'est remplie pendant l'attente. Libère une place ou refuse."
-    }
+    },
+    "contestScore": "Contester ce score",
+    "contestScoreTitle": "Contester ce score?",
+    "contestScoreBody": "Le résultat est signalé et c'est l'organisateur qui tranche, pas l'app. À faire si le score est faux, pas parce que tu aurais préféré l'autre résultat.",
+    "contestScoreCta": "Contester",
+    "contestScoreDone": "Contesté. L'organisateur va trancher.",
+    "contestScoreError": "Impossible de contester ce score. Réessaie."
   },
   "registerMatchScore": {
     "title": "Enregistrer le score",
@@ -3641,6 +3692,7 @@
       "subtitle": "Gardez le rythme et planifiez la prochaine dès maintenant.",
       "playAgain": "Rejouer la semaine prochaine",
       "joinAnother": "Rejoindre une autre partie",
+      "coPlayerGamesTitle": "À venir avec des joueurs de cette partie",
       "done": "Terminé"
     },
     "matchContext": {
@@ -4092,6 +4144,9 @@
       "emailFacility": "Courriel",
       "visitWebsite": "Site web",
       "isCourtFree": "Terrain gratuit",
+      "isRecurring": "Répéter chaque semaine",
+      "isRecurringOn": "La partie de la semaine prochaine est créée dès que celle-ci se termine, sans terrain. On t'avertit dès que les terrains ouvrent.",
+      "isRecurringOff": "C'est une partie unique.",
       "isCourtFreeYes": "Oui, c'est gratuit",
       "isCourtFreeNo": "Non, il y a un coût",
       "costSplitType": "Partage des coûts",
@@ -4192,6 +4247,10 @@
       "selectDate": "Sélectionner la date de la partie",
       "selectTime": "Sélectionner l'heure de début",
       "selectTimezone": "Sélectionner le fuseau horaire du lieu de la partie"
+    },
+    "nudges": {
+      "bookCourt": "Les parties avec un terrain déjà réservé trouvent un joueur environ deux fois plus souvent.",
+      "postEarly": "Publier une journée d'avance double presque vos chances que quelqu'un embarque."
     },
     "booking": {
       "openReservation": "Ouvrir la réservation",
@@ -4609,6 +4668,7 @@
       "breakdownEntry": "Entrée : {amount}",
       "breakdownServiceFee": "Frais de service Rallia : {amount}",
       "breakdownFeeTax": "TPS + TVQ sur les frais de service : {amount}",
+      "breakdownCredit": "Crédit Rallia : -{amount}",
       "breakdownTotal": "Total : {amount}",
       "breakdownTotalTaxesIncluded": "Total : {amount} (taxes incluses)",
       "feeCoveredByOrganizer": "Frais de service Rallia et taxes : assumés par l'organisateur, rien ne s'ajoute pour toi.",
@@ -4678,11 +4738,20 @@
       "empty": "Aucune séance planifiée",
       "namePlaceholder": "p. ex., Mardi soir",
       "date": "Date",
+      "windowStart": "Début",
       "time": "Heure",
       "capacityPlaceholder": "Capacité (optionnel)",
       "submit": "Créer la séance",
       "creating": "Création...",
       "publish": "Publier",
+      "publishNamed": "Publier {name}",
+      "confirmSpot": "Confirme ta présence",
+      "createSessionCta": {
+        "description": "Les membres jouent seulement quand une séance est au calendrier."
+      },
+      "publishCta": {
+        "description": "Une séance en brouillon reste invisible. Publie-la pour que le monde réponde."
+      },
       "created": "Séance créée",
       "published": "Séance publiée",
       "seriesCreated": "{count} séances créées",
@@ -4989,7 +5058,9 @@
       "draftBanner": "Brouillon. Toi seul vois ces pairages. Ajuste-les, puis publie.",
       "draftHint": "Régénérer rebrasse les pairages non verrouillés. Rien ne se rend à tes membres tant que tu n'as pas publié.",
       "publish": "Publier la feuille",
-      "published": "Feuille publiée"
+      "published": "Feuille publiée",
+      "stateDraft": "Brouillon",
+      "statePublished": "Publiée"
     },
     "score": {
       "title": "Entrer le pointage",
@@ -5002,11 +5073,15 @@
       "confirmLast": {
         "title": "Fermer la séance?",
         "message": "C'est le dernier résultat. L'enregistrer ferme la séance et met à jour le classement. Tu peux encore corriger n'importe quel score pendant 24 heures.",
-        "cta": "Enregistrer et fermer"
+        "cta": "Enregistrer et fermer",
+        "selfMessage": "C'est le dernier résultat de la séance. L'enregistrer ferme la séance et met à jour le classement."
       },
       "errors": {
-        "correctionWindowClosed": "La période de 24 heures pour corriger cette séance est terminée. Demande l'aide d'un admin."
-      }
+        "correctionWindowClosed": "La période de 24 heures pour corriger cette séance est terminée. Demande l'aide d'un admin.",
+        "alreadyScored": "Ce duel a déjà un résultat.",
+        "matchAlreadyLinked": "Une partie est déjà liée à ce duel. Entre le score dans cette partie."
+      },
+      "selfSubtitle": "Entre le score final convenu avec ton adversaire. Il compte tout de suite au classement. L'organisateur peut corriger au besoin."
     },
     "rpcErrors": {
       "startPassed": "L'heure de début de la séance est déjà passée.",
@@ -5037,7 +5112,8 @@
         "matchAlreadyLinked": "Cette partie est déjà liée à un autre résultat.",
         "matchNotVerified": "Le pointage de cette partie n'est pas encore confirmé.",
         "participantsMismatch": "Les joueurs de cette partie ne correspondent pas à ce duel."
-      }
+      },
+      "manualCta": "Entrer le score manuellement"
     },
     "pairingChat": {
       "organize": "Organise ta partie",
@@ -5079,7 +5155,6 @@
     "create": "Créer un événement",
     "createSubtitle": "Pars un tournoi ou une ligue",
     "myEvents": "Mes événements",
-    "viewAllMine": "Voir tout",
     "searchPlaceholder": "Rechercher des événements...",
     "empty": "Aucun événement pour le moment",
     "emptyDescription": "Rien d'ouvert près de chez toi en ce moment. Reviens bientôt, ou crée le tien.",
@@ -5212,7 +5287,7 @@
       "schedulingTitle": "Comment se jouent les séances",
       "scheduling": {
         "fixed": {
-          "title": "Soirs fixes",
+          "title": "Date fixe",
           "description": "Chaque séance est une date à une heure précise. Tout le monde joue en même temps."
         },
         "flex": {
@@ -5374,6 +5449,7 @@
       "breakdownEntry": "Entrée : {amount}",
       "breakdownServiceFee": "Frais de service : {amount}",
       "breakdownFeeTax": "TPS + TVQ sur les frais de service : {amount}",
+      "breakdownCredit": "Crédit Rallia : -{amount}",
       "breakdownTotal": "Total : {amount}",
       "breakdownTotalTaxesIncluded": "Total : {amount} (taxes incluses)",
       "feeCoveredByOrganizer": "Frais de service Rallia et taxes : assumés par l'organisateur, rien ne s'ajoute pour toi.",
@@ -5492,7 +5568,8 @@
         "openDescription": "{count} places sur {max} sont prises.",
         "closedDescription": "{count} joueurs sont inscrits. Génère le tableau pour commencer.",
         "liveTitle": "Tournoi en cours",
-        "liveDescription": "{done} parties jouées sur {total}. Touche une partie en attente dans le tableau pour enregistrer son résultat."
+        "liveDescription": "{done} parties jouées sur {total}. Touche une partie en attente dans le tableau pour enregistrer son résultat.",
+        "deadlinesDescription": "Mets une date sur chaque tour pour que le monde sache quand jouer."
       },
       "registerCta": {
         "full": "Tournoi complet",
@@ -5512,7 +5589,6 @@
         "descriptionInvited": "Accepte l'invitation pour confirmer ta place. Tu peux aussi te retirer si tu ne peux pas jouer."
       },
       "inviteFriendsCta": {
-        "title": "Amène tes amis",
         "description": "Un tournoi, c'est meilleur avec du monde que tu connais. Partage ton lien et embarque-les dans le tableau."
       },
       "pendingRequestsCta": {
@@ -5522,6 +5598,9 @@
       },
       "myMatch": {
         "title": "Ta prochaine partie",
+        "poolTitle": "Tes parties de poule",
+        "poolProgress": "{done} sur {total} parties jouées",
+        "poolProgress_one": "{done} sur {total} partie jouée",
         "vs": "contre {name}",
         "hint": "Lie ta partie jouée",
         "organize": "Organise ta partie",
@@ -5606,6 +5685,8 @@
       "closeRegistration": "Fermer les inscriptions",
       "reopenRegistration": "Rouvrir les inscriptions",
       "shareInviteLink": "Partager le lien d'invitation",
+      "setDeadlines": "Échéances des tours",
+      "setDeadlinesCta": "Fixer les échéances des tours",
       "register": "S'inscrire",
       "addMyself": "M'ajouter",
       "withdraw": "Se retirer",
@@ -5789,7 +5870,8 @@
         "matchAlreadyLinked": "Cette partie est déjà liée à un autre résultat.",
         "matchNotVerified": "Le pointage de cette partie n'est pas encore confirmé.",
         "participantsMismatch": "Les joueurs de cette partie ne correspondent pas à ce duel."
-      }
+      },
+      "manualCta": "Entrer le score manuellement"
     },
     "partner": {
       "title": "Choisis ton partenaire",
@@ -5822,6 +5904,15 @@
         "message": "{champion} gagne {score} et devient le champion. Les points de classement sont attribués tout de suite. Tu peux encore corriger pendant 24 heures.",
         "cta": "Confirmer le champion"
       },
+      "outcome": {
+        "completed": "Pointage",
+        "walkover": "Forfait",
+        "retired": "Abandon",
+        "cancelled": "Annulée",
+        "walkoverHint": "Personne n'a joué. Qui passe?",
+        "retiredHint": "La partie a commencé puis a été abandonnée. Qui l'emporte?",
+        "cancelledHint": "La partie ne sera pas jouée. Elle ne compte pour personne au classement de la poule."
+      },
       "errors": {
         "notOverridable": "Cette partie ne peut plus être modifiée.",
         "nextMatchPlayed": "Tu ne peux plus modifier ce score. La prochaine partie a déjà été jouée.",
@@ -5829,8 +5920,55 @@
         "notInProgress": "Le tournoi n'est pas en cours.",
         "slotsIncomplete": "Les deux joueurs ne sont pas encore définis pour cette partie.",
         "correctionWindowClosed": "La période de 24 heures pour corriger ce résultat est terminée. Demande l'aide d'un admin.",
-        "generic": "Impossible d'enregistrer le résultat. Réessaie."
+        "generic": "Impossible d'enregistrer le résultat. Réessaie.",
+        "cancelNeedsBracketOutcome": "Une partie du tableau ne peut pas être annulée: quelqu'un doit passer au tour suivant. Déclare plutôt un forfait.",
+        "winnerRequired": "Choisis qui passe.",
+        "matchAlreadyLinked": "Une partie est déjà liée à ce duel. Entre le score dans cette partie."
       }
+    },
+    "restore": {
+      "title": "L'app a réglé cette partie toute seule",
+      "cta": "Remettre la partie à jouer",
+      "confirmTitle": "Défaire cette décision?",
+      "confirmBody": "Le pairage redevient à jouer, la personne qui avait avancé ressort du tour suivant, et l'impact sur sa réputation est effacé. À utiliser quand l'app s'est trompée, pas pour inscrire un résultat.",
+      "confirmCta": "Défaire",
+      "windowClosed": "Trop tard pour défaire ici: le tableau a avancé au-delà de ce pairage. Inscris plutôt le résultat.",
+      "organizerOnly": "Seul l'organisateur peut défaire une décision automatique.",
+      "errorGeneric": "Impossible de défaire cette décision. Réessaie.",
+      "rule": {
+        "no_show": "Une des deux personnes a fait son check-in à la partie convenue, l'autre non: le forfait est allé du côté de l'absente.",
+        "cancel_forfeit": "Une des deux a annulé la partie convenue et elle n'a pas été reprise avant l'échéance.",
+        "one_sided": "Une des deux a donné ses dispos avant l'échéance, l'autre n'a rien fait.",
+        "gap_rule": "Les deux ont essayé, mais une des deux en a nettement fait plus pour organiser la partie.",
+        "no_effort": "Ni l'une ni l'autre n'a donné suite avant l'échéance, donc personne n'avance.",
+        "stalemate": "Les deux ont fait leur part et ça n'a pas adonné: la partie a été annulée, sans faute de personne.",
+        "generic": "L'app a réglé ce pairage quand l'échéance de la ronde est passée."
+      }
+    },
+    "rules": {
+      "title": "Comment marche l'échéance",
+      "intro": "Chaque ronde a une date à laquelle la partie doit être jouée. Sinon, l'app tranche au lieu de laisser traîner. Voici exactement comment, pour que rien ne te surprenne.",
+      "deadline": {
+        "title": "L'échéance ne bouge pas",
+        "body": "Quand elle passe, le pairage se règle d'une façon ou d'une autre et la ronde avance. Rien n'est prolongé automatiquement, et une partie réservée après l'échéance ne compte pas."
+      },
+      "trying": {
+        "title": "Ce qui compte comme un effort",
+        "body": "Donner tes dispos, réserver un des moments que vous avez en commun, et répondre quand ton adversaire propose quelque chose. Seulement ça. Les messages dans le clavardage ne comptent pas, volontairement: l'app ne peut pas juger une conversation équitablement, mais elle peut voir une heure que tu as déclarée libre."
+      },
+      "bothTried": {
+        "title": "Si vous avez essayé tous les deux sans réussir à jouer",
+        "body": "Personne n'est blâmé. Si une des deux personnes en a clairement fait plus (répondu plus vite, donné plus d'heures, réagi aux propositions), c'est elle qui avance. Si c'est serré, la partie est annulée et ne compte pour ni l'un ni l'autre."
+      },
+      "neither": {
+        "title": "Si une des deux n'a rien fait",
+        "body": "Celle qui a essayé avance par forfait. Si ni l'une ni l'autre n'a rien fait, personne n'avance. Tu reçois deux rappels avant ça, 48 heures et 12 heures d'avance."
+      },
+      "cost": {
+        "title": "Ce que coûte un forfait",
+        "body": "Ça compte comme une défaite au classement, et c'est tout. Ça ne touche jamais ta cote, et ça ne change pas tes points Rallia. Ne pas répondre du tout peut affecter ta réputation, mais seulement si on t'a vraiment rejoint avant."
+      },
+      "footnote": "L'organisateur peut déplacer une échéance tant qu'elle est devant, et peut défaire une décision que l'app a mal jugée. Si quelque chose cloche, dis-le-lui."
     },
     "generateBracketErrors": {
       "insufficientParticipants": "Au moins 2 joueurs doivent être inscrits.",
@@ -5902,6 +6040,10 @@
       "walkover": "Forfait",
       "cancelled": "Annulée",
       "toPlay": "À jouer",
+      "played": "Jouée",
+      "resultWon": "Gagné {detail}",
+      "resultLost": "Perdu {detail}",
+      "byWalkover": "par forfait",
       "launchKnockout": "Lancer la phase éliminatoire",
       "launchKnockoutWaiting": "Les éliminatoires ouvrent quand toutes les parties de poules sont réglées",
       "launchKnockoutReady": "Poules terminées. L'organisateur peut maintenant lancer les éliminatoires.",
@@ -5909,18 +6051,82 @@
       "knockoutTitle": "Éliminatoires",
       "headerRecord": "V-D",
       "headerSets": "Sets",
-      "vs": "vs"
+      "vs": "vs",
+      "enterScore": "Entrer le score"
     },
     "deadlines": {
       "playBy": "à jouer avant le {date}",
       "hoursLeft": "{hours} h pour jouer",
       "phaseDeadline": "Phase en cours : {when}"
     },
+    "deadlinesEditor": {
+      "title": "Échéances des tours",
+      "hint": "Les joueurs ont jusqu'à l'échéance pour jouer. Passé ce moment, les règles tranchent ce qui reste et la date ne peut plus bouger. Fixe-la maintenant, et repousse-la d'avance si tu en as besoin.",
+      "poolPhase": "Phase de poules",
+      "notSet": "Aucune échéance",
+      "passed": "Déjà passée, ne peut plus être modifiée",
+      "noRounds": "Les tours apparaissent une fois les poules ou le tableau publiés.",
+      "save": "Enregistrer les échéances",
+      "saved": "Échéances mises à jour. Les joueurs ont été avertis.",
+      "errorInPast": "Une échéance doit être dans le futur.",
+      "errorTooSoon": "Tu ne peux pas ramener une échéance à moins de 48 heures d'ici. Les joueurs comptaient sur la date qu'on leur a donnée.",
+      "errorPassed": "Cette échéance est passée, donc elle est réglée et ne peut plus bouger. Corrige plutôt un résultat.",
+      "errorNotIncreasing": "Chaque tour doit se terminer après le précédent.",
+      "errorNotIncreasingRound": "{round} doit se terminer après le tour précédent.",
+      "errorNotReady": "Les échéances se fixent seulement quand le tournoi est ouvert ou en cours.",
+      "errorInvalid": "Ces dates n'ont pas pu être enregistrées.",
+      "errorGeneric": "Les échéances n'ont pas pu être enregistrées."
+    },
+    "availabilityGate": {
+      "title": "Tes disponibilités",
+      "poolPhase": "Phase de poules",
+      "window": "Tes heures comptent jusqu'au {date}. Coche tout ce qui marche, tes adversaires verront les heures que vous avez en commun.",
+      "cta": "Donner mes dispos",
+      "edit": "Modifier mes dispos",
+      "confirm": "Confirmer mes dispos",
+      "saveEdited": "Enregistrer mes dispos",
+      "skip": "Continuer sans donner d'heures",
+      "saved": "Dispos enregistrées. Tes parties peuvent maintenant se planifier.",
+      "minHint": "Vise au moins {hours} h de disponibilité pour que tes parties se planifient facilement.",
+      "errorNoDeadline": "L'organisateur n'a pas encore fixé l'échéance de cette phase.",
+      "errorWindowClosed": "L'échéance de cette phase est passée.",
+      "errorNotParticipant": "Seuls les joueurs inscrits peuvent répondre.",
+      "errorNotInProgress": "Le tournoi n'est pas en cours.",
+      "errorGeneric": "Impossible d'enregistrer tes dispos. Réessaie.",
+      "stakes": "Si tu ne donnes pas d'heures et que ton adversaire en donne, la partie peut être déclarée forfait contre toi à l'échéance.",
+      "rulesLink": "Comment marche l'échéance"
+    },
+    "poolRoom": {
+      "title": "Poule {n}",
+      "settledCount": "{settled}/{total} parties réglées",
+      "deadline": "À jouer avant le {date}",
+      "ready": "Prêt à planifier",
+      "waitingFor": "En attente de {names}",
+      "walkover": "Forfait",
+      "cancelled": "Annulée",
+      "played": "Jouée",
+      "toPlay": "À jouer",
+      "ping": "Rappeler",
+      "pingSentShort": "Rappelé",
+      "pingSent": "Rappel envoyé.",
+      "pingTooSoon": "Tu l'as déjà relancé récemment. Laisse passer un jour ou deux.",
+      "pingNobody": "Tout le monde a donné ses dispos.",
+      "pingError": "Impossible d'envoyer le rappel. Réessaie.",
+      "waitingForYou": "On attend tes dispos",
+      "giveMine": "Mes dispos",
+      "openRoom": "Ouvrir le clavardage de la partie"
+    },
     "goodToKnow": {
       "title": "Bon à savoir",
       "courts": "Le temps de terrain n'est pas inclus. Tu réserves ton terrain et tu partages le coût avec ton adversaire.",
       "scheduling": "Une fois le tableau sorti, ton adversaire et toi vous entendez sur quand et où jouer, avant la date limite de la ronde.",
-      "cancelRefund": "Si l'organisateur annule le tournoi, tes frais d'inscription sont remboursés automatiquement."
+      "cancelRefund": "Si l'organisateur annule le tournoi, tes frais d'inscription sont remboursés automatiquement.",
+      "deadlineRule": "Si l'échéance de la ronde passe sans que la partie soit jouée, l'app règle le pairage: la personne qui a essayé de l'organiser avance. Un forfait compte au classement mais ne touche jamais ta cote.",
+      "availabilityRule": "Donner tes dispos, c'est ce qui débloque tes parties et ce qui prouve que tu as essayé. Les messages dans le clavardage ne comptent pas."
+    },
+    "selfReport": {
+      "title": "Entrer ton résultat",
+      "subtitle": "Entre le score final convenu avec ton adversaire. Il compte tout de suite et fait avancer le tableau. L'organisateur peut corriger au besoin."
     }
   },
   "tournamentCreation": {
@@ -6669,6 +6875,9 @@
       },
       "favorites": {
         "label": "Favoris"
+      },
+      "forYou": {
+        "label": "Pour toi"
       },
       "specificTime": {
         "label": "Choisir une heure",
@@ -12170,6 +12379,10 @@
     "ogTitle": "Rejoignez un match de {sport} sur Rallia",
     "ogSpotsLeft": "{count, plural, one {1 place restante} other {# places restantes}}",
     "ogMatchFull": "Match complet",
+    "ogChallengeSingles": "Viens me défier",
+    "ogChallengeDoubles": "Viens nous défier",
+    "ogFinalScore": "Score final",
+    "ogTeamFallback": "Équipe {number}",
     "format": {
       "singles": "Simple",
       "doubles": "Double"

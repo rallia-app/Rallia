@@ -167,6 +167,7 @@ interface BeginRow {
   service_fee_cents: number;
   fee_tax_cents: number;
   amount_charged_cents: number;
+  credit_applied_cents: number;
   organizer_amount_cents: number;
   fee_payer: string;
   payout_timing: string;
@@ -247,6 +248,40 @@ Deno.serve(async req => {
     if (!reg) return err('registration_failed', 400);
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
+
+    // Fully covered by account credit: nothing to charge, so no PaymentIntent
+    // and no dependence on the organizer's Stripe onboarding. Finalize inline
+    // in the webhook's exact order: ledger first (the paid-gate and credit
+    // triggers key off it), then the slot flip with a status filter.
+    if (reg.amount_charged_cents === 0 && reg.credit_applied_cents > 0) {
+      // Shared with the webhook: ledger first, then the slot, atomically.
+      const { data: fin, error: finErr } = await admin.rpc('lt_finalize_paid_registration', {
+        p_payment_id: reg.payment_id,
+      });
+      if (finErr) return err('internal_error', 500);
+      const f = (Array.isArray(fin) ? fin[0] : fin) as
+        | { seated: boolean; already_seated: boolean }
+        | undefined;
+      if (f && !f.seated && !f.already_seated) {
+        console.error(
+          '[lt-create-registration-payment] CREDIT SPENT BUT NOT SEATED: slot was not ' +
+            'payment_pending at finalize. payment_id=%s',
+          reg.payment_id
+        );
+      }
+      return json({
+        fullyCovered: true,
+        clientSecret: null,
+        paymentId: reg.payment_id,
+        entryCents: reg.entry_cents,
+        serviceFeeCents: reg.service_fee_cents,
+        feeTaxCents: reg.fee_tax_cents,
+        amountChargedCents: 0,
+        creditAppliedCents: reg.credit_applied_cents,
+        currency: reg.currency,
+      });
+    }
+
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2023-10-16' });
 
     const currency = (reg.currency || 'CAD').toLowerCase();
@@ -264,6 +299,7 @@ Deno.serve(async req => {
       serviceFeeCents: String(reg.service_fee_cents),
       feeTaxCents: String(reg.fee_tax_cents),
       organizerAmountCents: String(reg.organizer_amount_cents),
+      creditAppliedCents: String(reg.credit_applied_cents),
       feePayer: reg.fee_payer,
       payoutTiming: reg.payout_timing,
       // Stripe-side copy of the consent record (spec §3). Absent = pre-checkbox client.
@@ -396,6 +432,7 @@ Deno.serve(async req => {
       serviceFeeCents: reg.service_fee_cents,
       feeTaxCents: reg.fee_tax_cents,
       amountChargedCents: reg.amount_charged_cents,
+      creditAppliedCents: reg.credit_applied_cents,
       currency: reg.currency,
     });
   } catch (e) {

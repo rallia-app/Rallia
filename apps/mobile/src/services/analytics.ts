@@ -283,9 +283,14 @@ export function createGameCtaPressed(props: {
 
 /** Fired when the post-feedback "what's next" prompt is answered. */
 export function postFeedbackPromptAction(props: {
-  action: 'create' | 'join' | 'dismiss';
+  /** `co_player_game`: tapped an upcoming game belonging to someone they just played with. */
+  action: 'create' | 'join' | 'dismiss' | 'co_player_game';
   match_id: string;
   sport_id: string;
+  /** Set for `co_player_game`: the game they opened. */
+  target_match_id?: string;
+  /** Set for `co_player_game`: whether that game is part of a recurring series. */
+  target_is_recurring?: boolean;
 }): void {
   capture('post_feedback_prompt_action', props);
 }
@@ -847,6 +852,11 @@ export function milestoneShared(props: {
 /** The player closed the takeover without sharing. `step` is where they left. */
 export function milestoneDismissed(props: { step: number }): void {
   capture('milestone_1000_dismissed', props);
+}
+
+/** The player opened one of Rallia's social profiles from the final step. */
+export function milestoneSocialFollowed(props: { network: string }): void {
+  capture('milestone_1000_social_followed', props);
 }
 
 // ---- Subscription ----

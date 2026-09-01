@@ -74,11 +74,7 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
   const presetColors = useMemo(
     () => ({
       presetActiveBg: colors.buttonActive,
-      presetInactiveBg: colors.buttonInactive,
-      presetActiveBorder: colors.buttonActive,
-      presetInactiveBorder: colors.border,
       presetActiveText: colors.buttonTextActive,
-      presetInactiveText: colors.text,
       textMuted: colors.textMuted,
       border: colors.border,
     }),

@@ -637,7 +637,25 @@ describe('RPC wrappers', () => {
       name: 'overrideTournamentMatchScore',
       fn: () => overrideTournamentMatchScore('tm1', 'reg1', '6-4 6-2'),
       rpc: 'tournament_override_score',
-      args: { p_tournament_match_id: 'tm1', p_winner_registration_id: 'reg1', p_score: '6-4 6-2' },
+      args: {
+        p_tournament_match_id: 'tm1',
+        p_winner_registration_id: 'reg1',
+        p_score: '6-4 6-2',
+        p_outcome: 'completed',
+      },
+    },
+    {
+      // An explicit outcome is the whole point of the override: a walkover
+      // advances a side without inventing a score for a game nobody played.
+      name: 'overrideTournamentMatchScore with an explicit outcome',
+      fn: () => overrideTournamentMatchScore('tm1', 'reg1', undefined, 'walkover'),
+      rpc: 'tournament_override_score',
+      args: {
+        p_tournament_match_id: 'tm1',
+        p_winner_registration_id: 'reg1',
+        p_score: undefined,
+        p_outcome: 'walkover',
+      },
     },
     {
       name: 'cancelTournament',

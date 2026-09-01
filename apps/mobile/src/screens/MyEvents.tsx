@@ -12,20 +12,19 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  Animated,
-} from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { EmptyState, Text, EventCardSkeleton, useEventListColors } from '@rallia/shared-components';
-import { spacingPixels, radiusPixels, primary, neutral, base } from '@rallia/design-system';
+import {
+  EmptyState,
+  SelectableChip,
+  Text,
+  EventCardSkeleton,
+  useEventListColors,
+} from '@rallia/shared-components';
+import { spacingPixels, radiusPixels, neutral, base } from '@rallia/design-system';
 import {
   useTheme,
   useAuth,
@@ -33,7 +32,7 @@ import {
   useMyTournaments,
   useMyActiveRegistrations,
 } from '@rallia/shared-hooks';
-import { tournamentToEventSummary, type EventSummary } from '@rallia/shared-services';
+import { eventTimeKey, tournamentToEventSummary, type EventSummary } from '@rallia/shared-services';
 
 import { EventSummaryCard } from '../features/events/components/EventSummaryCard';
 import SignInPrompt from '../components/SignInPrompt';
@@ -71,46 +70,6 @@ function isUpcoming(event: EventSummary): boolean {
     status === 'in_progress'
   );
 }
-
-/** Sort key: upcoming events lead with the soonest, past with the most recent. */
-function timeKey(event: EventSummary): number {
-  if (event.engine === 'league') return new Date(event.league.created_at).getTime();
-  const t = event.tournament;
-  return new Date(t.cancelled_at ?? t.start_date).getTime();
-}
-
-const FilterChip: React.FC<{
-  label: string;
-  isActive: boolean;
-  onPress: () => void;
-  isDark: boolean;
-}> = ({ label, isActive, onPress, isDark }) => {
-  const scaleAnim = useMemo(() => new Animated.Value(1), []);
-  const bgColor = isActive ? primary[500] : isDark ? neutral[800] : neutral[100];
-  const borderColor = isActive ? primary[400] : isDark ? neutral[700] : neutral[200];
-  const textColor = isActive ? base.white : isDark ? neutral[300] : neutral[600];
-
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
-        style={[styles.chip, { backgroundColor: bgColor, borderColor }]}
-        onPress={() => {
-          void lightHaptic();
-          Animated.sequence([
-            Animated.timing(scaleAnim, { toValue: 0.95, duration: 50, useNativeDriver: true }),
-            Animated.timing(scaleAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
-          ]).start();
-          onPress();
-        }}
-        activeOpacity={0.85}
-      >
-        <Text size="xs" weight={isActive ? 'semibold' : 'medium'} color={textColor}>
-          {label}
-        </Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
 
 export const MyEvents: React.FC = () => {
   const { theme } = useTheme();
@@ -207,8 +166,11 @@ export const MyEvents: React.FC = () => {
       }
     });
 
+    // Upcoming leads with the soonest, past with the most recent.
     return visible.sort((a, b) =>
-      activeTab === 'upcoming' ? timeKey(a) - timeKey(b) : timeKey(b) - timeKey(a)
+      activeTab === 'upcoming'
+        ? eventTimeKey(a) - eventTimeKey(b)
+        : eventTimeKey(b) - eventTimeKey(a)
     );
   }, [events, activeTab, currentFilter, registeredIds, userId, showArchived]);
 
@@ -295,16 +257,19 @@ export const MyEvents: React.FC = () => {
 
       <View style={styles.chipRow}>
         {chips.map(filter => (
-          <FilterChip
+          <SelectableChip
             key={filter}
             label={t(FILTER_LABEL_KEYS[filter])}
-            isActive={currentFilter === filter}
-            onPress={() =>
-              activeTab === 'upcoming'
-                ? setUpcomingFilter(filter as UpcomingFilter)
-                : setPastFilter(filter as PastFilter)
-            }
-            isDark={isDark}
+            selected={currentFilter === filter}
+            animateOnPress
+            onPress={() => {
+              void lightHaptic();
+              if (activeTab === 'upcoming') {
+                setUpcomingFilter(filter as UpcomingFilter);
+              } else {
+                setPastFilter(filter as PastFilter);
+              }
+            }}
           />
         ))}
       </View>
@@ -385,12 +350,6 @@ const styles = StyleSheet.create({
     paddingTop: spacingPixels[3],
     paddingBottom: spacingPixels[1],
     gap: spacingPixels[2],
-  },
-  chip: {
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
   },
   listContent: {
     paddingTop: spacingPixels[2],

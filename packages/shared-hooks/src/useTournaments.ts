@@ -47,6 +47,8 @@ import {
   forfeitTournamentRegistration,
   getTournamentRoundDeadlines,
   setTournamentRoundDeadlines,
+  getTournamentPhaseAvailability,
+  submitPhaseAvailability,
   extendTournamentMatchDeadline,
   getTournamentCoOrganizers,
   addTournamentCoOrganizer,
@@ -56,6 +58,10 @@ import {
   listLinkableMatchesForSlot,
   attachMatchToTournamentSlot,
   overrideTournamentMatchScore,
+  getMatchRestoreState,
+  restoreTournamentMatch,
+  type TournamentMatchOutcome,
+  type MatchRestoreState,
   cancelTournament,
   archiveTournament,
   unarchiveTournament,
@@ -85,6 +91,8 @@ import {
   type PoolStandingRow,
   type TournamentRoundDeadline,
   type RoundDeadlineInput,
+  type TournamentPhaseAvailability,
+  type SubmitPhaseAvailabilityInput,
   type TournamentCoOrganizer,
   type LinkableMatch,
   type PlayerProfile,
@@ -129,6 +137,8 @@ export const tournamentKeys = {
     [...tournamentKeys.all, 'poolStandings', tournamentId] as const,
   roundDeadlines: (tournamentId: string) =>
     [...tournamentKeys.all, 'roundDeadlines', tournamentId] as const,
+  phaseAvailability: (tournamentId: string, bracketSide: string, roundNumber: number) =>
+    [...tournamentKeys.all, 'phaseAvailability', tournamentId, bracketSide, roundNumber] as const,
   coOrganizers: (tournamentId: string) =>
     [...tournamentKeys.all, 'coOrganizers', tournamentId] as const,
   amIOrganizer: (tournamentId: string) =>
@@ -499,6 +509,50 @@ export function useAttachMatchToTournamentSlot(options: MutationOptions<Tourname
 }
 
 /**
+ * Whether this pairing still carries an undoable automated decision. Only
+ * asked for settled pairings, since a pending one can never have one.
+ */
+export function useMatchRestoreState(tournamentMatchId?: string, enabled = true) {
+  const query = useQuery<MatchRestoreState>({
+    queryKey: [...tournamentKeys.all, 'restoreState', tournamentMatchId ?? ''],
+    queryFn: () => getMatchRestoreState(tournamentMatchId as string),
+    enabled: !!tournamentMatchId && enabled,
+    staleTime: 30_000,
+  });
+  return { state: query.data, isLoading: query.isLoading };
+}
+
+/**
+ * Undo an automated decision on a pairing, putting it back to unplayed. This
+ * is the misfire path: it says the machine got it wrong, where an override
+ * says what actually happened.
+ */
+export function useRestoreTournamentMatch(options: MutationOptions<TournamentMatch> = {}) {
+  const invalidate = useTournamentDetailInvalidator();
+  const qc = useQueryClient();
+  const mutation = useMutation<
+    TournamentMatch,
+    Error,
+    { tournamentMatchId: string; tournamentId: string }
+  >({
+    mutationFn: ({ tournamentMatchId }) => restoreTournamentMatch(tournamentMatchId),
+    onSuccess: (tm, vars) => {
+      invalidate(vars.tournamentId);
+      qc.invalidateQueries({
+        queryKey: [...tournamentKeys.all, 'restoreState', vars.tournamentMatchId],
+      });
+      options.onSuccess?.(tm);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
  * Organizer/admin authoritative score override for a stalled or disputed
  * bracket match. Completes the match with the chosen winner and advances the
  * bracket.
@@ -510,13 +564,14 @@ export function useOverrideTournamentMatchScore(options: MutationOptions<Tournam
     Error,
     {
       tournamentMatchId: string;
-      winnerRegistrationId: string;
+      winnerRegistrationId: string | null;
       score?: string;
+      outcome?: TournamentMatchOutcome;
       tournamentId: string;
     }
   >({
-    mutationFn: ({ tournamentMatchId, winnerRegistrationId, score }) =>
-      overrideTournamentMatchScore(tournamentMatchId, winnerRegistrationId, score),
+    mutationFn: ({ tournamentMatchId, winnerRegistrationId, score, outcome }) =>
+      overrideTournamentMatchScore(tournamentMatchId, winnerRegistrationId, score, outcome),
     onSuccess: (tm, vars) => {
       invalidate(vars.tournamentId);
       options.onSuccess?.(tm);
@@ -704,6 +759,47 @@ export function useSetTournamentRoundDeadlines(
     onSuccess: (rows, vars) => {
       qc.invalidateQueries({ queryKey: tournamentKeys.roundDeadlines(vars.tournamentId) });
       options.onSuccess?.(rows);
+    },
+    onError: e => options.onError?.(e),
+  });
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/** Gate answers for one phase ('pool' normalises to round 0). */
+export function useTournamentPhaseAvailability(
+  tournamentId: string | undefined,
+  bracketSide: 'pool' | 'main',
+  roundNumber: number,
+  enabled = true
+) {
+  const round = bracketSide === 'pool' ? 0 : roundNumber;
+  return useQuery<TournamentPhaseAvailability[]>({
+    queryKey: tournamentKeys.phaseAvailability(tournamentId ?? '', bracketSide, round),
+    queryFn: () => getTournamentPhaseAvailability(tournamentId!, bracketSide, round),
+    enabled: !!tournamentId && enabled,
+  });
+}
+
+/** The scheduling gate: answer a phase with dispos (or skip). Upserts. */
+export function useSubmitPhaseAvailability(
+  options: MutationOptions<TournamentPhaseAvailability> = {}
+) {
+  const qc = useQueryClient();
+  const mutation = useMutation<TournamentPhaseAvailability, Error, SubmitPhaseAvailabilityInput>({
+    mutationFn: input => submitPhaseAvailability(input),
+    onSuccess: (row, vars) => {
+      qc.invalidateQueries({
+        queryKey: tournamentKeys.phaseAvailability(
+          vars.tournamentId,
+          vars.bracketSide,
+          vars.bracketSide === 'pool' ? 0 : vars.roundNumber
+        ),
+      });
+      options.onSuccess?.(row);
     },
     onError: e => options.onError?.(e),
   });

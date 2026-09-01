@@ -17,7 +17,7 @@
  * - Navigate to network detail
  */
 
-import React, { useState, useCallback, useMemo, memo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -29,7 +29,6 @@ import {
   TextInput,
   Modal,
   ScrollView,
-  Animated,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,6 +36,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
+  base,
   lightTheme,
   darkTheme,
   spacingPixels,
@@ -46,7 +46,7 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import { Text } from '@rallia/shared-components';
+import { SelectableChip, Text } from '@rallia/shared-components';
 import {
   useTheme,
   useAdminNetworks,
@@ -81,118 +81,6 @@ type NetworkTypeFilter = AdminNetworkType;
 type CertificationFilter = 'all' | 'certified' | 'uncertified';
 type PrivacyFilter = 'all' | 'public' | 'private';
 type SportFilter = string; // 'all' or sport UUID
-
-// =============================================================================
-// FILTER CHIP COMPONENT
-// =============================================================================
-
-interface FilterChipProps {
-  label: string;
-  isActive: boolean;
-  onPress: () => void;
-  isDark: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
-  materialIcon?: keyof typeof MaterialCommunityIcons.glyphMap;
-  sportName?: string;
-  showBothSportsIcon?: boolean;
-}
-
-const FilterChip = memo(function FilterChip({
-  label,
-  isActive,
-  onPress,
-  isDark,
-  icon,
-  materialIcon,
-  sportName,
-  showBothSportsIcon,
-}: FilterChipProps) {
-  const scaleAnim = useMemo(() => new Animated.Value(1), []);
-
-  const bgColor = isActive ? primary[500] : isDark ? neutral[800] : neutral[100];
-  const borderColor = isActive ? primary[400] : isDark ? neutral[700] : neutral[200];
-  const textColor = isActive ? '#ffffff' : isDark ? neutral[300] : neutral[600];
-
-  const handlePress = () => {
-    void lightHaptic();
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    onPress();
-  };
-
-  const renderIcon = () => {
-    if (showBothSportsIcon) {
-      return (
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <SportIcon sportName="tennis" size={12} color={textColor} />
-          <Text style={{ color: textColor, marginHorizontal: 1, fontSize: 8 }}>+</Text>
-          <SportIcon sportName="pickleball" size={12} color={textColor} />
-        </View>
-      );
-    }
-    if (sportName) {
-      return (
-        <SportIcon
-          sportName={sportName}
-          size={14}
-          color={textColor}
-          style={styles.filterChipIcon}
-        />
-      );
-    }
-    if (materialIcon) {
-      return (
-        <MaterialCommunityIcons
-          name={materialIcon}
-          size={14}
-          color={textColor}
-          style={styles.filterChipIcon}
-        />
-      );
-    }
-    if (icon) {
-      return <Ionicons name={icon} size={14} color={textColor} style={styles.filterChipIcon} />;
-    }
-    return null;
-  };
-
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
-        style={[
-          styles.filterChip,
-          {
-            backgroundColor: bgColor,
-            borderColor: borderColor,
-          },
-        ]}
-        onPress={handlePress}
-        activeOpacity={0.85}
-      >
-        {renderIcon()}
-        <Text size="xs" weight={isActive ? 'semibold' : 'medium'} color={textColor}>
-          {label}
-        </Text>
-        <Ionicons
-          name="chevron-down-outline"
-          size={12}
-          color={textColor}
-          style={styles.filterChipChevron}
-        />
-      </TouchableOpacity>
-    </Animated.View>
-  );
-});
 
 // =============================================================================
 // FILTER DROPDOWN MODAL
@@ -395,6 +283,9 @@ const AdminNetworksScreen: React.FC = () => {
     }),
     [themeColors, isDark]
   );
+
+  /** Chip icons track the label colour the chip renders at. */
+  const chipTint = (selected: boolean) => (selected ? base.white : colors.textMuted);
 
   // Filter options
   const certificationOptions: FilterDropdownOption<CertificationFilter>[] = useMemo(
@@ -1036,49 +927,95 @@ const AdminNetworksScreen: React.FC = () => {
         style={styles.filterBar}
       >
         {/* Sport Filter Chip */}
-        <FilterChip
+        <SelectableChip
           label={getSportLabel()}
-          showBothSportsIcon={sportFilter === 'all'}
-          sportName={
-            sportFilter !== 'all'
-              ? sports
-                  .find((s: Sport) => s.id === sportFilter)
-                  ?.name.toLowerCase()
-                  .includes('tennis')
-                ? 'tennis'
-                : 'pickleball'
-              : undefined
+          selected={sportFilter !== 'all'}
+          animateOnPress
+          icon={
+            sportFilter === 'all' ? (
+              <View style={styles.bothSportsIcon}>
+                <SportIcon sportName="tennis" size={12} color={chipTint(false)} />
+                <Text size="xs" color={chipTint(false)} style={styles.bothSportsPlus}>
+                  +
+                </Text>
+                <SportIcon sportName="pickleball" size={12} color={chipTint(false)} />
+              </View>
+            ) : (
+              <SportIcon
+                sportName={
+                  sports
+                    .find((s: Sport) => s.id === sportFilter)
+                    ?.name.toLowerCase()
+                    .includes('tennis')
+                    ? 'tennis'
+                    : 'pickleball'
+                }
+                size={14}
+                color={chipTint(true)}
+              />
+            )
           }
-          isActive={sportFilter !== 'all'}
+          trailingIcon={
+            <Ionicons
+              name="chevron-down-outline"
+              size={12}
+              color={chipTint(sportFilter !== 'all')}
+            />
+          }
           onPress={() => {
             void selectionHaptic();
             setShowSportDropdown(true);
           }}
-          isDark={isDark}
         />
 
         {/* Certification Filter Chip */}
-        <FilterChip
+        <SelectableChip
           label={getCertificationLabel()}
-          icon="shield-checkmark-outline"
-          isActive={certificationFilter !== 'all'}
+          selected={certificationFilter !== 'all'}
+          animateOnPress
+          icon={
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={14}
+              color={chipTint(certificationFilter !== 'all')}
+            />
+          }
+          trailingIcon={
+            <Ionicons
+              name="chevron-down-outline"
+              size={12}
+              color={chipTint(certificationFilter !== 'all')}
+            />
+          }
           onPress={() => {
             void selectionHaptic();
             setShowCertificationDropdown(true);
           }}
-          isDark={isDark}
         />
 
         {/* Privacy Filter Chip */}
-        <FilterChip
+        <SelectableChip
           label={getPrivacyLabel()}
-          icon="lock-closed-outline"
-          isActive={privacyFilter !== 'all'}
+          selected={privacyFilter !== 'all'}
+          animateOnPress
+          icon={
+            <Ionicons
+              name="lock-closed-outline"
+              size={14}
+              color={chipTint(privacyFilter !== 'all')}
+            />
+          }
+          trailingIcon={
+            <Ionicons
+              name="chevron-down-outline"
+              size={12}
+              color={chipTint(privacyFilter !== 'all')}
+            />
+          }
           onPress={() => {
             void selectionHaptic();
             setShowPrivacyDropdown(true);
           }}
-          isDark={isDark}
         />
 
         {/* Reset Button (only show when filters active) */}
@@ -1328,20 +1265,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[1],
     gap: spacingPixels[2],
   },
-  filterChip: {
+  bothSportsIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    borderRadius: radiusPixels.full,
-    borderWidth: 1,
-    gap: spacingPixels[2],
   },
-  filterChipIcon: {
-    marginRight: spacingPixels[1],
-  },
-  filterChipChevron: {
-    marginLeft: spacingPixels[1],
+  bothSportsPlus: {
+    marginHorizontal: 1,
   },
   resetButton: {
     flexDirection: 'row',

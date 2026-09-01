@@ -54,3 +54,4 @@ The single most damaging failure mode in this repo is inventing ad-hoc styling f
 
 - Multiple agents may share this working tree. Never `git add -A` or `git add .`; stage only files you touched, and check `git diff --cached` before committing.
 - Conventional commits. Always commit migrations together with regenerated Supabase types.
+- Work in the checkout you were given. Never create a git worktree, and never spawn worktree-isolated agents: the local Supabase DB is shared, so a sibling worktree's migrations leak into any types you regenerate.
