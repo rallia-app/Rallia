@@ -4232,9 +4232,9 @@ export async function checkInToMatch(
   // The radius used to be computed here and written straight to the row, which
   // RLS lets a player do on their own participation: the field the resolution
   // ladder trusts for a walkover and a reputation hit was settable from
-  // anywhere. It is enforced server-side now, and it accepts a game with no
-  // coordinates rather than refusing it, so the no-show rung is not blind on
-  // games agreed without a place.
+  // anywhere. It is enforced server-side now. A game with no
+  // coordinates is accepted rather than refused, but records as unverified,
+  // which the no-show rung does not treat as evidence of presence.
   try {
     const { data, error } = await supabase.rpc('check_in_to_match', {
       p_match_id: matchId,

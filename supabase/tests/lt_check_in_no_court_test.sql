@@ -9,7 +9,10 @@
 --   * a game with no coordinates accepts a self-declared check-in
 --   * a game WITH coordinates still enforces the radius
 --   * checked_in_at cannot be written directly, only through the RPC
---   * and the ladder can now tell the two sides apart: no_show fires
+--
+-- What the ladder then does with an unverified check-in is 20260901110000's
+-- concern, and lt_no_show_requires_verified_test's: it is not evidence of
+-- presence, so it does not fire the no-show rung.
 --
 -- Run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
 --        -v ON_ERROR_STOP=1 -f supabase/tests/lt_check_in_no_court_test.sql
