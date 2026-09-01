@@ -820,7 +820,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
   const handleSubmit = useCallback(async () => {
     Keyboard.dismiss();
 
-    // PreferencesStep has no blocking inputs besides the cost, so name it in the toast
+    // Cost lives on this step; give the specific message rather than the generic one
     if (
       values.locationType !== 'tbd' &&
       !values.isCourtFree &&
@@ -1428,6 +1428,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
                 isDark={isDark}
                 locale={locale}
                 isLocked={bookedSlotData !== null}
+                isEditMode={isEditMode}
               />
             )}
           </View>
@@ -1566,7 +1567,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   postSuccessStep: {
-    flex: 1,
+    // No flex: the row is two screens wide and holds a single pane, so growing
+    // would stretch it across both and centre its content off-screen.
     height: '100%',
   },
   successContainer: {
