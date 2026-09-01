@@ -9748,7 +9748,7 @@
       "lastUpdated": "Dernière mise à jour",
       "overview": "Aperçu",
       "players": "Joueurs",
-      "matches": "Matchs",
+      "matches": "Parties",
       "completed": "Terminées",
       "views": "vues",
       "sportStatistics": "Statistiques sportives",
@@ -9832,7 +9832,7 @@
         "acquisition": "Acquisition",
         "invitations": "Invitations",
         "users": "Utilisateurs",
-        "matches": "Matchs",
+        "matches": "Parties",
         "compatibility": "Compatibilité"
       },
       "compat": {
@@ -12751,7 +12751,7 @@
     "moduleLabel": "Où cela s'est-il produit ?",
     "modules": {
       "profile": "Profil",
-      "matches": "Matchs",
+      "matches": "Parties",
       "facilities": "Sites de jeu",
       "playerDirectory": "Répertoire des joueurs",
       "groupsCommunities": "Groupes et communautés",

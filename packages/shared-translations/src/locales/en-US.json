@@ -8545,7 +8545,7 @@
         "showEnabledOnly": "SMS-enabled only"
       },
       "categories": {
-        "match": "Match",
+        "match": "Game",
         "social": "Social / Community",
         "organization": "Organization",
         "system": "System",
@@ -9048,7 +9048,7 @@
       "anonymous": "Anonymous User",
       "noEmail": "No email",
       "sports": "sports",
-      "matches": "matches",
+      "matches": "games",
       "noSearchResults": "No users found matching your search",
       "noUsers": "No users found",
       "tryDifferentSearch": "Try a different search term",
@@ -9748,7 +9748,7 @@
       "lastUpdated": "Last updated",
       "overview": "Overview",
       "players": "Players",
-      "matches": "Matches",
+      "matches": "Games",
       "completed": "Completed",
       "views": "views",
       "sportStatistics": "Sport Statistics",
@@ -9832,7 +9832,7 @@
         "acquisition": "Acquisition",
         "invitations": "Invitations",
         "users": "Users",
-        "matches": "Matches",
+        "matches": "Games",
         "compatibility": "Compatibility"
       },
       "compat": {
@@ -9953,7 +9953,7 @@
       },
       "invitationType": {
         "referral": "Referral",
-        "match": "Match",
+        "match": "Game",
         "group": "Group",
         "community": "Community",
         "tournament": "Tournament",
@@ -11556,7 +11556,7 @@
     "tabs": {
       "info": "Info",
       "availability": "Availability",
-      "matches": "Matches"
+      "matches": "Games"
     },
     "about": "About",
     "accessBooking": {
@@ -12751,7 +12751,7 @@
     "moduleLabel": "Where did it happen?",
     "modules": {
       "profile": "Profile",
-      "matches": "Matches",
+      "matches": "Games",
       "facilities": "Facilities",
       "playerDirectory": "Player Directory",
       "groupsCommunities": "Groups & Communities",
