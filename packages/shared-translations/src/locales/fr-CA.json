@@ -8150,6 +8150,85 @@
         "rejected": "Rejetée"
       }
     },
+    "bugReports": {
+      "title": "Rapports de bogues",
+      "subtitle": "Les bogues signalés depuis l'app. Le statut et les notes que tu inscris ici sont affichés aux joueurs sur le tableau dans l'app.",
+      "empty": "Aucun rapport de bogue ne correspond à ces filtres.",
+      "loadError": "Impossible de charger les rapports de bogues.",
+      "noDetails": "Aucun détail fourni",
+      "anonymous": "Anonyme",
+      "saveError": "La modification n'a pas pu être enregistrée. Réessaie.",
+      "pagination": {
+        "showing": "Affichage de {start} à {end} sur {total} rapports",
+        "page": "Page {current} sur {total}"
+      },
+      "status": {
+        "new": "Nouveau",
+        "reviewed": "Examiné",
+        "in_progress": "En cours",
+        "resolved": "Résolu",
+        "closed": "Fermé"
+      },
+      "severity": {
+        "critical": "Critique",
+        "major": "Majeur",
+        "minor": "Mineur"
+      },
+      "module": {
+        "profile_settings": "Profil et réglages",
+        "match_features": "Parties",
+        "facilities": "Installations",
+        "player_directory": "Répertoire des joueurs",
+        "groups_communities": "Communautés",
+        "notifications": "Notifications",
+        "performance": "Performance",
+        "other": "Autre"
+      },
+      "table": {
+        "report": "Rapport",
+        "severity": "Gravité",
+        "module": "Section",
+        "status": "Statut",
+        "reporter": "Signalé par",
+        "appVersion": "Version de l'app",
+        "upvotes": "Votes",
+        "reportedOn": "Signalé le"
+      },
+      "filters": {
+        "searchPlaceholder": "Rechercher un rapport...",
+        "allStatuses": "Statut",
+        "allSeverities": "Gravité",
+        "allModules": "Section",
+        "allVisibilities": "Visibilité",
+        "visible": "Visible",
+        "hidden": "Masqué",
+        "clearFilters": "Effacer"
+      },
+      "detail": {
+        "title": "Rapport de bogue",
+        "reportedOn": "Signalé le {date}",
+        "hidden": "Masqué",
+        "steps": "Étapes pour reproduire",
+        "expectedVsActual": "Attendu vs observé",
+        "screenshots": "Captures d'écran",
+        "screenshotAlt": "Capture {index}",
+        "reporter": "Signalé par",
+        "appVersion": "Version de l'app",
+        "device": "Appareil",
+        "trigger": "Déclencheur",
+        "lastUpdated": "Dernière mise à jour",
+        "updateStatus": "Statut",
+        "adminNotes": "Notes admin",
+        "notesPlaceholder": "Où en est ce rapport?",
+        "notesArePublic": "Les notes sont affichées aux joueurs sur le tableau dans l'app dès que le rapport est en cours ou résolu.",
+        "visibleHint": "Ce rapport est visible par les joueurs sur le tableau dans l'app.",
+        "hiddenHint": "Ce rapport est masqué du tableau dans l'app.",
+        "hide": "Masquer aux joueurs",
+        "unhide": "Afficher aux joueurs",
+        "close": "Fermer",
+        "save": "Enregistrer"
+      }
+    },
     "sidebar": {
       "brand": "Rallia Admin",
       "dashboard": "Tableau de bord",
@@ -8157,6 +8236,7 @@
       "users": "Utilisateurs",
       "moderation": "Modération",
       "ratingProofs": "Preuves signalées",
+      "bugReports": "Rapports de bogues",
       "activityLog": "Journal d'activité",
       "alerts": "Alertes",
       "networks": "Réseaux",

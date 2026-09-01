@@ -8150,6 +8150,85 @@
         "rejected": "Rejected"
       }
     },
+    "bugReports": {
+      "title": "Bug Reports",
+      "subtitle": "Bug reports submitted from the app. The status and notes you set here are shown back to players on the in-app board.",
+      "empty": "No bug reports match these filters.",
+      "loadError": "Bug reports could not be loaded.",
+      "noDetails": "No details provided",
+      "anonymous": "Anonymous",
+      "saveError": "The change could not be saved. Try again.",
+      "pagination": {
+        "showing": "Showing {start} to {end} of {total} bug reports",
+        "page": "Page {current} of {total}"
+      },
+      "status": {
+        "new": "New",
+        "reviewed": "Reviewed",
+        "in_progress": "In Progress",
+        "resolved": "Resolved",
+        "closed": "Closed"
+      },
+      "severity": {
+        "critical": "Critical",
+        "major": "Major",
+        "minor": "Minor"
+      },
+      "module": {
+        "profile_settings": "Profile & Settings",
+        "match_features": "Games",
+        "facilities": "Facilities",
+        "player_directory": "Player Directory",
+        "groups_communities": "Communities",
+        "notifications": "Notifications",
+        "performance": "Performance",
+        "other": "Other"
+      },
+      "table": {
+        "report": "Report",
+        "severity": "Severity",
+        "module": "Area",
+        "status": "Status",
+        "reporter": "Reporter",
+        "appVersion": "App Version",
+        "upvotes": "Upvotes",
+        "reportedOn": "Reported On"
+      },
+      "filters": {
+        "searchPlaceholder": "Search bug reports...",
+        "allStatuses": "Status",
+        "allSeverities": "Severity",
+        "allModules": "Area",
+        "allVisibilities": "Visibility",
+        "visible": "Visible",
+        "hidden": "Hidden",
+        "clearFilters": "Clear"
+      },
+      "detail": {
+        "title": "Bug Report",
+        "reportedOn": "Reported on {date}",
+        "hidden": "Hidden",
+        "steps": "Steps to Reproduce",
+        "expectedVsActual": "Expected vs Actual",
+        "screenshots": "Screenshots",
+        "screenshotAlt": "Screenshot {index}",
+        "reporter": "Reporter",
+        "appVersion": "App Version",
+        "device": "Device",
+        "trigger": "Trigger",
+        "lastUpdated": "Last Updated",
+        "updateStatus": "Status",
+        "adminNotes": "Admin Notes",
+        "notesPlaceholder": "Where does this report stand?",
+        "notesArePublic": "Notes are shown to players on the in-app board once the report is in progress or resolved.",
+        "visibleHint": "This report is visible to players on the in-app board.",
+        "hiddenHint": "This report is hidden from the in-app board.",
+        "hide": "Hide from players",
+        "unhide": "Show to players",
+        "close": "Close",
+        "save": "Save"
+      }
+    },
     "sidebar": {
       "brand": "Rallia Admin",
       "dashboard": "Dashboard",
@@ -8157,6 +8236,7 @@
       "users": "Users",
       "moderation": "Moderation",
       "ratingProofs": "Rating Proofs",
+      "bugReports": "Bug Reports",
       "activityLog": "Activity Log",
       "alerts": "Alerts",
       "networks": "Networks",

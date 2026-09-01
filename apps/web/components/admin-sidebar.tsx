@@ -4,6 +4,7 @@ import { useAuth } from '@rallia/shared-hooks';
 import {
   BarChart3,
   Bell,
+  Bug,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -124,6 +125,12 @@ export function AdminSidebar() {
       href: '/admin/rating-proofs',
       label: t('ratingProofs'),
       icon: Flag,
+      exactMatch: false,
+    },
+    {
+      href: '/admin/bug-reports',
+      label: t('bugReports'),
+      icon: Bug,
       exactMatch: false,
     },
     {
