@@ -93,17 +93,21 @@ COMMIT;
 -- ÉTAPE 2 : caler les échéances exactes du doc. APRÈS CHAQUE TIRAGE.
 --
 -- `tournament_generate_pools` et `tournament_generate_knockout` posent des
--- échéances par défaut au prorata du temps restant (la phase de poules prend
--- 3/7 de start -> end_date), ce qui tombe vers le 4 septembre et non le 2. Ce
--- bloc réécrit les dates du plan.
+-- échéances par défaut au prorata du temps restant À PARTIR DU TIRAGE, pas du
+-- départ. Plus le tirage est tardif, plus elles glissent: en prod les poules
+-- ont atterri le lundi 7 septembre à 06:45 et 06:49, pas le 2. Ce bloc
+-- réécrit les dates du plan. Voir l'ÉTAPE 2-CORRECTIF plus bas.
 --
 -- Le RPC `tournament_set_round_deadlines` exige un `auth.uid()`, absent du
 -- dashboard: on écrit donc directement dans la table.
 --
 --   2a. après `tournament_generate_pools`     (ligne ('pool', 0), phase entière)
---   2b. après `tournament_generate_knockout`  (main 1..4 = 8es, QF, SF, finale)
+--   2b. après `tournament_generate_knockout`  (main 1..3 = QF, SF, finale)
 --
--- Un 5e tour n'existe pas: 8 poules x 2 qualifiés = 16, soit 4 tours.
+-- LE PLAN TABLAIT SUR UN 32. Le vrai remplissage donne 3 poules (Avancé) et
+-- 4 poules (Intermédiaire) de 4, `qualifiers_per_pool` = 2, donc 6 et 8
+-- qualifiés: un tableau de 8 des deux côtés, soit TROIS tours, pas quatre.
+-- Un 4e tour n'existe pas et ne doit pas être inséré.
 -- ============================================================================
 -- BEGIN;
 --
@@ -115,17 +119,19 @@ COMMIT;
 -- ON CONFLICT (tournament_id, bracket_side, round_number)
 -- DO UPDATE SET deadline_at = EXCLUDED.deadline_at, updated_at = now();
 --
--- -- 2b. 5 jours par tour éliminatoire.
+-- -- 2b. 5 jours par tour éliminatoire, comme promis dans la description.
+-- --     Trois tours: la finale tombe le 17, cinq jours avant end_date
+-- --     (22 septembre 23:59). Cette marge est voulue, pas un oubli.
 -- INSERT INTO public.tournament_round_deadlines (tournament_id, bracket_side, round_number, deadline_at)
 -- SELECT t.id, 'main', d.round_number, d.deadline_at
 --   FROM public.tournaments t
 --  CROSS JOIN (VALUES
---        (1::smallint, '2026-09-07 23:59:00 America/Toronto'::timestamptz),  -- 8es
---        (2::smallint, '2026-09-12 23:59:00 America/Toronto'::timestamptz),  -- quarts
---        (3::smallint, '2026-09-17 23:59:00 America/Toronto'::timestamptz),  -- demies
---        (4::smallint, '2026-09-22 23:59:00 America/Toronto'::timestamptz)   -- finale
+--        (1::smallint, '2026-09-07 23:59:00 America/Toronto'::timestamptz),  -- quarts
+--        (2::smallint, '2026-09-12 23:59:00 America/Toronto'::timestamptz),  -- demies
+--        (3::smallint, '2026-09-17 23:59:00 America/Toronto'::timestamptz)   -- finale
 --  ) AS d(round_number, deadline_at)
 --  WHERE t.name LIKE 'Série 2 Montréal · Tennis ·%'
+--    AND t.status = 'in_progress'   -- le Débutant est annulé
 -- ON CONFLICT (tournament_id, bracket_side, round_number)
 -- DO UPDATE SET deadline_at = EXCLUDED.deadline_at, updated_at = now();
 --
@@ -166,6 +172,103 @@ COMMIT;
 -- DO UPDATE SET deadline_at = EXCLUDED.deadline_at, updated_at = now();
 --
 -- COMMIT;
+
+
+-- ============================================================================
+-- ÉTAPE 2-CORRECTIF : ramener la fin des poules au MERCREDI 2 SEPTEMBRE.
+--
+-- JOUÉ EN PROD LE 31 AOÛT 2026. Les deux tournois vivants portaient la valeur
+-- par défaut du tirage, un lundi 7 septembre à 06:45 et 06:49, alors que leur
+-- description et l'annonce promettent le mercredi 2. 21 joueurs notifiés.
+-- Gardé ici parce que le cas se represente à chaque tirage tardif.
+--
+-- LE MEILLEUR CHEMIN EST L'APP, PAS CE BLOC. L'organisateur ouvre le tournoi,
+-- puis la feuille des échéances (TournamentDeadlinesSheet), qui appelle
+-- `tournament_set_round_deadlines`: audit, notification, et les gardes de
+-- 20260825160000. Ce bloc n'existe que pour le dashboard, sans `auth.uid()`.
+--
+-- ATTENTION À LA FENÊTRE. Ce RPC refuse d'AVANCER une échéance à moins de
+-- 48 h (DEADLINE_TOO_SOON). Viser le 2 septembre 23:59 par l'app n'était donc
+-- possible que jusqu'au 31 août 23:59. Passé ce moment il ne reste que ce
+-- bloc, qui contourne la garde: à n'utiliser qu'en assumant de retirer aux
+-- joueurs une fenêtre déjà affichée.
+--
+-- Le filtre est `status = 'in_progress'` et une ligne de poules qui EXISTE
+-- DÉJÀ: un INSERT poserait une échéance sur un tournoi annulé.
+--
+-- Un UPDATE brut ne notifie personne et n'audite rien. On rejoue donc les deux
+-- gestes du RPC, pour les seuls tournois réellement déplacés. Idempotent:
+-- relancer ne renotifie pas.
+-- ============================================================================
+
+BEGIN;
+
+DO $$
+DECLARE
+    v_cible timestamptz := '2026-09-02 23:59:00 America/Toronto';
+    v_id    uuid;
+    v_org   uuid;
+    v_n     integer := 0;
+BEGIN
+    FOR v_id IN
+        SELECT t.id
+          FROM public.tournaments t
+          JOIN public.tournament_round_deadlines d
+            ON d.tournament_id = t.id
+           AND d.bracket_side  = 'pool'
+           AND d.round_number  = 0
+         WHERE t.entry_fee_cents > 0
+           AND t.status = 'in_progress'
+           AND d.deadline_at IS DISTINCT FROM v_cible
+         ORDER BY t.name
+    LOOP
+        -- Une échéance atteinte est gelée: la poule est décidée, on ne
+        -- réécrit pas l'horloge (principe 7 de la spec, 20260825160000).
+        IF EXISTS (
+            SELECT 1 FROM public.tournament_round_deadlines
+             WHERE tournament_id = v_id AND bracket_side = 'pool'
+               AND round_number = 0 AND deadline_at <= now()
+        ) THEN
+            RAISE EXCEPTION 'Poules déjà échues sur %: passer par un override, pas par la date.', v_id;
+        END IF;
+
+        UPDATE public.tournament_round_deadlines
+           SET deadline_at = v_cible, updated_at = now()
+         WHERE tournament_id = v_id AND bracket_side = 'pool' AND round_number = 0;
+
+        SELECT organizer_id INTO v_org FROM public.tournaments WHERE id = v_id;
+
+        INSERT INTO public.leagues_tournaments_audit
+            (scope, entity_id, action, actor_id, payload_after)
+        VALUES ('tournament', v_id, 'set_round_deadlines', v_org,
+                jsonb_build_array(jsonb_build_object(
+                    'bracket_side', 'pool',
+                    'round_number', 0,
+                    'deadline_at',  v_cible,
+                    'via',          'mcp_sql')));
+
+        -- Sans ça, personne n'apprend que la date a bougé.
+        PERFORM public.lt_notify_tournament_deadline_changed(v_id, 'pool', '{0}'::smallint[]);
+
+        v_n := v_n + 1;
+    END LOOP;
+
+    RAISE NOTICE '% tournoi(s) ramené(s) au 2 septembre.', v_n;
+END $$;
+
+-- Une ligne au 2026-09-02 23:59 par tournoi vivant, et le compte des poussées.
+SELECT t.name,
+       to_char(d.deadline_at AT TIME ZONE 'America/Toronto', 'YYYY-MM-DD Dy HH24:MI') AS fin_des_poules,
+       (SELECT count(*) FROM public.notification n
+         WHERE n.type = 'tournament_deadline_changed' AND n.target_id = t.id
+           AND n.created_at > now() - interval '10 minutes')                          AS notifs_envoyees
+  FROM public.tournaments t
+  JOIN public.tournament_round_deadlines d
+    ON d.tournament_id = t.id AND d.bracket_side = 'pool' AND d.round_number = 0
+ WHERE t.entry_fee_cents > 0 AND t.status = 'in_progress'
+ ORDER BY t.name;
+
+COMMIT;
 
 
 -- ============================================================================
