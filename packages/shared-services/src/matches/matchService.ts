@@ -4225,105 +4225,40 @@ export interface CheckInResult {
  */
 export async function checkInToMatch(
   matchId: string,
-  playerId: string,
-  playerLat: number,
-  playerLng: number
+  _playerId: string,
+  playerLat?: number,
+  playerLng?: number
 ): Promise<CheckInResult> {
+  // The radius used to be computed here and written straight to the row, which
+  // RLS lets a player do on their own participation: the field the resolution
+  // ladder trusts for a walkover and a reputation hit was settable from
+  // anywhere. It is enforced server-side now, and it accepts a game with no
+  // coordinates rather than refusing it, so the no-show rung is not blind on
+  // games agreed without a place.
   try {
-    // 1. Fetch match with facility coordinates
-    const { data: match, error: matchError } = await supabase
-      .from('match')
-      .select(
-        `
-        id,
-        location_type,
-        custom_latitude,
-        custom_longitude,
-        facility:facility_id (
-          id,
-          latitude,
-          longitude
-        )
-      `
-      )
-      .eq('id', matchId)
-      .single();
-
-    if (matchError || !match) {
-      Logger.error('[checkInToMatch] Failed to fetch match:', matchError);
+    const { data, error } = await supabase.rpc('check_in_to_match', {
+      p_match_id: matchId,
+      p_latitude: playerLat ?? undefined,
+      p_longitude: playerLng ?? undefined,
+    });
+    if (error) {
+      Logger.error('[checkInToMatch] Check-in failed:', error);
       return { success: false, error: 'unknown' };
     }
-
-    // 2. Determine target coordinates based on location type
-    let targetLat: number | null = null;
-    let targetLng: number | null = null;
-
-    if (match.location_type === 'facility' && match.facility) {
-      // Handle facility as potential array (Supabase relation quirk)
-      const facility = Array.isArray(match.facility) ? match.facility[0] : match.facility;
-      targetLat = facility?.latitude ?? null;
-      targetLng = facility?.longitude ?? null;
-    } else if (match.location_type === 'custom') {
-      targetLat = match.custom_latitude;
-      targetLng = match.custom_longitude;
+    const row = (data ?? {}) as Record<string, unknown>;
+    if (row.success === true) {
+      return {
+        success: true,
+        distanceMeters: typeof row.distanceMeters === 'number' ? row.distanceMeters : undefined,
+      };
     }
-
-    // 3. Validate we have location coordinates
-    if (targetLat === null || targetLng === null) {
-      Logger.error('[checkInToMatch] Match has no valid location coordinates', undefined, {
-        matchId,
-        locationType: match.location_type,
-      });
-      return { success: false, error: 'no_location' };
-    }
-
-    // 4. Check if player is already checked in
-    const { data: participant, error: participantError } = await supabase
-      .from('match_participant')
-      .select('id, checked_in_at')
-      .eq('match_id', matchId)
-      .eq('player_id', playerId)
-      .eq('status', 'joined')
-      .single();
-
-    if (participantError || !participant) {
-      Logger.error('[checkInToMatch] Player is not a participant', undefined, {
-        matchId,
-        playerId,
-        error: participantError,
-      });
-      return { success: false, error: 'not_participant' };
-    }
-
-    if (participant.checked_in_at) {
-      return { success: false, error: 'already_checked_in' };
-    }
-
-    // 5. Calculate distance using Haversine formula
-    const distanceMeters = calculateDistanceMeters(playerLat, playerLng, targetLat, targetLng);
-
-    // 6. Check if within radius
-    if (distanceMeters > CHECK_IN_RADIUS_METERS) {
-      return { success: false, error: 'too_far', distanceMeters };
-    }
-
-    // 7. Update match_participant.checked_in_at
-    const { error: updateError } = await supabase
-      .from('match_participant')
-      .update({ checked_in_at: new Date().toISOString() })
-      .eq('id', participant.id);
-
-    if (updateError) {
-      Logger.error('[checkInToMatch] Failed to update checked_in_at:', updateError);
-      return { success: false, error: 'unknown' };
-    }
-
-    return { success: true, distanceMeters };
+    return {
+      success: false,
+      error: (row.error as CheckInResult['error']) ?? 'unknown',
+      distanceMeters: typeof row.distanceMeters === 'number' ? row.distanceMeters : undefined,
+    };
   } catch (err) {
-    Logger.error(
-      '[checkInToMatch] Unexpected error',
-      err instanceof Error ? err : new Error(String(err))
-    );
+    Logger.error('[checkInToMatch] Unexpected error:', err instanceof Error ? err : undefined);
     return { success: false, error: 'unknown' };
   }
 }

@@ -3335,6 +3335,7 @@ export type Database = {
           cancellation_reason:
             | Database["public"]["Enums"]["cancellation_reason_enum"]
             | null
+          check_in_verified: boolean
           checked_in_at: string | null
           created_at: string | null
           expired_at: string | null
@@ -3371,6 +3372,7 @@ export type Database = {
           cancellation_reason?:
             | Database["public"]["Enums"]["cancellation_reason_enum"]
             | null
+          check_in_verified?: boolean
           checked_in_at?: string | null
           created_at?: string | null
           expired_at?: string | null
@@ -3407,6 +3409,7 @@ export type Database = {
           cancellation_reason?:
             | Database["public"]["Enums"]["cancellation_reason_enum"]
             | null
+          check_in_verified?: boolean
           checked_in_at?: string | null
           created_at?: string | null
           expired_at?: string | null
@@ -10537,6 +10540,10 @@ export type Database = {
           membership_role: string
           membership_status: string
         }[]
+      }
+      check_in_to_match: {
+        Args: { p_latitude?: number; p_longitude?: number; p_match_id: string }
+        Returns: Json
       }
       check_peer_verification_threshold: {
         Args: { p_player_id: string; p_sport_id: string; p_threshold?: number }
