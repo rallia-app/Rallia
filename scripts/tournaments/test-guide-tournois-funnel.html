@@ -340,10 +340,11 @@
 <h2>Ce qui n'est pas à tester cette fois</h2>
 <ul>
   <li>
-    <b>Le no-show.</b> L'app sait distinguer "s'est présenté" de "ne s'est pas présenté" quand une
-    partie a été convenue, mais rien n'invite encore les joueurs à faire leur check-in sur une
-    partie de tournoi, donc cette règle ne sert presque jamais. On la branchera avant que ça compte
-    pour vrai.
+    <b>Le no-show.</b> Quand une partie a été convenue, l'app sait distinguer qui s'est présenté:
+    les parties de tournoi reçoivent le rappel de check-in comme les autres. Ce qu'on n'a pas mis
+    en fixture, c'est le cas où ça bloque: le check-in exige d'être à moins de 500 m du terrain,
+    donc il est impossible sur une partie sans endroit précis, et il s'en crée quand aucun terrain
+    n'est suggéré ou quand quelqu'un propose un moment sans dire où.
   </li>
   <li>
     <b>Le double.</b> Les quatre tournois sont en simple. En double, la pénalité de réputation suit

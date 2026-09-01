@@ -79,9 +79,13 @@ même pas qu'un résultat existait. Les deux sont là maintenant.
 
 ## Ce qui reste ouvert
 
-- **Le check-in n'est pas branché sur les tournois.** La règle qui distingue
-  "s'est présenté" de "ne s'est pas présenté" existe, mais personne n'est invité
-  à faire son check-in sur une partie de tournoi, donc elle ne sert presque
-  jamais. À faire avant que ça compte pour vrai.
+- **Le check-in ne marche pas partout.** La règle qui distingue "s'est
+  présenté" de "ne s'est pas présenté" fonctionne: les parties de tournoi
+  reçoivent le rappel de check-in comme les autres. Mais le check-in demande
+  d'être à moins de 500 m du terrain, donc il est impossible sur une partie
+  sans endroit précis, et le funnel en crée: quand aucun terrain proche n'est
+  suggéré, ou quand quelqu'un propose un moment sans préciser où. Dans ces
+  cas-là, personne ne peut faire son check-in et la règle du no-show ne peut
+  pas s'appliquer. À regarder avant que ça compte pour vrai.
 - **Défaire une décision, c'est réservé à l'organisateur.** Un joueur qui pense
   que l'app s'est trompée n'a aucun recours dans l'app: il doit t'écrire.
