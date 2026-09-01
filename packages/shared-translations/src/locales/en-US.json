@@ -5066,8 +5066,8 @@
       "draftHint": "Regenerating reshuffles the unlocked pairings. Nothing reaches your members until you publish.",
       "publish": "Publish the sheet",
       "published": "Sheet published",
-      "stateDraft": "Draft",
-      "statePublished": "Published"
+      "stateDraft": "Sheet draft",
+      "statePublished": "Sheet published"
     },
     "score": {
       "title": "Enter score",
