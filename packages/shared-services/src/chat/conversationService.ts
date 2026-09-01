@@ -622,6 +622,8 @@ export async function getNetworkByConversationId(conversationId: string): Promis
   description: string | null;
   member_count: number;
   type: 'community' | 'player_group' | string | null;
+  /** Null when the network spans every sport. */
+  sport_id: string | null;
 } | null> {
   const { data, error } = await supabase
     .from('network')
@@ -632,6 +634,7 @@ export async function getNetworkByConversationId(conversationId: string): Promis
       cover_image_url, 
       description, 
       member_count,
+      sport_id,
       network_type:network_type_id (name)
     `
     )
@@ -652,6 +655,7 @@ export async function getNetworkByConversationId(conversationId: string): Promis
     description: data.description,
     member_count: data.member_count,
     type: networkType?.name || null,
+    sport_id: data.sport_id ?? null,
   };
 }
 

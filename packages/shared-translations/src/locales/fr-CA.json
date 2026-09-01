@@ -13162,5 +13162,59 @@
     "systemNote": {
       "updated": "{name} a mis à jour ses dispos"
     }
+  },
+  "quickGame": {
+    "banner": {
+      "title": "Lance une partie",
+      "subtitle": "Choisis un jour et une heure, les autres demandent à embarquer"
+    },
+    "sheet": {
+      "title": "Partie rapide",
+      "intro": "Tout le monde dans {community} va la voir et pourra demander à embarquer.",
+      "sportLabel": "Sport",
+      "dayLabel": "Jour",
+      "otherDay": "Autre jour",
+      "timeLabel": "Heure",
+      "otherTime": "Autre heure",
+      "formatLabel": "Format",
+      "singles": "Simple",
+      "doubles": "Double",
+      "submit": "Lancer la partie",
+      "whereLabel": "Où",
+      "placeTbd": "À déterminer",
+      "durationLabel": "Durée"
+    },
+    "summary": {
+      "anyStyle": "Tous les types de partie",
+      "anyRating": "Tout classement",
+      "anyGender": "Tous les genres",
+      "youApprove": "Tu approuves chaque joueur"
+    },
+    "card": {
+      "title": "Partie ouverte",
+      "singles": "Simple",
+      "doubles": "Double",
+      "locationTbd": "Endroit à déterminer",
+      "spotsLeft": "{count} places libres",
+      "spotsLeft_one": "{count} place libre",
+      "full": "Complète",
+      "cancelled": "Annulée",
+      "past": "Déjà jouée",
+      "unavailable": "Plus disponible",
+      "youIn": "Tu embarques",
+      "youHost": "Tu organises",
+      "join": "Embarquer",
+      "viewGame": "Voir la partie",
+      "joinFailed": "Impossible d'embarquer dans cette partie. Réessaie.",
+      "loadingSpots": "Chargement…",
+      "joinRequested": "Demande envoyée à l'organisateur",
+      "askToJoin": "Demander à embarquer",
+      "requestPending": "Demande envoyée"
+    },
+    "error": {
+      "pastTitle": "Cette heure est passée",
+      "pastBody": "On t'a placé au prochain créneau. Choisis-en un autre si tu préfères.",
+      "createFailed": "Impossible de lancer la partie. Réessaie."
+    }
   }
 }

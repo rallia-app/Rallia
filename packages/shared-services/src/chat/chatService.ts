@@ -30,6 +30,7 @@ export type {
   CourtBookedMetadata,
   MatchOrganizerOption,
   MatchOrganizerMetadata,
+  MatchShareMetadata,
   MessageReaction,
   ReactionSummary,
   MessageWithSender,

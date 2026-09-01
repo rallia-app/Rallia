@@ -15,6 +15,7 @@ export {
   type CourtBookedMetadata,
   type MatchOrganizerOption,
   type MatchOrganizerMetadata,
+  type MatchShareMetadata,
   type MessageWithSender,
   type ConversationWithDetails,
   type ConversationPreview,

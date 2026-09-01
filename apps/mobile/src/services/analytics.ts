@@ -1232,6 +1232,44 @@ export function matchOrganizerCardPosted(props: {
   capture('match_organizer_card_posted', props);
 }
 
+// ============================================================================
+// QUICK GAME (community chats)
+// ============================================================================
+
+/** The quick-game sheet was opened from a community chat's banner. */
+export function quickGameOpened(props: {
+  conversation_type: string;
+  /** Null when the network row hasn't loaded yet. */
+  member_count: number | null;
+}): void {
+  capture('quick_game_opened', props);
+}
+
+/** An open game was created and announced in the community chat. */
+export function quickGameCreated(props: {
+  match_id: string;
+  sport_id: string;
+  sport_name: string;
+  format: 'singles' | 'doubles';
+  /** True when the community pinned the sport (no picker was shown). */
+  network_scoped_sport: boolean;
+  /** True when the host picked one of their courts instead of leaving it TBD. */
+  has_facility: boolean;
+  /** 0 = today. The whole point is measuring how short-notice these are. */
+  days_ahead: number;
+}): void {
+  capture('quick_game_created', props);
+}
+
+/** Someone joined an open game straight from the chat card. */
+export function quickGameJoined(props: {
+  match_id: string;
+  format: 'singles' | 'doubles';
+  spots_left_before: number;
+}): void {
+  capture('quick_game_joined', props);
+}
+
 /** A participant thumbs-up'd (or removed a vote on) an option. */
 export function matchOrganizerVoteCast(props: {
   sport_id: string;

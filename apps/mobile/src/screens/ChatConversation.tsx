@@ -53,6 +53,7 @@ import {
   MessageList,
   MessageInput,
   MatchOrganizerBanner,
+  QuickGameBanner,
   ChatActionBanner,
   AnnouncementNotice,
   PoolRoomLockedNotice,
@@ -83,6 +84,8 @@ interface NetworkInfo {
   cover_image_url: string | null;
   member_count: number;
   type: 'community' | 'player_group' | string | null;
+  /** Null when the network spans every sport. */
+  sport_id: string | null;
 }
 
 export default function ChatConversationScreen() {
@@ -453,6 +456,31 @@ export default function ChatConversationScreen() {
     if (!isRoundChat && !isSmallChat) return false;
     return participantIds.length >= 2 && participantIds.length <= 4;
   }, [conversation, playerId, participantIds]);
+
+  // A community chat has too many members for the Organizer (its engine only
+  // offers slots EVERY participant is free for, and its card needs a vote from
+  // each of them). The question here is the opposite one anyway: not "when can
+  // we all play" but "here is a game, who's in". Hence a separate quick path.
+  const canQuickCreateGame = useMemo(() => {
+    if (!conversation || !playerId) return false;
+    return conversation.conversation_type === 'community';
+  }, [conversation, playerId]);
+
+  const handleQuickCreateGame = useCallback(() => {
+    if (!conversationId || !playerId) return;
+    lightHaptic();
+    Analytics.quickGameOpened({
+      conversation_type: conversation?.conversation_type ?? 'unknown',
+      member_count: networkInfo?.member_count ?? null,
+    });
+    SheetManager.show('quick-match-create', {
+      payload: {
+        conversationId,
+        networkSportId: networkInfo?.sport_id ?? null,
+        networkName: networkInfo?.name ?? null,
+      },
+    });
+  }, [conversationId, playerId, conversation, networkInfo]);
 
   const handleOrganizeMatch = useCallback(() => {
     if (!playerId || !conversationId || participantIds.length < 2) return;
@@ -972,6 +1000,9 @@ export default function ChatConversationScreen() {
 
       {/* Prominent pinned entry point into the Match Organizer. */}
       {canOrganizeMatch && <MatchOrganizerBanner onPress={handleOrganizeMatch} />}
+
+      {/* Community chats get the quick game instead: post an open game here. */}
+      {canQuickCreateGame && <QuickGameBanner onPress={handleQuickCreateGame} />}
 
       {poolRoomTournamentId && poolNumber != null && (
         <PoolRoomBoard tournamentId={poolRoomTournamentId} poolNumber={poolNumber} />

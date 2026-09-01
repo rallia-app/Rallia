@@ -13162,5 +13162,59 @@
     "systemNote": {
       "updated": "{name} updated their availability"
     }
+  },
+  "quickGame": {
+    "banner": {
+      "title": "Post a game",
+      "subtitle": "Pick a day and a time, players ask to join here"
+    },
+    "sheet": {
+      "title": "Quick game",
+      "intro": "Everyone in {community} will see it and can ask to join.",
+      "sportLabel": "Sport",
+      "dayLabel": "Day",
+      "otherDay": "Other day",
+      "timeLabel": "Time",
+      "otherTime": "Other time",
+      "formatLabel": "Format",
+      "singles": "Singles",
+      "doubles": "Doubles",
+      "submit": "Post the game",
+      "whereLabel": "Where",
+      "placeTbd": "Decide later",
+      "durationLabel": "How long"
+    },
+    "summary": {
+      "anyStyle": "All game types",
+      "anyRating": "Any rating",
+      "anyGender": "Any gender",
+      "youApprove": "You approve each player"
+    },
+    "card": {
+      "title": "Open game",
+      "singles": "Singles",
+      "doubles": "Doubles",
+      "locationTbd": "Place TBD",
+      "spotsLeft": "{count} spots left",
+      "spotsLeft_one": "{count} spot left",
+      "full": "Full",
+      "cancelled": "Cancelled",
+      "past": "Already played",
+      "unavailable": "No longer available",
+      "youIn": "You're in",
+      "youHost": "You host",
+      "join": "Join",
+      "viewGame": "View game",
+      "joinFailed": "Couldn't join this game. Please try again.",
+      "loadingSpots": "Loading…",
+      "joinRequested": "Request sent to the host",
+      "askToJoin": "Ask to join",
+      "requestPending": "Request sent"
+    },
+    "error": {
+      "pastTitle": "That time has passed",
+      "pastBody": "We moved you to the next open slot. Pick another if you prefer.",
+      "createFailed": "Couldn't post the game. Please try again."
+    }
   }
 }

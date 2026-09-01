@@ -62,6 +62,7 @@ export type MessageType =
   | 'court_booking_prompt'
   | 'court_booked'
   | 'match_organizer'
+  | 'match_share'
   | 'pool_room_welcome';
 
 /** metadata for a 'court_booking_prompt' system message. */
@@ -165,10 +166,39 @@ export interface MatchOrganizerMetadata {
   confirmed_option_index?: number | null;
 }
 
+/**
+ * metadata for a 'match_share' card: the game announcement the
+ * post_match_to_network_chats trigger posts into every network chat the
+ * creator belongs to. Written by Postgres, so the shape is the trigger's.
+ */
+export interface MatchShareMetadata {
+  kind: 'match_share';
+  /** Suppresses the new_message notification fan-out. */
+  silent?: boolean;
+  match_id: string;
+  creator_id: string;
+  sport_id: string;
+  sport_name: string | null;
+  sport_display: string | null;
+  format: 'singles' | 'doubles' | string;
+  /** YYYY-MM-DD. */
+  match_date: string;
+  /** HH:MM:SS in the match timezone. */
+  start_time: string;
+  end_time: string | null;
+  timezone: string | null;
+  location_type: string | null;
+  /** Facility, custom location name, or address; null when the place is TBD. */
+  place_name: string | null;
+  min_rating_label: string | null;
+  is_public: boolean;
+}
+
 export type MessageMetadata =
   | CourtBookingPromptMetadata
   | CourtBookedMetadata
   | MatchOrganizerMetadata
+  | MatchShareMetadata
   | Record<string, unknown>;
 
 /**
