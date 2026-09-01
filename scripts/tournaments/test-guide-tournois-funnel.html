@@ -42,6 +42,13 @@
     qui on attend. Deux de tes adversaires ont déjà répondu, un n'a rien fait.
   </li>
   <li>
+    Avant de remplir quoi que ce soit, lis les deux lignes au-dessus de la grille. Elles disent ce
+    que ça coûte de ne rien donner, et il y a un lien <i>Comment marche l'échéance</i> qui ouvre
+    toutes les règles en français ordinaire. C'est nouveau: avant, la seule place où c'était écrit,
+    c'était la notification qui t'annonçait que ça venait de t'arriver. Dis-nous si une phrase
+    sonne faux, menaçante, ou pas claire.
+  </li>
+  <li>
     Tape <i>Donner mes dispos</i>. La grille s'ouvre déjà remplie avec tes disponibilités
     habituelles: tu ajustes, tu ne repars pas de zéro. Enregistre.
   </li>
@@ -163,10 +170,18 @@
       <td>Vous avez joué. L'app ne touche à rien.</td>
     </tr>
     <tr>
-      <td><b>Forfait</b>, avec un gagnant</td>
+      <td><b>Forfait</b>, un seul a essayé</td>
       <td>
-        Un des deux a fait des gestes, l'autre non. Celui qui a essayé gagne. Deux de tes trois
-        parties sont dans ce cas: tu avais donné tes heures, eux non.
+        Un des deux a fait des gestes, l'autre non. Celui qui a essayé gagne.
+      </td>
+    </tr>
+    <tr>
+      <td><b>Forfait</b>, les deux ont essayé</td>
+      <td>
+        Les deux ont donné leurs dispos et se sont relancés, mais une des deux personnes en a
+        nettement fait plus: répondu plus vite, donné plus d'heures. C'est la règle la plus
+        discutable de la liste et on veut ton avis dessus. Une de tes trois parties est réglée
+        comme ça.
       </td>
     </tr>
     <tr>
@@ -193,8 +208,11 @@
     pas à ta cote et ne change rien à tes points Rallia.
   </li>
   <li>
-    Vérifie tes trois parties à toi. Tu devrais avoir une partie jouée gagnée 8-5, et deux gains par
-    forfait.
+    Vérifie tes trois parties à toi: une partie jouée gagnée 8-5, un gain par forfait contre
+    quelqu'un qui n'avait rien donné, et un gain par forfait contre quelqu'un qui <b>avait</b>
+    donné ses dispos et s'était manifesté, mais moins que toi. Cette dernière est celle sur
+    laquelle on veut ton avis: est-ce que c'est un gain que tu accepterais de recevoir, et est-ce
+    que c'est une défaite que tu accepterais de prendre?
   </li>
   <li>
     Va voir tes notifications: chacune de ces décisions t'explique maintenant laquelle des règles a
@@ -271,15 +289,66 @@
   quelqu'un passe, que ça atterrit sur ton bureau.
 </p>
 
+<h2>9. Contester un score qu'on a inscrit contre toi</h2>
+<p>Tournoi: <i>[JDL v4] L'entente</i></p>
+<p>
+  Un score entré fait foi tout de suite: plus besoin que l'adversaire le confirme. Le contrepoids,
+  c'est que tu as 48 h pour dire qu'il est faux. Un de tes adversaires vient d'en inscrire un.
+</p>
+<ol>
+  <li>
+    Regarde tes notifications: <i>Le score a été inscrit</i>, avec le nom de la personne qui l'a
+    entré. Sans ça, la fenêtre de 48 h se fermerait sur quelqu'un qui ne sait même pas qu'un
+    résultat existe.
+  </li>
+  <li>
+    Ouvre la partie. Le score est là, et il y a <i>Contester ce score</i>.
+  </li>
+  <li>
+    Tape-le. On te demande de confirmer, parce que contester veut dire que c'est l'organisateur qui
+    tranche, pas l'app. Une fois contesté, la partie n'est plus réglée automatiquement.
+  </li>
+</ol>
+<p>
+  <b>À valider:</b> est-ce que 48 h est le bon délai, et est-ce que le bouton est assez visible sans
+  encourager à contester un score juste parce qu'on a perdu?
+</p>
+
+<h2>10. L'échéance ne bouge plus une fois passée</h2>
+<p>Tournoi: <i>[JDL v4] L'échéance</i> (tu es l'organisateur)</p>
+<p>
+  C'est le changement direct de ton commentaire sur les 72 heures. Avant, l'app se donnait des
+  prolongations toute seule. Maintenant elle ne s'en donne aucune, et toi non plus une fois la date
+  passée.
+</p>
+<ol>
+  <li>
+    Va dans <i>Échéances des tours</i>. Essaie de repousser l'échéance de la poule, qui est passée.
+    L'app refuse: <i>Cette échéance est passée, donc elle est réglée et ne peut plus bouger.</i>
+  </li>
+  <li>
+    Fais le même essai sur <i>[JDL v4] Le parcours</i>, dont l'échéance est encore devant: là ça
+    marche, et les joueurs sont avertis.
+  </li>
+</ol>
+<p>
+  <b>Le principe:</b> déplacer une date, c'est une décision d'organisateur qui se prend pendant que
+  les joueurs peuvent encore en profiter. Après coup, ça change un résultat déjà rendu, et pour ça
+  il y a corriger le résultat ou défaire la décision (section 7), pas réécrire l'horloge.
+</p>
+
 <h2>Ce qui n'est pas à tester cette fois</h2>
 <ul>
   <li>
-    <b>Contester un score.</b> Même chose: un score entré est final tout de suite et contestable
-    pendant 48 h, la mécanique existe, l'écran non.
+    <b>Le no-show.</b> L'app sait distinguer "s'est présenté" de "ne s'est pas présenté" quand une
+    partie a été convenue, mais rien n'invite encore les joueurs à faire leur check-in sur une
+    partie de tournoi, donc cette règle ne sert presque jamais. On la branchera avant que ça compte
+    pour vrai.
   </li>
   <li>
-    <b>Les phases éliminatoires.</b> Les trois tournois s'arrêtent aux poules. La logique est la
-    même en élimination, avec un seuil plus serré pour départager.
+    <b>Le double.</b> Les quatre tournois sont en simple. En double, la pénalité de réputation suit
+    maintenant la personne qui n'a rien fait au lieu de frapper les deux partenaires, mais il n'y a
+    pas de fixture pour te le montrer.
   </li>
   <li>
     Les tournois payants, les inscriptions et les remboursements: rien n'a changé depuis ta dernière
@@ -288,6 +357,6 @@
 </ul>
 
 <p>
-  Comme d'habitude, une capture d'écran et le nom du tournoi suffisent. Et si un des trois chemins
-  te semble simplement de trop, c'est le genre de commentaire qui nous est le plus utile.
+  Comme d'habitude, une capture d'écran et le nom du tournoi suffisent. Et si un des chemins te
+  semble simplement de trop, c'est le genre de commentaire qui nous est le plus utile.
 </p>

@@ -221,12 +221,16 @@ RETURNS void LANGUAGE sql AS $$
       (tournament_id, bracket_side, round_number, player_id, outcome,
        responded_at, hours_in_window, grid_snapshot)
   SELECT p_t, p_side, p_round, p_user,
-         CASE WHEN p_state = 'engaged' THEN 'edited' ELSE 'skipped' END,
+         CASE WHEN p_state IN ('engaged', 'thin') THEN 'edited' ELSE 'skipped' END,
          (SELECT min(created_at) FROM tournament_matches
            WHERE tournament_id = p_t AND bracket_side = p_side)
-           + CASE WHEN p_state = 'engaged' THEN interval '2 hours' ELSE interval '6 days' END,
-         CASE WHEN p_state = 'engaged' THEN 14 ELSE 0 END,
-         CASE WHEN p_state = 'engaged'
+           + CASE WHEN p_state = 'engaged' THEN interval '2 hours'
+                  WHEN p_state = 'thin'    THEN interval '4 days'
+                  ELSE interval '6 days' END,
+         CASE WHEN p_state = 'engaged' THEN 14
+              WHEN p_state = 'thin'    THEN 3
+              ELSE 0 END,
+         CASE WHEN p_state IN ('engaged', 'thin')
               THEN '[{"day":"monday","hour":18},{"day":"monday","hour":19},
                      {"day":"tuesday","hour":18},{"day":"wednesday","hour":19},
                      {"day":"thursday","hour":18},{"day":"saturday","hour":10},
@@ -245,6 +249,7 @@ DECLARE
     v_b     uuid;
     v_c     uuid;
     v_d     uuid;
+    v_gap_tm uuid;
     v_r     uuid[];
     v_tm    tournament_matches;
     v_match uuid;
@@ -308,6 +313,41 @@ BEGIN
     VALUES (v_tm.id, v_match, v_opp, now() - interval '2 hours',
             now() + interval '22 hours');
 
+    -- A second Jean pairing carries a score somebody ELSE declared, inside its
+    -- 48 h contest window. A declared score is final on entry now, so this
+    -- window is the only counterweight the other side has, and until today
+    -- nothing told them it existed.
+    SELECT tm.* INTO v_tm
+      FROM tournament_matches tm
+      JOIN tournament_registrations r1 ON r1.id = tm.player1_registration_id
+      JOIN tournament_registrations r2 ON r2.id = tm.player2_registration_id
+     WHERE tm.tournament_id = v_b AND tm.bracket_side = 'pool'
+       AND v_jdl IN (r1.user_id, r2.user_id)
+       AND tm.match_id IS NULL
+     ORDER BY tm.id LIMIT 1;
+    IF v_tm.id IS NOT NULL THEN
+        SELECT CASE WHEN r1.user_id = v_jdl THEN r2.user_id ELSE r1.user_id END
+          INTO v_opp
+          FROM tournament_registrations r1, tournament_registrations r2
+         WHERE r1.id = v_tm.player1_registration_id AND r2.id = v_tm.player2_registration_id;
+
+        INSERT INTO match (sport_id, created_by, match_date, start_time, end_time)
+        VALUES ((SELECT id FROM sport WHERE name = 'tennis'), v_opp,
+                (now() - interval '1 day')::date, '19:00', '20:30')
+        RETURNING id INTO v_match;
+        INSERT INTO match_participant (match_id, player_id, team_number, status)
+        VALUES (v_match, v_opp, 1, 'joined'), (v_match, v_jdl, 2, 'joined')
+        ON CONFLICT (match_id, player_id) DO UPDATE
+          SET team_number = EXCLUDED.team_number, status = 'joined';
+        UPDATE tournament_matches SET match_id = v_match WHERE id = v_tm.id;
+
+        PERFORM pg_temp.as_user(v_opp);
+        PERFORM public.submit_match_result_for_match(
+            v_match, v_opp, 1,
+            '[{"team1_score": 6, "team2_score": 3}, {"team1_score": 6, "team2_score": 4}]'::jsonb);
+        PERFORM pg_temp.as_user(v_jdl);
+    END IF;
+
     -- ===================================================== C. L'échéance
     -- The deadline has passed and the ladder decides for real below, so the
     -- board shows outcomes it actually produced rather than ones we typed.
@@ -339,7 +379,27 @@ BEGIN
     PERFORM pg_temp.gate(v_c, v_jdl,       'engaged');
     PERFORM pg_temp.gate(v_c, v_mates[1],  'passive');
     PERFORM pg_temp.gate(v_c, v_mates[2],  'engaged');
-    PERFORM pg_temp.gate(v_c, v_mates[3],  'passive');
+    -- Mate 3 answers too, but late and thin. With both of them having reached
+    -- out, Jean and mate 3 are BOTH engaged and the app separates them on how
+    -- much each actually did: the gap rule, which is the rung most worth
+    -- arguing about and the one no fixture showed before.
+    PERFORM pg_temp.gate(v_c, v_mates[3],  'thin');
+
+    SELECT tm.id INTO v_gap_tm
+      FROM tournament_matches tm
+      JOIN tournament_registrations r1 ON r1.id = tm.player1_registration_id
+      JOIN tournament_registrations r2 ON r2.id = tm.player2_registration_id
+     WHERE tm.tournament_id = v_c AND tm.bracket_side = 'pool'
+       AND r1.user_id IN (v_jdl, v_mates[3]) AND r2.user_id IN (v_jdl, v_mates[3])
+     LIMIT 1;
+    IF v_gap_tm IS NULL THEN
+        RAISE EXCEPTION 'no Jean/mate-3 pairing found for the gap rule';
+    END IF;
+    -- Both reached out on this pairing, so it is not the no-attempt case and
+    -- the signals are allowed to decide it.
+    INSERT INTO leagues_tournaments_audit (scope, entity_id, action, actor_id, payload_after)
+    SELECT 'tournament_match', v_gap_tm, 'funnel_pinged', u, '{}'::jsonb
+      FROM unnest(ARRAY[v_jdl, v_mates[3]]) u;
 
     -- The other pool carries the fourth outcome: two who tried equally hard and
     -- still did not play. Nobody is at fault, so that game is cancelled rather
