@@ -171,7 +171,11 @@ export interface FacilityDetailScreenParams {
  */
 export interface SportProfileScreenParams {
   sportId: string;
-  sportName: 'tennis' | 'pickleball';
+  /**
+   * Omitted by the `sport/:sportId` deep link, which only carries the id.
+   * The screen resolves the name from the player's sports when it is absent.
+   */
+  sportName?: 'tennis' | 'pickleball';
   /** Optional sheet to auto-open on mount */
   openSheet?: 'preferences' | 'rating' | 'favorite-facilities';
 }
