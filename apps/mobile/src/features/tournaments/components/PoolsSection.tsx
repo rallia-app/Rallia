@@ -14,6 +14,8 @@ import { Button, Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, base } from '@rallia/design-system';
 import type { PoolStandingRow, TournamentMatch } from '@rallia/shared-services';
 
+import { isOrganizerActionable, isSettled } from '../matchStatus';
+
 type Colors = {
   text: string;
   textMuted: string;
@@ -27,10 +29,8 @@ type Colors = {
 
 const POOL_LETTERS = 'ABCDEFGHIJ';
 
-const TERMINAL = new Set(['completed', 'retired', 'walkover', 'cancelled']);
-
 export function poolsComplete(poolMatches: TournamentMatch[]): boolean {
-  return poolMatches.length > 0 && poolMatches.every(m => TERMINAL.has(m.status));
+  return poolMatches.length > 0 && poolMatches.every(m => isSettled(m.status));
 }
 
 export const PoolsSection: React.FC<{
@@ -171,10 +171,10 @@ export const PoolsSection: React.FC<{
               const p2 = m.player2_registration_id
                 ? (nameByRegId.get(m.player2_registration_id) ?? '—')
                 : '—';
-              const settled = TERMINAL.has(m.status);
+              const settled = isSettled(m.status);
               // Same gating as the knockout renderer: participants act on their
-              // own pending game, the organizer records others' games and may
-              // quietly correct a completed one; everyone else just reads.
+              // own pending game, the organizer opens any settled one to correct
+              // it or undo the ladder; everyone else just reads.
               const callerInMatch =
                 !!currentUserId &&
                 [m.player1_registration_id, m.player2_registration_id].some(
@@ -184,7 +184,7 @@ export const PoolsSection: React.FC<{
               const canOverride =
                 isOrganizer &&
                 !canAttach &&
-                (m.status === 'pending' || m.status === 'completed') &&
+                isOrganizerActionable(m.status) &&
                 !!onOrganizerOverride;
               const tappable = canAttach || canOverride;
               // The caller's own unplayed game is the one row here they can do
