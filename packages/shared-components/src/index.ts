@@ -90,11 +90,13 @@ export type { OfflineIndicatorProps, NetworkStatus } from './feedback/OfflineInd
 export { default as Overlay } from './Overlay';
 export { default as MatchCard } from './MatchCard';
 export { default as MyMatchCard } from './MyMatchCard';
+export { PlayerSlotRow, buildPlayerSlots } from './PlayerSlotRow';
 export { default as AppHeader } from './AppHeader';
 export { default as SettingsModal } from './SettingsModal';
 
 export type { MatchCardProps } from './MatchCard';
 export type { MyMatchCardProps } from './MyMatchCard';
+export type { PlayerSlotRowProps, PlayerSlot } from './PlayerSlotRow';
 
 // Header Components
 export {

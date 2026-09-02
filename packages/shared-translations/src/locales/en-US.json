@@ -3337,7 +3337,8 @@
     "courtStatus": {
       "readyToPlay": "Ready to Play",
       "courtBooked": "Court Booked",
-      "courtsAvailable": "{count} courts available"
+      "courtsAvailable": "{count} courts available",
+      "courtsAvailable_one": "{count} court available"
     },
     "tier": {
       "mostWanted": "Must-Play",
@@ -13297,6 +13298,7 @@
       "full": "Full",
       "cancelled": "Cancelled",
       "past": "Already played",
+      "live": "Happening now",
       "unavailable": "No longer available",
       "youIn": "You're in",
       "youHost": "You host",

@@ -189,8 +189,12 @@ export const linking: LinkingOptions<RootStackParamList> = {
 
       // Shared screens
       UserProfile: 'profile/:userId?',
-      PlayerProfile: 'player/:playerId',
-      SportProfile: 'sport/:sportId/:playerId?',
+      // The optional sport scopes the ratings, preferences and game history the
+      // screen already filters by sport when the param is present.
+      PlayerProfile: 'player/:playerId/:sportId?',
+      // Own sport profile: an editor for the signed-in player, so it takes no
+      // player segment. "That player, in this sport" is PlayerProfile above.
+      SportProfile: 'sport/:sportId',
       Settings: 'settings',
       Notifications: 'notifications',
       NotificationPreferences: 'notifications/preferences',
