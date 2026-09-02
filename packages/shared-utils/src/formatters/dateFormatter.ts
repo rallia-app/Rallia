@@ -576,3 +576,21 @@ export function formatIntuitiveDateInTimezone(
     label: formattedDate,
   };
 }
+
+/**
+ * Length of a game as a compact label: "1h30", "2h", "45min". An end time
+ * earlier than the start means the game crosses midnight.
+ *
+ * @param startTimeStr - Start time string in HH:MM format
+ * @param endTimeStr - End time string in HH:MM format
+ */
+export function formatMatchDuration(startTimeStr: string, endTimeStr: string): string {
+  const [startH, startM] = startTimeStr.split(':').map(Number);
+  const [endH, endM] = endTimeStr.split(':').map(Number);
+  let minutes = endH * 60 + endM - (startH * 60 + startM);
+  if (minutes <= 0) minutes += 24 * 60;
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes % 60;
+  if (hours === 0) return `${rem}min`;
+  return rem > 0 ? `${hours}h${rem.toString().padStart(2, '0')}` : `${hours}h`;
+}

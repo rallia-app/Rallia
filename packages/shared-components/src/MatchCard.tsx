@@ -13,7 +13,7 @@
  */
 
 import React, { useMemo, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, Animated, Easing } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './foundation/Text';
@@ -36,13 +36,15 @@ import {
   getTimeDifferenceFromNow,
   getMatchEndTimeDifferenceFromNow,
   formatIntuitiveDateInTimezone,
-  getProfilePictureUrl,
+  formatMatchDuration,
   deriveMatchStatus,
   lightHaptic,
   type MatchTier,
   getMatchTier,
 } from '@rallia/shared-utils';
 import { TranslationKey } from '@rallia/shared-translations';
+
+import { PlayerSlotRow, buildPlayerSlots } from './PlayerSlotRow';
 
 // =============================================================================
 // TIER-BASED GRADIENT PALETTES (using design system tokens)
@@ -133,8 +135,6 @@ const CARD_HORIZONTAL_MARGIN = spacingPixels[4]; // 16px each side
 const CARD_PADDING = spacingPixels[4]; // 16px
 const GRADIENT_STRIP_HEIGHT = 4;
 
-// Slot sizes
-const SLOT_SIZE = 32;
 const CHIP_BG_ALPHA_LIGHT = '15';
 const CHIP_BG_ALPHA_DARK = '30';
 
@@ -179,9 +179,6 @@ interface ThemeColors {
   primaryLight: string;
   secondary: string;
   secondaryLight: string;
-  slotEmpty: string;
-  slotEmptyBorder: string;
-  avatarPlaceholder: string;
   // Tier-aware accent colors (set based on match tier)
   tierAccent: string;
   tierAccentLight: string;
@@ -235,19 +232,7 @@ function getRelativeTimeDisplay(
   // Format start time (locale-aware: 12h for English, 24h for French)
   const startResult = formatTimeInTimezone(dateString, startTime, tz, locale);
 
-  // Calculate duration from start and end times
-  const [startH, startM] = startTime.split(':').map(Number);
-  const [endH, endM] = endTime.split(':').map(Number);
-  let durationMin = endH * 60 + endM - (startH * 60 + startM);
-  if (durationMin <= 0) durationMin += 24 * 60; // handle midnight crossing
-  const durationHours = Math.floor(durationMin / 60);
-  const durationRemMin = durationMin % 60;
-  const durationStr =
-    durationHours > 0
-      ? durationRemMin > 0
-        ? `${durationHours}h${durationRemMin.toString().padStart(2, '0')}`
-        : `${durationHours}h`
-      : `${durationRemMin}min`;
+  const durationStr = formatMatchDuration(startTime, endTime);
 
   const separator = t('common.time.timeSeparator');
   const timeRange = `${startResult.formattedTime}${separator}${durationStr}`;
@@ -354,7 +339,6 @@ function getCheckInWindowStatus(
 interface PlayerSlotsProps {
   match: MatchWithDetails;
   participantInfo: { current: number; total: number; spotsLeft: number };
-  colors: ThemeColors;
   isDark: boolean;
   t: (key: TranslationKey, options?: TranslationOptions) => string;
   /** Current user's player ID to check if they're invited */
@@ -371,29 +355,17 @@ interface PlayerSlotsProps {
 const PlayerSlots: React.FC<PlayerSlotsProps> = ({
   match,
   participantInfo,
-  colors,
   isDark,
   t,
   currentPlayerId,
   tier,
   onPlayerPress,
 }) => {
-  // Tier-aware avatar border color
-  const avatarBorderColor = (() => {
-    switch (tier) {
-      case 'expired':
-        return isDark ? neutral[500] : neutral[400];
-      default:
-        return isDark ? primary[400] : primary[500];
-    }
-  })();
-
   // Only include joined participants
   const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
 
   // Identify host and other participants using is_host flag
   const hostParticipant = joinedParticipants.find(p => p.is_host);
-  const otherParticipants = joinedParticipants.filter(p => !p.is_host);
 
   // Check if current user has been invited (pending status)
   const isInvited = currentPlayerId
@@ -419,109 +391,16 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({
   const invitedBadgeColor = isDark ? primary[400] : primary[500];
   const pendingBadgeColor = isDark ? secondary[400] : secondary[500];
 
-  // Build slots array
-  const slots: Array<{
-    filled: boolean;
-    avatarUrl?: string | null;
-    isHost: boolean;
-    playerId?: string | null;
-  }> = [];
-
-  // First slot is always the host
-  // Use host participant's profile, fallback to created_by_player for backwards compatibility
-  const hostProfile = hostParticipant?.player?.profile ?? match.created_by_player?.profile;
-  slots.push({
-    filled: true,
-    avatarUrl: getProfilePictureUrl(hostProfile?.profile_picture_url),
-    isHost: true,
-    playerId:
-      hostParticipant?.player?.id ??
-      hostParticipant?.player_id ??
-      match.created_by_player?.id ??
-      match.created_by,
-  });
-
-  // Add participant slots (only non-host joined participants)
-  // Normalize URLs to use current environment's Supabase URL
-  for (let i = 0; i < participantInfo.total - 1; i++) {
-    const participant = otherParticipants[i];
-    slots.push({
-      filled: !!participant,
-      avatarUrl: getProfilePictureUrl(participant?.player?.profile?.profile_picture_url),
-      isHost: false,
-      playerId: participant?.player?.id ?? participant?.player_id,
-    });
-  }
+  const slots = buildPlayerSlots(match, participantInfo.total);
 
   return (
     <View style={styles.slotsContainer}>
-      <View style={styles.slotsRow}>
-        {slots.map((slot, index) => {
-          const isPressable = slot.filled && !!slot.playerId && !!onPlayerPress;
-          const SlotContainer = isPressable ? TouchableOpacity : View;
-          return (
-            <View key={index} style={styles.slotWrapper}>
-              <SlotContainer
-                {...(isPressable
-                  ? {
-                      onPress: () => onPlayerPress!(slot.playerId!),
-                      activeOpacity: 0.7,
-                      accessibilityRole: 'button' as const,
-                      hitSlop: { top: 6, bottom: 6, left: 0, right: 0 },
-                    }
-                  : {})}
-                style={[
-                  styles.slot,
-                  index > 0 && { marginLeft: -8 }, // Overlap avatars
-                  slot.filled
-                    ? {
-                        backgroundColor: slot.avatarUrl
-                          ? colors.tierAccent
-                          : colors.avatarPlaceholder,
-                        borderWidth: 2,
-                        borderColor: avatarBorderColor,
-                        shadowColor: avatarBorderColor,
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 4,
-                        elevation: 3,
-                      }
-                    : {
-                        backgroundColor: colors.slotEmpty,
-                        borderWidth: 2,
-                        borderStyle: 'dashed',
-                        borderColor: colors.slotEmptyBorder,
-                      },
-                ]}
-              >
-                {slot.filled ? (
-                  slot.avatarUrl ? (
-                    <Image source={{ uri: slot.avatarUrl }} style={styles.slotAvatar} />
-                  ) : (
-                    <Ionicons
-                      name="person-outline"
-                      size={14}
-                      color={isDark ? neutral[400] : neutral[500]}
-                    />
-                  )
-                ) : (
-                  <Ionicons name="add-outline" size={16} color={colors.slotEmptyBorder} />
-                )}
-              </SlotContainer>
-              {slot.isHost && (
-                <View
-                  style={[
-                    styles.hostIndicator,
-                    { backgroundColor: isDark ? primary[400] : primary[500] },
-                  ]}
-                >
-                  <Ionicons name="star" size={8} color={base.white} />
-                </View>
-              )}
-            </View>
-          );
-        })}
-      </View>
+      <PlayerSlotRow
+        slots={slots}
+        isDark={isDark}
+        tone={tier === 'expired' ? 'muted' : 'default'}
+        onPlayerPress={onPlayerPress}
+      />
       {/* Invited indicator for players with pending status */}
       {isInvited && (
         <View
@@ -1085,9 +964,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
       primaryLight: isDark ? primary[900] : primary[50],
       secondary: isDark ? secondary[400] : secondary[500],
       secondaryLight: isDark ? secondary[900] : secondary[50],
-      slotEmpty: isDark ? neutral[800] : neutral[100],
-      slotEmptyBorder: isDark ? neutral[600] : neutral[300],
-      avatarPlaceholder: isDark ? neutral[700] : neutral[200],
       // Tier-aware accent colors for consistent theming
       tierAccent: tierAccentColors.accent,
       tierAccentLight: tierAccentColors.accentLight,
@@ -1419,7 +1295,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
           <PlayerSlots
             match={match}
             participantInfo={participantInfo}
-            colors={colors}
             isDark={isDark}
             t={t}
             currentPlayerId={currentPlayerId}
@@ -1674,43 +1549,6 @@ const styles = StyleSheet.create({
     // keeps fixed spacing: slots -> chips -> separator -> CTA.
     marginTop: 'auto',
     marginBottom: spacingPixels[3],
-  },
-  slotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  slotWrapper: {
-    position: 'relative',
-    alignItems: 'center',
-  },
-  slot: {
-    width: SLOT_SIZE,
-    height: SLOT_SIZE,
-    borderRadius: SLOT_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  slotAvatar: {
-    width: SLOT_SIZE,
-    height: SLOT_SIZE,
-    borderRadius: SLOT_SIZE / 2,
-  },
-  hostIndicator: {
-    position: 'absolute',
-    bottom: -2,
-    left: -2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 4,
   },
   invitedBadge: {
     flexDirection: 'row',

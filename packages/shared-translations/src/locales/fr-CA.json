@@ -3337,7 +3337,8 @@
     "courtStatus": {
       "readyToPlay": "Prêt à jouer",
       "courtBooked": "Terrain Réservé",
-      "courtsAvailable": "{count} terrains disponibles"
+      "courtsAvailable": "{count} terrains disponibles",
+      "courtsAvailable_one": "{count} terrain disponible"
     },
     "tier": {
       "mostWanted": "Incontournable",
@@ -13297,6 +13298,7 @@
       "full": "Complète",
       "cancelled": "Annulée",
       "past": "Déjà jouée",
+      "live": "En cours",
       "unavailable": "Plus disponible",
       "youIn": "Tu embarques",
       "youHost": "Tu organises",
