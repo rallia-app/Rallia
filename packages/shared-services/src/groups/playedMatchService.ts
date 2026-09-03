@@ -390,24 +390,7 @@ export async function submitMatchResultForMatch(
     throw new Error(error.message);
   }
 
-  // Notify non-submitter participants about pending score confirmation
-  const { data: otherParticipants } = await supabase
-    .from('match_participant')
-    .select('player_id')
-    .eq('match_id', matchId)
-    .eq('status', 'joined')
-    .neq('player_id', submittedByPlayerId);
-
-  const opponentIds = otherParticipants?.map(p => p.player_id) ?? [];
-  if (opponentIds.length > 0) {
-    try {
-      await notifyOpponentsOfPendingScore(matchId, submittedByPlayerId, opponentIds);
-    } catch (notifyError) {
-      console.error('Error sending score notifications:', notifyError);
-      // Don't fail - notification failure shouldn't break the flow
-    }
-  }
-
+  // The RPC already told the other side the score stands and can be contested.
   return data as string;
 }
 
