@@ -46,6 +46,7 @@ The single most damaging failure mode in this repo is inventing ad-hoc styling f
 
 - Data flow: Component → hook (`packages/shared-hooks`) → TanStack Query → service (`packages/shared-services`) → Supabase. Components never call Supabase directly. No Redux/Zustand.
 - Database: new migration files only, never edit an applied migration. Local: `npx supabase migration up` (never `db push`). Types: `npm run db:generate-types:local`, never hand-edit `supabase.ts`. Every new public table migration needs explicit GRANTs.
+- Migration filenames carry the exact UTC second of creation: `$(date -u +%Y%m%d%H%M%S)_description.sql` (or `npx supabase migration new`). Never round to the hour or pick a number: two sessions choosing `120000` on the same day collide on `schema_migrations`.
 - When copying a SQL function body to modify it, copy from the LATEST migration containing it (sort filenames), or you silently revert newer fixes.
 - Logging via `Logger` from `@rallia/shared-services`, not `console.log`.
 - Code comments: minimal, one short line max; rationale goes in the PR description.
