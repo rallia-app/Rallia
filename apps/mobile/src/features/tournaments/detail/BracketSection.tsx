@@ -205,6 +205,10 @@ export const BracketSection: React.FC<{
 
     const isLive = m.status === 'in_progress';
     const isDisputed = m.status === 'disputed';
+    // Neither of these puts anyone through, so neither marks a winner row: with
+    // no pill they read exactly like a match still waiting to be played.
+    const isDoubleWalkover = m.status === 'walkover' && !m.winner_registration_id;
+    const isCancelled = m.status === 'cancelled';
 
     const headerRight = isLive ? (
       <View style={[styles.bmStatusPill, { backgroundColor: colors.statusActiveBg }]}>
@@ -218,6 +222,16 @@ export const BracketSection: React.FC<{
         <Ionicons name="alert-circle" size={12} color={colors.cancelledText} />
         <Text size="xs" weight="bold" color={colors.cancelledText}>
           {t('tournamentDetail.bracket.disputed')}
+        </Text>
+      </View>
+    ) : isDoubleWalkover || isCancelled ? (
+      <View style={[styles.bmStatusPill, { backgroundColor: colors.statusMutedBg }]}>
+        <Text size="xs" weight="bold" color={colors.statusMutedText}>
+          {t(
+            isDoubleWalkover
+              ? 'tournamentDetail.pools.doubleWalkover'
+              : 'tournamentDetail.pools.cancelled'
+          )}
         </Text>
       </View>
     ) : null;
@@ -234,8 +248,9 @@ export const BracketSection: React.FC<{
     const cells1 = p1Games.map((v, i) => ({ value: v, won: v > p2Games[i] }));
     const cells2 = p2Games.map((v, i) => ({ value: v, won: v > p1Games[i] }));
 
-    const statusStrip =
-      isLive || isDisputed ? <View style={styles.bmStatusStrip}>{headerRight}</View> : null;
+    const statusStrip = headerRight ? (
+      <View style={styles.bmStatusStrip}>{headerRight}</View>
+    ) : null;
 
     const matchInner = (
       <>

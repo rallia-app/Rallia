@@ -194,10 +194,20 @@ export const PoolsSection: React.FC<{
               // A cancelled game is settled but carries no score, so it reads as
               // a status rather than a result.
               const noResult = m.status === 'cancelled';
+              // A forfeit carries no score to read the winner off, and the
+              // ladder's double forfeit is a walkover with nobody advancing, so
+              // the two used to render as the same word.
+              const winnerRegId = settled ? m.winner_registration_id : null;
+              const p1Won = !!winnerRegId && winnerRegId === m.player1_registration_id;
+              const p2Won = !!winnerRegId && winnerRegId === m.player2_registration_id;
               const label = !settled
                 ? t('tournamentDetail.pools.toPlay')
                 : m.status === 'walkover'
-                  ? t('tournamentDetail.pools.walkover')
+                  ? t(
+                      winnerRegId
+                        ? 'tournamentDetail.pools.walkover'
+                        : 'tournamentDetail.pools.doubleWalkover'
+                    )
                   : noResult
                     ? t('tournamentDetail.pools.cancelled')
                     : (m.score ?? '—');
@@ -205,13 +215,27 @@ export const PoolsSection: React.FC<{
               const identity = (
                 <>
                   <Text size="xs" color={colors.text} numberOfLines={1} style={styles.matchPlayers}>
-                    {p1}
+                    {/* The winner is carried by the names, the way the bracket
+                        already marks them, so the status column stays narrow. */}
+                    <Text
+                      size="xs"
+                      weight={p1Won ? 'semibold' : 'regular'}
+                      color={p2Won ? colors.textMuted : colors.text}
+                    >
+                      {p1}
+                    </Text>
                     <Text size="xs" color={colors.textMuted}>
                       {'  '}
                       {t('tournamentDetail.pools.vs')}
                       {'  '}
                     </Text>
-                    {p2}
+                    <Text
+                      size="xs"
+                      weight={p2Won ? 'semibold' : 'regular'}
+                      color={p1Won ? colors.textMuted : colors.text}
+                    >
+                      {p2}
+                    </Text>
                   </Text>
                   <View style={styles.matchStatus}>
                     {/* Attached to a real Rallia game: its score comes from that
