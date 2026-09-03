@@ -6059,6 +6059,8 @@
       "doubleWalkover": "Double W/O",
       "cancelled": "Cancelled",
       "toPlay": "To play",
+      "toSchedule": "To schedule",
+      "scheduled": "Scheduled",
       "played": "Played",
       "resultWon": "Won {detail}",
       "resultLost": "Lost {detail}",

@@ -1782,6 +1782,10 @@ export const TournamentDetail: React.FC = () => {
           settled,
           isDisputed: m.status === 'disputed',
           isWalkover: m.status === 'walkover',
+          // A booked pairing has a game behind it. Without this the row read
+          // "to play" whether or not anything had been arranged, so a slate of
+          // three said nothing about which ones still needed a time.
+          isScheduled: !!m.match_id,
           didWin: m.winner_registration_id ? m.winner_registration_id === myRegId : null,
           scoreLabel,
           // An organizer extension on one pairing wins over the phase row, so

@@ -45,6 +45,8 @@ export interface MyPoolGame {
   /** Played, but the result is contested and still needs sorting out. */
   isDisputed: boolean;
   isWalkover: boolean;
+  /** A game is booked behind this pairing, so it needs a result, not a time. */
+  isScheduled: boolean;
   /** Null when no winner is recorded yet. */
   didWin: boolean | null;
   /** Set scores written viewer-first, e.g. "8-1". Null when none recorded. */
@@ -418,7 +420,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             ? 'checkmark-circle'
                             : game.isDisputed
                               ? 'alert-circle-outline'
-                              : 'ellipse-outline'
+                              : game.isScheduled
+                                ? 'calendar-outline'
+                                : 'ellipse-outline'
                         }
                         size={18}
                         color={
@@ -438,11 +442,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           {game.opponentLabel ?? '?'}
                         </Text>
                         <Text size="xs" color={game.isDisputed ? colors.danger : colors.textMuted}>
+                          {/* This slate is a to-do list, so an arranged game has
+                              to read differently from one that still needs a time. */}
                           {done
                             ? resultText
                             : game.isDisputed
                               ? t('tournamentDetail.bracket.disputed')
-                              : t('tournamentDetail.pools.toPlay' as TranslationKey)}
+                              : t(
+                                  (game.isScheduled
+                                    ? 'tournamentDetail.pools.scheduled'
+                                    : 'tournamentDetail.pools.toSchedule') as TranslationKey
+                                )}
                         </Text>
                         {/* Only when an organizer moved this one off the shared date. */}
                         {!done && game.deadlineAt && game.deadlineAt !== myPoolPhase.deadlineAt && (

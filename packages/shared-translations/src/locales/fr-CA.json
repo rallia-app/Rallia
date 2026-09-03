@@ -6059,6 +6059,8 @@
       "doubleWalkover": "Double forfait",
       "cancelled": "Annulée",
       "toPlay": "À jouer",
+      "toSchedule": "À planifier",
+      "scheduled": "Planifiée",
       "played": "Jouée",
       "resultWon": "Gagné {detail}",
       "resultLost": "Perdu {detail}",
