@@ -423,6 +423,8 @@ export interface MatchContestState {
   disputed: boolean;
   isDeclarer: boolean;
   deadline?: string | null;
+  /** The draw moved past this pairing, so there is nothing left to reopen. */
+  advanced: boolean;
 }
 
 export async function getMatchContestState(matchId: string): Promise<MatchContestState> {
@@ -437,6 +439,7 @@ export async function getMatchContestState(matchId: string): Promise<MatchContes
     disputed: row.disputed === true,
     isDeclarer: row.isDeclarer === true,
     deadline: typeof row.deadline === 'string' ? row.deadline : null,
+    advanced: row.advanced === true,
   };
 }
 
