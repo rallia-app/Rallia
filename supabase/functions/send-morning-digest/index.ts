@@ -20,6 +20,11 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { SignJWT } from 'https://esm.sh/jose@5';
 
+import {
+  createSendThrottle,
+  sendWithRateLimitRetry,
+  type SendThrottle,
+} from '../_shared/send-throttle.ts';
 import { requireSecretApikey } from '../_shared/auth.ts';
 import { isFakeSeedEmail } from '../_shared/email-guards.ts';
 import { reportHeartbeat } from '../_shared/heartbeat.ts';
@@ -42,6 +47,8 @@ const MAX_PER_SECTION = 5;
 
 /** Bounded concurrency for the per-user processing loop. */
 const USER_CONCURRENCY = 10;
+/** Resend allows 10 sends/second; pace below it so a busy shard never 429s. */
+const SENDS_PER_SECOND = 8;
 /** Soft deadline; we stop dispatching new users when crossed. */
 const MAX_RUN_MS = 240_000;
 
@@ -311,6 +318,7 @@ interface SendResult {
 
 async function sendDigestEmail(
   resend: Resend,
+  throttle: SendThrottle,
   fromEmail: string,
   user: DigestUser,
   sections: DigestSection[],
@@ -330,18 +338,20 @@ async function sendDigestEmail(
     unsubscribeUrl,
   });
 
-  const { data, error } = await resend.emails.send({
-    from: fromEmail,
-    to: user.email,
-    subject,
-    html,
-    headers: {
-      // RFC 8058 one-click unsubscribe — Gmail / Apple Mail surface this in
-      // the message header so users opt out without leaving the inbox.
-      'List-Unsubscribe': `<${unsubscribeUrl}>`,
-      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-    },
-  });
+  const { data, error } = await sendWithRateLimitRetry(throttle, () =>
+    resend.emails.send({
+      from: fromEmail,
+      to: user.email,
+      subject,
+      html,
+      headers: {
+        // RFC 8058 one-click unsubscribe — Gmail / Apple Mail surface this in
+        // the message header so users opt out without leaving the inbox.
+        'List-Unsubscribe': `<${unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
+    })
+  );
 
   if (error) {
     return { ok: false, error: error.message };
@@ -438,6 +448,7 @@ async function processDigests(
   const userTimings: number[] = [];
 
   let stopDispatching = false;
+  const throttle = createSendThrottle(SENDS_PER_SECOND);
 
   await runWithConcurrency(users, USER_CONCURRENCY, async user => {
     if (stopDispatching) {
@@ -465,6 +476,7 @@ async function processDigests(
       const unsubscribeUrl = await buildUnsubscribeUrl(appUrl, user.userId, jwtSecret);
       const result = await sendDigestEmail(
         resend,
+        throttle,
         fromEmail,
         user,
         sections,
