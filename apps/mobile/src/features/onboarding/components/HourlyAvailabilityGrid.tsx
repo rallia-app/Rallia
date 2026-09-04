@@ -41,7 +41,7 @@
 import React, { useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { useScrollHandlers } from 'react-native-actions-sheet';
+import { usePanGestureContext } from 'react-native-actions-sheet/dist/src/context';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { selectionHaptic } from '@rallia/shared-utils';
@@ -226,27 +226,17 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
   // (configured with .activeOffsetY([-5,5]) and .failOffsetX([-5,5])) wins
   // vertical drags before our gesture can claim them — that's why
   // horizontal-first drags work but pure vertical drags get yanked away.
-  // useScrollHandlers exposes the sheet's gesture ref via simultaneousHandlers
-  // so we can pass it to .blocksExternalGesture(), which makes the sheet's
-  // gesture defer to ours whenever a touch starts on this area.
-  //
-  // Outside an action sheet, the hook returns a default no-op ref; passing
-  // it to blocksExternalGesture is harmless.
-  const scrollHandlers = useScrollHandlers<View>();
-  const sheetGestureRef = scrollHandlers.simultaneousHandlers[0];
+  // Read from the pan context, not useScrollHandlers: that hook registers a
+  // scrollable node the sheet calls scrollTo() on, and a View has none.
+  // Outside a sheet the context holds an empty ref, which is harmless.
+  const sheetGestureRef = usePanGestureContext().ref;
 
   // ─── Cells container layout ───────────────────────────────────────────────
 
-  const onCellsLayout = useCallback(
-    (e: LayoutChangeEvent) => {
-      const { width } = e.nativeEvent.layout;
-      cellWidthRef.current = width / daysRef.current.length;
-      // useScrollHandlers tracks layout for the draggable-node registration
-      // (which the sheet uses to defer to nested scrollables on web).
-      scrollHandlers.onLayout();
-    },
-    [scrollHandlers]
-  );
+  const onCellsLayout = useCallback((e: LayoutChangeEvent) => {
+    const { width } = e.nativeEvent.layout;
+    cellWidthRef.current = width / daysRef.current.length;
+  }, []);
 
   // ─── Hit-testing ──────────────────────────────────────────────────────────
 
@@ -455,7 +445,7 @@ export const HourlyAvailabilityGrid: React.FC<HourlyAvailabilityGridProps> = ({
             gesture's e.x/e.y are cell-local coordinates and no inner
             interactive child competes with the gesture. */}
         <GestureDetector gesture={pan}>
-          <View ref={scrollHandlers.ref} onLayout={onCellsLayout} collapsable={false}>
+          <View onLayout={onCellsLayout} collapsable={false}>
             {SUPPORTED_HOURS.map(hour => (
               <View key={`row-${hour}`} style={[styles.row, { height: CELL_HEIGHT }]}>
                 {days.map(day => {
