@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { withSchemaCacheRetry } from './supabaseFetch';
 
 // Supabase credentials from environment variables
 // These will be injected by the platform (React Native or Next.js)
@@ -11,6 +12,8 @@ function getSupabaseAnonKey() {
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
   );
 }
+
+const supabaseFetch = withSchemaCacheRetry((input, init) => globalThis.fetch(input, init));
 
 // Lazy-initialized Supabase client to avoid module-level errors during build
 // when environment variables are not available (e.g., Next.js static page collection in CI)
@@ -31,6 +34,7 @@ function getOrCreateClient(): SupabaseClient {
         persistSession: true,
         detectSessionInUrl: false,
       },
+      global: { fetch: supabaseFetch },
     });
   }
   return _supabaseInstance;
@@ -76,6 +80,7 @@ export const configureSupabaseStorage = (storage: any) => {
       detectSessionInUrl: false,
       storage: storage, // Set storage during client creation
     },
+    global: { fetch: supabaseFetch },
   });
 
   return _supabaseInstance;

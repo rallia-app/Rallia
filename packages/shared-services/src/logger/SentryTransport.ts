@@ -140,6 +140,18 @@ function isAuthSessionNoise(entry: LogEntry): boolean {
   return (err as { name?: unknown }).name === 'AuthSessionUnavailableError';
 }
 
+// PGRST002 outlasting the fetch-level retry is still a transient reload, not an app bug.
+function isSchemaCacheNoise(entry: LogEntry): boolean {
+  const err = entry.error as unknown;
+  if (!err || typeof err !== 'object') return false;
+  if ((err as { code?: unknown }).code === 'PGRST002') return true;
+  const message = (err as { message?: unknown }).message;
+  return (
+    typeof message === 'string' &&
+    message.includes('Could not query the database for the schema cache')
+  );
+}
+
 export class SentryTransport implements Transport {
   private static sentry: SentryLike | null = null;
   private static getAppState: (() => string) | null = null;
@@ -163,15 +175,21 @@ export class SentryTransport implements Transport {
 
     try {
       if (entry.level === LogLevel.ERROR) {
-        const authNoise = isAuthSessionNoise(entry);
-        if (authNoise || isNetworkNoise(entry)) {
+        const suppressedKind = isAuthSessionNoise(entry)
+          ? 'auth session'
+          : isSchemaCacheNoise(entry)
+            ? 'schema cache'
+            : isNetworkNoise(entry)
+              ? 'network'
+              : null;
+        if (suppressedKind) {
           // Don't surface as an issue — keep a breadcrumb so context survives
           // if a real error fires later in the same session.
           const appState = SentryTransport.getAppState?.();
           const err = entry.error as { name?: unknown; message?: unknown } | undefined;
           SentryTransport.sentry.addBreadcrumb({
             category: 'app',
-            message: `[suppressed ${authNoise ? 'auth session' : 'network'} error] ${entry.message}`,
+            message: `[suppressed ${suppressedKind} error] ${entry.message}`,
             level: 'warning',
             data: {
               ...entry.context,
