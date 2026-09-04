@@ -55,6 +55,7 @@ import {
   formatPrice,
   tournamentRankingHeadline,
   tournamentPointsLadder,
+  awaitWebhookSettle,
 } from '@rallia/shared-utils';
 import {
   useTheme,
@@ -628,27 +629,34 @@ export const TournamentDetail: React.FC = () => {
           }
           successHaptic();
           toast.success(t('tournamentDetail.payments.successToast'), inviteNudgeAction());
-          // The webhook flips payment_pending → registered; refetch now and again
-          // shortly after to catch the async finalize.
-          const invalidate = () => {
-            void queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournament.id) });
-            void queryClient.invalidateQueries({
-              queryKey: tournamentKeys.registrations(tournament.id),
-            });
-            void queryClient.invalidateQueries({
-              queryKey: tournamentKeys.participants(tournament.id),
-            });
-            void queryClient.invalidateQueries({
-              queryKey: tournamentKeys.myRegistration(tournament.id, userId ?? ''),
-            });
-            void queryClient.invalidateQueries({
-              queryKey: tournamentKeys.myActiveRegistrations(userId ?? ''),
-            });
-            // Paying takes a slot, so the card's count chip moves too.
-            void queryClient.invalidateQueries({ queryKey: tournamentKeys.lists() });
-          };
-          invalidate();
-          setTimeout(invalidate, 2500);
+          // The webhook flips payment_pending → registered asynchronously, and it
+          // is routinely slower than the payment sheet takes to close. Poll until
+          // the registration actually flips rather than guessing a delay: a fixed
+          // retry that fires too early leaves the CTA offering to register someone
+          // who has already paid, with nothing scheduled to correct it.
+          const myRegistrationKey = tournamentKeys.myRegistration(tournament.id, userId ?? '');
+          const invalidate = () =>
+            Promise.all([
+              queryClient.invalidateQueries({ queryKey: tournamentKeys.detail(tournament.id) }),
+              queryClient.invalidateQueries({
+                queryKey: tournamentKeys.registrations(tournament.id),
+              }),
+              queryClient.invalidateQueries({
+                queryKey: tournamentKeys.participants(tournament.id),
+              }),
+              queryClient.invalidateQueries({ queryKey: myRegistrationKey }),
+              queryClient.invalidateQueries({
+                queryKey: tournamentKeys.myActiveRegistrations(userId ?? ''),
+              }),
+              // Paying takes a slot, so the card's count chip moves too.
+              queryClient.invalidateQueries({ queryKey: tournamentKeys.lists() }),
+            ]);
+          void awaitWebhookSettle({
+            refresh: invalidate,
+            isSettled: () =>
+              queryClient.getQueryData<{ status?: string }>(myRegistrationKey)?.status ===
+              'registered',
+          });
         } catch (e) {
           warningHaptic();
           const code = e instanceof TournamentPaymentError ? e.code : undefined;

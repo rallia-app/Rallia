@@ -19,6 +19,7 @@ export * from './ratings';
 export * from './devMocks';
 export * from './utm';
 export * from './fees';
+export * from './payments';
 export * from './ids';
 export * from './onboarding';
 export * from './dispatchGuard';
