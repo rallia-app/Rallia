@@ -56,6 +56,7 @@ async function getMatchDetails(matchId: string) {
       `
       *,
       sport:sport_id (name),
+      facility:facility_id (name, city),
       participants:match_participant!match_id (status)
     `
     )
@@ -220,6 +221,37 @@ function buildOgImageUrl(
   return `/api/og/invite?${params.toString()}`;
 }
 
+/** Date, venue, format and remaining spots — the same summary the game's own
+ *  page puts under its title. */
+async function matchDescription(
+  match: NonNullable<Awaited<ReturnType<typeof getMatchDetails>>>,
+  locale: string
+): Promise<string> {
+  const t = await getTranslations({ locale, namespace: 'matchPage' });
+  const dateObj = new Date(`${match.match_date}T${match.start_time}`);
+  const date = dateObj.toLocaleDateString(locale, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+  const time = dateObj.toLocaleTimeString(locale, { timeStyle: 'short' });
+
+  const facility = match.facility;
+  const location = facility
+    ? `${facility.name}${facility.city ? `, ${facility.city}` : ''}`
+    : (match.location_name ?? '');
+
+  const total = match.format === 'doubles' ? 4 : 2;
+  const joined = match.participants?.filter(p => p.status === 'joined').length ?? 0;
+  const spotsLeft = Math.max(0, total - joined);
+
+  const parts = [`📅 ${date} ${t('at')} ${time}`];
+  if (location) parts.push(`📍 ${location}`);
+  if (match.format) parts.push(t(`format.${match.format}`));
+  parts.push(spotsLeft === 0 ? t('ogMatchFull') : t('ogSpotsLeft', { count: spotsLeft }));
+  return parts.join(' · ');
+}
+
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { code, locale } = await params;
   const query = await searchParams;
@@ -263,6 +295,9 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     title = inviter?.first_name
       ? t('matchInviteTitle', { name: inviter.first_name, sport: sportName })
       : t('matchInviteTitleGeneric', { sport: sportName });
+    // Same line /match/[id] shows, so a game reads the same wherever it is
+    // shared. Without it the invite fell back to the generic "download Rallia".
+    if (match) description = await matchDescription(match, locale);
   } else if (invitationType === 'tournament' && query.id) {
     const tournament = await getTournamentDetails(query.id);
     if (tournament) {

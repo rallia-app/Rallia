@@ -6,8 +6,8 @@ import { getStorageImageUrl } from '@rallia/shared-utils';
 import { getRelativeDateLabel, formatDuration } from '../../play/_components/utils';
 
 import { MatchLandingClient } from './_components/match-landing-client';
-import { getMatch } from './_lib/get-match';
 
+import { getMatch } from '@/lib/match/get-match';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
