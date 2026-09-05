@@ -5,8 +5,11 @@
  * which the file-convention opengraph-image can't see — so the invite page's
  * generateMetadata points og:image here instead. Tournament invites render the
  * tournament's banner (or a branded trophy background when the organizer kept
- * the default banner) with name/dates/venue/spots; every other type renders
- * the generic "X invited you to Rallia" card.
+ * the default banner) with name/dates/venue/spots. Game invites render the same
+ * card `/match/[id]` serves, from the shared module: the app's own share always
+ * carries a referral code, so it lands here and not on the bare match link, and
+ * without this branch it fell through to the generic "download Rallia" banner.
+ * Every other type still renders the generic "X invited you to Rallia" card.
  */
 import { ImageResponse } from 'next/og';
 import { getTranslations } from 'next-intl/server';
@@ -15,6 +18,9 @@ import { primary, secondary, neutral, accent, status } from '@rallia/design-syst
 import { getTournamentLogoUrl } from '@rallia/shared-utils';
 import { locales, defaultLocale } from '@rallia/shared-translations';
 
+import { renderMatchCard } from '../_shared/match-card';
+
+import { getMatch } from '@/lib/match/get-match';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { formatDateRange } from '@/lib/format-date-range';
 import { loadOgFonts } from '@/lib/og-fonts';
@@ -238,6 +244,11 @@ export async function GET(request: Request) {
     { name: 'Poppins', data: poppinsSemiBoldData, style: 'normal', weight: 600 },
     { name: 'Inter', data: interMediumData, style: 'normal', weight: 500 },
   ];
+
+  if (type === 'match' && id) {
+    const match = await getMatch(id);
+    if (match) return renderMatchCard(match, locale);
+  }
 
   if (type === 'tournament' && id) {
     const tournament = await getTournament(id);

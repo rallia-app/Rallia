@@ -15,7 +15,7 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import ActionSheet, { ScrollView } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, ToastOverlay } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
 import { useThemeStyles } from '#/hooks';
@@ -74,6 +74,9 @@ export function BaseActionSheet({
       closeOnTouchBackdrop={closeOnTouchBackdrop}
       onBeforeClose={onBeforeClose}
       onClose={onSheetClose}
+      // A sheet renders in its own Modal, so a toast raised from inside one
+      // lands behind it and is never seen. Re-render the overlay in here.
+      ExtraOverlayComponent={<ToastOverlay />}
       // An empty header replaces (and thus hides) the default drag indicator
       // while leaving the gesture + rounded corners intact.
       CustomHeaderComponent={hideHandle ? <View /> : undefined}

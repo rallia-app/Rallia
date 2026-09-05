@@ -14,6 +14,8 @@ import { Button, Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels, base } from '@rallia/design-system';
 import type { PoolStandingRow, TournamentMatch } from '@rallia/shared-services';
 
+import { isOrganizerActionable, isSettled } from '../matchStatus';
+
 type Colors = {
   text: string;
   textMuted: string;
@@ -27,10 +29,8 @@ type Colors = {
 
 const POOL_LETTERS = 'ABCDEFGHIJ';
 
-const TERMINAL = new Set(['completed', 'retired', 'walkover', 'cancelled']);
-
 export function poolsComplete(poolMatches: TournamentMatch[]): boolean {
-  return poolMatches.length > 0 && poolMatches.every(m => TERMINAL.has(m.status));
+  return poolMatches.length > 0 && poolMatches.every(m => isSettled(m.status));
 }
 
 export const PoolsSection: React.FC<{
@@ -171,10 +171,10 @@ export const PoolsSection: React.FC<{
               const p2 = m.player2_registration_id
                 ? (nameByRegId.get(m.player2_registration_id) ?? '—')
                 : '—';
-              const settled = TERMINAL.has(m.status);
+              const settled = isSettled(m.status);
               // Same gating as the knockout renderer: participants act on their
-              // own pending game, the organizer records others' games and may
-              // quietly correct a completed one; everyone else just reads.
+              // own pending game, the organizer opens any settled one to correct
+              // it or undo the ladder; everyone else just reads.
               const callerInMatch =
                 !!currentUserId &&
                 [m.player1_registration_id, m.player2_registration_id].some(
@@ -184,7 +184,7 @@ export const PoolsSection: React.FC<{
               const canOverride =
                 isOrganizer &&
                 !canAttach &&
-                (m.status === 'pending' || m.status === 'completed') &&
+                isOrganizerActionable(m.status) &&
                 !!onOrganizerOverride;
               const tappable = canAttach || canOverride;
               // The caller's own unplayed game is the one row here they can do
@@ -194,10 +194,20 @@ export const PoolsSection: React.FC<{
               // A cancelled game is settled but carries no score, so it reads as
               // a status rather than a result.
               const noResult = m.status === 'cancelled';
+              // A forfeit carries no score to read the winner off, and the
+              // ladder's double forfeit is a walkover with nobody advancing, so
+              // the two used to render as the same word.
+              const winnerRegId = settled ? m.winner_registration_id : null;
+              const p1Won = !!winnerRegId && winnerRegId === m.player1_registration_id;
+              const p2Won = !!winnerRegId && winnerRegId === m.player2_registration_id;
               const label = !settled
                 ? t('tournamentDetail.pools.toPlay')
                 : m.status === 'walkover'
-                  ? t('tournamentDetail.pools.walkover')
+                  ? t(
+                      winnerRegId
+                        ? 'tournamentDetail.pools.walkover'
+                        : 'tournamentDetail.pools.doubleWalkover'
+                    )
                   : noResult
                     ? t('tournamentDetail.pools.cancelled')
                     : (m.score ?? '—');
@@ -205,13 +215,27 @@ export const PoolsSection: React.FC<{
               const identity = (
                 <>
                   <Text size="xs" color={colors.text} numberOfLines={1} style={styles.matchPlayers}>
-                    {p1}
+                    {/* The winner is carried by the names, the way the bracket
+                        already marks them, so the status column stays narrow. */}
+                    <Text
+                      size="xs"
+                      weight={p1Won ? 'semibold' : 'regular'}
+                      color={p2Won ? colors.textMuted : colors.text}
+                    >
+                      {p1}
+                    </Text>
                     <Text size="xs" color={colors.textMuted}>
                       {'  '}
                       {t('tournamentDetail.pools.vs')}
                       {'  '}
                     </Text>
-                    {p2}
+                    <Text
+                      size="xs"
+                      weight={p2Won ? 'semibold' : 'regular'}
+                      color={p1Won ? colors.textMuted : colors.text}
+                    >
+                      {p2}
+                    </Text>
                   </Text>
                   <View style={styles.matchStatus}>
                     {/* Attached to a real Rallia game: its score comes from that

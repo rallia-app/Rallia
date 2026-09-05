@@ -14,6 +14,7 @@ import { getHumanName, getProfilePictureUrl, lightHaptic } from '@rallia/shared-
 import type { Tables } from '@rallia/shared-types';
 
 import type { TranslationKey } from '../../../hooks';
+import { isOrganizerActionable, isSettled } from '../matchStatus';
 import { seedFallbackLabel, type ScreenColors } from './components';
 import { styles } from './detailStyles';
 
@@ -190,11 +191,11 @@ export const BracketSection: React.FC<{
       !!m.player1_registration_id &&
       !!m.player2_registration_id;
     const isPlayable = m.status === 'pending' && slotsReady;
-    // Organizers record results (override) and may also CORRECT a completed
-    // match; the RPC rejects (NEXT_MATCH_ALREADY_PLAYED) once the downstream
-    // match has its own result. Participants link their own played match.
-    const canOrganizerOverride =
-      isOrganizer && slotsReady && (m.status === 'pending' || m.status === 'completed');
+    // Organizers record results (override) and may also CORRECT or undo any
+    // settled one; the RPC rejects (NEXT_MATCH_ALREADY_PLAYED) once the
+    // downstream match has its own result. Participants link their own played
+    // match.
+    const canOrganizerOverride = isOrganizer && slotsReady && isOrganizerActionable(m.status);
     const canParticipantAttach = isPlayable && callerIsParticipant;
     const isTappable = canOrganizerOverride || canParticipantAttach;
     // An organizer who is playing in this match acts as a participant on it
@@ -204,6 +205,10 @@ export const BracketSection: React.FC<{
 
     const isLive = m.status === 'in_progress';
     const isDisputed = m.status === 'disputed';
+    // Neither of these puts anyone through, so neither marks a winner row: with
+    // no pill they read exactly like a match still waiting to be played.
+    const isDoubleWalkover = m.status === 'walkover' && !m.winner_registration_id;
+    const isCancelled = m.status === 'cancelled';
 
     const headerRight = isLive ? (
       <View style={[styles.bmStatusPill, { backgroundColor: colors.statusActiveBg }]}>
@@ -217,6 +222,16 @@ export const BracketSection: React.FC<{
         <Ionicons name="alert-circle" size={12} color={colors.cancelledText} />
         <Text size="xs" weight="bold" color={colors.cancelledText}>
           {t('tournamentDetail.bracket.disputed')}
+        </Text>
+      </View>
+    ) : isDoubleWalkover || isCancelled ? (
+      <View style={[styles.bmStatusPill, { backgroundColor: colors.statusMutedBg }]}>
+        <Text size="xs" weight="bold" color={colors.statusMutedText}>
+          {t(
+            isDoubleWalkover
+              ? 'tournamentDetail.pools.doubleWalkover'
+              : 'tournamentDetail.pools.cancelled'
+          )}
         </Text>
       </View>
     ) : null;
@@ -233,8 +248,9 @@ export const BracketSection: React.FC<{
     const cells1 = p1Games.map((v, i) => ({ value: v, won: v > p2Games[i] }));
     const cells2 = p2Games.map((v, i) => ({ value: v, won: v > p1Games[i] }));
 
-    const statusStrip =
-      isLive || isDisputed ? <View style={styles.bmStatusStrip}>{headerRight}</View> : null;
+    const statusStrip = headerRight ? (
+      <View style={styles.bmStatusStrip}>{headerRight}</View>
+    ) : null;
 
     const matchInner = (
       <>
@@ -288,7 +304,7 @@ export const BracketSection: React.FC<{
       const p2RegId = m.player2_registration_id;
       // Fixing an already-recorded result is a quiet escape hatch, not the next
       // action — it drops the playable accent and softens the footer.
-      const isCorrection = useOrganizerOverride && m.status === 'completed';
+      const isCorrection = useOrganizerOverride && isSettled(m.status);
       const handlePress = useOrganizerOverride
         ? () => onOrganizerOverride(m.id, p1RegId, p2RegId)
         : () => onMatchPress(m.id, p1RegId, p2RegId);

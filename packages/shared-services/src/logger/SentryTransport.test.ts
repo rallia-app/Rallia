@@ -38,6 +38,21 @@ describe('SentryTransport error normalization', () => {
     expect(crumb.message).toContain('[suppressed auth session error]');
   });
 
+  it('suppresses a PostgREST schema-cache reload into a breadcrumb, not an issue', () => {
+    const reload = {
+      code: 'PGRST002',
+      details: null,
+      hint: null,
+      message: 'Could not query the database for the schema cache. Retrying.',
+    };
+
+    new SentryTransport().log(makeEntry(reload, 'Failed to fetch favorite facilities'));
+
+    expect(sentry.captureException).not.toHaveBeenCalled();
+    const [crumb] = sentry.addBreadcrumb.mock.calls[0];
+    expect(crumb.message).toContain('[suppressed schema cache error]');
+  });
+
   it('captures a real Error as-is, without an override fingerprint', () => {
     const err = new Error('boom');
     new SentryTransport().log(makeEntry(err));

@@ -42,6 +42,7 @@ import {
   getHumanName,
   formatPrice,
   getProfilePictureUrl,
+  awaitWebhookSettle,
 } from '@rallia/shared-utils';
 import {
   useTheme,
@@ -869,19 +870,23 @@ export const LeagueDetail: React.FC = () => {
       successHaptic();
       toast.success(t('leagueDetail.roster.enrolled'));
 
-      // The webhook flips payment_pending -> enrolled asynchronously, so a single
-      // invalidate here would re-read the pre-webhook state. Refetch again shortly
-      // after (same trick TournamentDetail uses).
-      const refresh = () => {
-        void qc.invalidateQueries({ queryKey: leagueKeys.seasons(leagueId) });
-        void qc.invalidateQueries({ queryKey: leagueKeys.seasonMembers(openSeasonId) });
-        void qc.invalidateQueries({
-          queryKey: leagueKeys.mySeasonMembership(openSeasonId, userId ?? ''),
-        });
-        void qc.invalidateQueries({ queryKey: leagueKeys.rankings(openSeasonId) });
-      };
-      refresh();
-      setTimeout(refresh, 2500);
+      // The webhook flips payment_pending -> enrolled asynchronously, and it is
+      // routinely slower than the payment sheet takes to close. Poll until the
+      // membership actually flips rather than guessing a delay: a fixed retry
+      // that fires too early leaves the CTA offering to enrol someone who has
+      // already paid, with nothing scheduled to correct it.
+      const membershipKey = leagueKeys.mySeasonMembership(openSeasonId, userId ?? '');
+      const refresh = () =>
+        Promise.all([
+          qc.invalidateQueries({ queryKey: leagueKeys.seasons(leagueId) }),
+          qc.invalidateQueries({ queryKey: leagueKeys.seasonMembers(openSeasonId) }),
+          qc.invalidateQueries({ queryKey: membershipKey }),
+          qc.invalidateQueries({ queryKey: leagueKeys.rankings(openSeasonId) }),
+        ]);
+      void awaitWebhookSettle({
+        refresh,
+        isSettled: () => qc.getQueryData<{ status?: string }>(membershipKey)?.status === 'enrolled',
+      });
     } catch (e) {
       warningHaptic();
       const code = e instanceof TournamentPaymentError ? e.code : null;
