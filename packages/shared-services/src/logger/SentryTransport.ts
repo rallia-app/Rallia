@@ -134,10 +134,12 @@ function isNetworkNoise(entry: LogEntry): boolean {
 // the guards in shared-services/auth stop the call before it reaches the API.
 // Suppressed by name so a caller that logs it can't dress it up as a 42501
 // grants bug in the issue stream.
+// PGRST303 outlasting the fetch-level refresh-and-replay is the same dead session.
 function isAuthSessionNoise(entry: LogEntry): boolean {
   const err = entry.error as unknown;
   if (!err || typeof err !== 'object') return false;
-  return (err as { name?: unknown }).name === 'AuthSessionUnavailableError';
+  if ((err as { name?: unknown }).name === 'AuthSessionUnavailableError') return true;
+  return (err as { code?: unknown }).code === 'PGRST303';
 }
 
 // PGRST002 outlasting the fetch-level retry is still a transient reload, not an app bug.

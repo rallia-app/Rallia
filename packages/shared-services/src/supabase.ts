@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { withSchemaCacheRetry } from './supabaseFetch';
+import { withSupabaseRetries } from './supabaseFetch';
 
 // Supabase credentials from environment variables
 // These will be injected by the platform (React Native or Next.js)
@@ -13,11 +13,22 @@ function getSupabaseAnonKey() {
   );
 }
 
-const supabaseFetch = withSchemaCacheRetry((input, init) => globalThis.fetch(input, init));
-
 // Lazy-initialized Supabase client to avoid module-level errors during build
 // when environment variables are not available (e.g., Next.js static page collection in CI)
 let _supabaseInstance: SupabaseClient | null = null;
+
+// A 401 PGRST303 means the bearer expired server-side (clock skew, missed refresh
+// tick); refresh through the live client and let the wrapper replay the call.
+async function refreshAccessToken(): Promise<string | null> {
+  if (!_supabaseInstance) return null;
+  const { data, error } = await _supabaseInstance.auth.refreshSession();
+  if (error) return null;
+  return data.session?.access_token ?? null;
+}
+
+const supabaseFetch = withSupabaseRetries((input, init) => globalThis.fetch(input, init), {
+  refreshAccessToken,
+});
 
 function getOrCreateClient(): SupabaseClient {
   if (!_supabaseInstance) {
