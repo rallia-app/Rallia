@@ -5,12 +5,17 @@
 -- 4-draw: two semi-finals and a final, no byes, no third round.
 --
 -- Why this exists. Every pool_knockout event shipped so far took 2 qualifiers
--- per pool, so the 1-qualifier branch of tournament_generate_knockout was
--- reachable but unexercised: the only test touching the value was a paid
--- registration security case that never generated a draw. Série 3 (Montréal,
--- September 2026) is its first live use, and its calendar depends on the
--- knockout being exactly two rounds: the event ends the day Montreal's
--- outdoor courts close, so a third round would have nowhere to go.
+-- per pool, so the 1-qualifier branch of tournament_generate_knockout is
+-- reachable but was never exercised: the only test touching the value was a
+-- paid registration security case that never generated a draw.
+--
+-- It was written for Série 3, which briefly ran on 1 qualifier before Mathis
+-- reversed that to 2 on 2026-09-08 (see 20260908222310). So no live event uses
+-- the branch today, and the test is kept deliberately: `qualifiers_per_pool`
+-- accepts exactly 1 or 2 by CHECK constraint, the organizer can pick either,
+-- and an untested half of a two-valued setting is how a draw silently comes
+-- out the wrong shape. The 2-qualifier side is covered at full field size by
+-- tournament_pool_knockout_draw_test.
 --
 -- Run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
 --        -v ON_ERROR_STOP=1 -f supabase/tests/tournament_pool_one_qualifier_test.sql
