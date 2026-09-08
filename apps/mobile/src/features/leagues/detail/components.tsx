@@ -270,6 +270,7 @@ export interface ScreenColors {
   secondaryHighlightBorder: string;
   secondaryAccent: string;
   secondaryAccentBg: string;
+  creditText: string;
   danger: string;
   dangerBg: string;
 }
