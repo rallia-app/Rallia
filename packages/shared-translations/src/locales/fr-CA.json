@@ -4993,11 +4993,11 @@
     "confirmedOfCapacity": "{count}/{capacity} confirmés",
     "confirmBy": "Confirme avant le {date}",
     "status": {
-      "draft": "Brouillon",
-      "published": "Publiée",
-      "inProgress": "En cours",
-      "completed": "Terminée",
-      "cancelled": "Annulée"
+      "draft": "Séance brouillon",
+      "published": "Séance publiée",
+      "inProgress": "Séance en cours",
+      "completed": "Séance terminée",
+      "cancelled": "Séance annulée"
     },
     "cta": {
       "title": "Tu embarques?",

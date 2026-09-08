@@ -4993,11 +4993,11 @@
     "confirmedOfCapacity": "{count}/{capacity} confirmed",
     "confirmBy": "Confirm by {date}",
     "status": {
-      "draft": "Draft",
-      "published": "Published",
-      "inProgress": "In progress",
-      "completed": "Completed",
-      "cancelled": "Cancelled"
+      "draft": "Session draft",
+      "published": "Session published",
+      "inProgress": "Session in progress",
+      "completed": "Session completed",
+      "cancelled": "Session cancelled"
     },
     "cta": {
       "title": "Are you in?",
