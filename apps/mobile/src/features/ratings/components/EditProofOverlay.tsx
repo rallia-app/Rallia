@@ -37,6 +37,11 @@ import {
 } from '#/services/ratingProofUpload';
 import { useThemeStyles, useTranslation, useImagePicker } from '#/hooks';
 
+import {
+  COMPATIBLE_VIDEO_CAPTURE_OPTIONS,
+  COMPATIBLE_VIDEO_LIBRARY_OPTIONS,
+} from '../videoCaptureOptions';
+
 // Types for new file selection
 interface NewFile {
   uri: string;
@@ -225,6 +230,7 @@ export function EditProofActionSheet({ payload }: SheetProps<'edit-proof'>) {
         allowsEditing: true,
         quality: 0.8,
         videoMaxDuration: 60,
+        ...COMPATIBLE_VIDEO_CAPTURE_OPTIONS,
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -265,6 +271,7 @@ export function EditProofActionSheet({ payload }: SheetProps<'edit-proof'>) {
         allowsEditing: true,
         quality: 0.8,
         videoMaxDuration: 60,
+        ...COMPATIBLE_VIDEO_LIBRARY_OPTIONS,
       });
 
       if (!result.canceled && result.assets[0]) {

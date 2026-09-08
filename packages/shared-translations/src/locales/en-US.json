@@ -1348,6 +1348,7 @@
         "imageNotAvailable": "Image not available",
         "documentNotAvailable": "Document not available",
         "failedToLoadVideo": "Failed to load video",
+        "videoFormatUnsupported": "This video can't be played on this device",
         "failedToLoadImage": "Failed to load image",
         "failedToLoadDocument": "Failed to load document",
         "cannotOpenLink": "Cannot open this link",
