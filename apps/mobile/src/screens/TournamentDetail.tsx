@@ -1942,6 +1942,7 @@ export const TournamentDetail: React.FC = () => {
       secondaryAccentBg: isDark ? `${secondary[500]}30` : `${secondary[500]}20`,
       championBg: isDark ? `${accent[400]}25` : `${accent[500]}15`,
       championText: isDark ? accent[400] : accent[600],
+      creditText: isDark ? accent[400] : accent[600],
       danger: isDark ? secondary[400] : secondary[500],
       dangerBg: isDark ? `${secondary[500]}30` : `${secondary[500]}1f`,
     }),
@@ -2313,6 +2314,14 @@ export const TournamentDetail: React.FC = () => {
           { locale }
         )
       : null;
+  // A price the credit already lowered reads as an error unless we say why.
+  const creditAppliedNote =
+    isPaidTournament && feeQuote && (feeQuote.creditApplicableCents ?? 0) > 0
+      ? t('tournamentDetail.payments.creditAppliedHint').replace(
+          '{amount}',
+          formatPrice(feeQuote.creditApplicableCents, feeQuote.currency, { locale })
+        )
+      : null;
   const refundSummary = isPaidTournament ? refundPolicyLine(feeQuote, t, locale) : null;
   const registerBusy = registerPending || createRegistrationPayment.isPending;
 
@@ -2348,6 +2357,8 @@ export const TournamentDetail: React.FC = () => {
     onPress: () => void;
     disabled: boolean;
     hint: string | null;
+    /** Sits above the button, explaining a price the button alone can't. */
+    note?: string | null;
     testID: string;
   } | null = (() => {
     // Live phase: give the gate the dock. It is the one action that advances
@@ -2414,6 +2425,7 @@ export const TournamentDetail: React.FC = () => {
         onPress: onAcceptInvite,
         disabled: busy,
         hint: refundSummary,
+        note: creditAppliedNote,
         testID: 'cta-accept-tournament-invite',
       };
     }
@@ -2440,6 +2452,7 @@ export const TournamentDetail: React.FC = () => {
           onPress: onRegister,
           disabled: registerBusy,
           hint: registerHint || null,
+          note: creditAppliedNote,
           testID: 'cta-register',
         };
       }
@@ -3023,6 +3036,17 @@ export const TournamentDetail: React.FC = () => {
             },
           ]}
         >
+          {primaryAction.note ? (
+            <Text
+              size="xs"
+              weight="semibold"
+              color={colors.creditText}
+              numberOfLines={1}
+              style={styles.dockedBarNote}
+            >
+              {primaryAction.note}
+            </Text>
+          ) : null}
           <TouchableOpacity
             onPress={primaryAction.onPress}
             disabled={primaryAction.disabled}

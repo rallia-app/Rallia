@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useEventListener } from 'expo';
 import { WebView } from 'react-native-webview';
-import { Text, useToast } from '@rallia/shared-components';
+import { Text, Button, useToast } from '@rallia/shared-components';
 import { Logger, supabase } from '@rallia/shared-services';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
@@ -64,6 +64,22 @@ interface ProofViewerProps {
   onReport?: (proofId: string, proofTitle: string) => void;
 }
 
+// A decoder refusing the file is a device limitation, not an app bug: iPhones
+// record Dolby Vision HEVC that many Android chipsets cannot play.
+const UNSUPPORTED_FORMAT_MARKERS = [
+  'NO_EXCEEDS_CAPABILITIES',
+  'MediaCodecVideoRenderer',
+  'Decoder failed',
+  'DecoderInitializationError',
+  'no suitable decoder',
+];
+
+function isUnsupportedFormat(message: string | undefined): boolean {
+  if (!message) return false;
+  const haystack = message.toLowerCase();
+  return UNSUPPORTED_FORMAT_MARKERS.some(marker => haystack.includes(marker.toLowerCase()));
+}
+
 const ProofViewer: React.FC<ProofViewerProps> = ({
   visible,
   onClose,
@@ -77,7 +93,17 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
   const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [formatUnsupported, setFormatUnsupported] = useState(false);
   const [resolvedFileUrl, setResolvedFileUrl] = useState<string | null>(null);
+
+  // Reset a previous proof's failure when the viewer opens or switches proof.
+  const viewerKey = `${proof?.id ?? ''}:${visible}`;
+  const [lastViewerKey, setLastViewerKey] = useState(viewerKey);
+  if (viewerKey !== lastViewerKey) {
+    setLastViewerKey(viewerKey);
+    setError(null);
+    setFormatUnsupported(false);
+  }
 
   const canReact = isOwnProfile === false && !!currentUserId;
   const [likeCount, setLikeCount] = useState(0);
@@ -97,13 +123,21 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
     } else if (status === 'readyToPlay') {
       setLoading(false);
     } else if (status === 'error') {
-      if (playerError) {
-        Logger.error(
-          'Video playback error',
-          new Error(playerError.message || 'unknown player error')
-        );
+      const message = playerError?.message;
+      const unsupported = isUnsupportedFormat(message);
+      if (unsupported) {
+        Logger.warn('Video format not supported on this device', { message });
+      } else if (playerError) {
+        Logger.error('Video playback error', new Error(message || 'unknown player error'));
       }
-      setError(t('profile.ratingProofs.gallery.failedToLoadVideo'));
+      setFormatUnsupported(unsupported);
+      setError(
+        t(
+          unsupported
+            ? 'profile.ratingProofs.gallery.videoFormatUnsupported'
+            : 'profile.ratingProofs.gallery.failedToLoadVideo'
+        )
+      );
       setLoading(false);
     }
   });
@@ -257,6 +291,16 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
         Logger.error('Failed to open external link', err as Error);
         setError(t('profile.ratingProofs.gallery.failedToOpenLink'));
       }
+    }
+  };
+
+  const handleOpenVideoExternally = async () => {
+    if (!resolvedFileUrl) return;
+    try {
+      await Linking.openURL(resolvedFileUrl);
+    } catch (err) {
+      Logger.error('Failed to open video externally', err as Error);
+      toast.error(t('profile.ratingProofs.gallery.failedToOpenLink'));
     }
   };
 
@@ -505,17 +549,28 @@ const ProofViewer: React.FC<ProofViewerProps> = ({
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={48} color={colors.error} />
               <Text style={[styles.errorText, { color: colors.textMuted }]}>{error}</Text>
-              <TouchableOpacity
-                style={[styles.retryButton, { backgroundColor: colors.inputBackground }]}
-                onPress={() => {
-                  setError(null);
-                  setLoading(true);
-                }}
-              >
-                <Text style={[styles.retryButtonText, { color: colors.text }]}>
+              {formatUnsupported ? (
+                <Button
+                  variant="primary"
+                  size="md"
+                  style={styles.errorAction}
+                  onPress={() => void handleOpenVideoExternally()}
+                >
+                  {t('profile.ratingProofs.gallery.openInBrowser')}
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="md"
+                  style={styles.errorAction}
+                  onPress={() => {
+                    setError(null);
+                    setLoading(true);
+                  }}
+                >
                   {t('profile.ratingProofs.gallery.retry')}
-                </Text>
-              </TouchableOpacity>
+                </Button>
+              )}
             </View>
           ) : (
             renderContent()
@@ -774,14 +829,8 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[3],
     textAlign: 'center',
   },
-  retryButton: {
+  errorAction: {
     marginTop: spacingPixels[4],
-    paddingVertical: spacingPixels[2],
-    paddingHorizontal: spacingPixels[4],
-    borderRadius: radiusPixels.md,
-  },
-  retryButtonText: {
-    fontSize: fontSizePixels.sm,
   },
   // Reactions
   reactionsRow: {

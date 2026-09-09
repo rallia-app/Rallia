@@ -33,6 +33,7 @@ import {
   spacingPixels,
   primary,
   neutral,
+  accent,
   secondary,
 } from '@rallia/design-system';
 import {
@@ -201,6 +202,7 @@ export const LeagueDetail: React.FC = () => {
       secondaryHighlightBorder: isDark ? `${secondary[400]}40` : `${secondary[500]}20`,
       secondaryAccent: isDark ? secondary[400] : secondary[500],
       secondaryAccentBg: isDark ? `${secondary[500]}30` : `${secondary[500]}20`,
+      creditText: isDark ? accent[400] : accent[600],
       danger: isDark ? secondary[400] : secondary[500],
       dangerBg: isDark ? `${secondary[500]}30` : `${secondary[500]}1f`,
     }),
@@ -1916,6 +1918,18 @@ export const LeagueDetail: React.FC = () => {
     });
   }
 
+  // A price the credit already lowered reads as an error unless we say why.
+  const seasonCreditNote =
+    isPaidSeason && seasonFeeQuote && (seasonFeeQuote.creditApplicableCents ?? 0) > 0
+      ? t('leagueDetail.paid.creditAppliedHint').replace(
+          '{amount}',
+          formatPrice(seasonFeeQuote.creditApplicableCents, seasonFeeQuote.currency, {
+            locale,
+            trimZeroCents: true,
+          })
+        )
+      : null;
+
   /**
    * The one state-advancing action for this viewer, docked to the bottom of
    * the screen so it's reachable from any tab at any position (the tournament
@@ -1927,6 +1941,8 @@ export const LeagueDetail: React.FC = () => {
     onPress: () => void;
     disabled: boolean;
     hint: string | null;
+    /** Sits above the button, explaining a price the button alone can't. */
+    note?: string | null;
     testID: string;
   } | null = (() => {
     if (league.status === 'closed') return null;
@@ -2017,6 +2033,7 @@ export const LeagueDetail: React.FC = () => {
         },
         disabled: busy,
         hint: isPaidSeason ? seasonRefundPolicyLine(seasonFeeQuote, t, locale) : null,
+        note: seasonCreditNote,
         testID: 'cta-enroll-season',
       };
     }
@@ -2369,6 +2386,17 @@ export const LeagueDetail: React.FC = () => {
             },
           ]}
         >
+          {primaryAction.note ? (
+            <Text
+              size="xs"
+              weight="semibold"
+              color={colors.creditText}
+              numberOfLines={1}
+              style={styles.dockedBarNote}
+            >
+              {primaryAction.note}
+            </Text>
+          ) : null}
           <TouchableOpacity
             onPress={primaryAction.onPress}
             disabled={primaryAction.disabled}

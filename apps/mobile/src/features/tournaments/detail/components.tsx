@@ -162,6 +162,7 @@ export interface ScreenColors {
   secondaryAccentBg: string;
   championBg: string;
   championText: string;
+  creditText: string;
   danger: string;
   dangerBg: string;
 }

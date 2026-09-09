@@ -235,6 +235,10 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
+  dockedBarNote: {
+    textAlign: 'center',
+    lineHeight: 16,
+  },
   screenScroll: {
     flex: 1,
   },

@@ -18,6 +18,11 @@ import {
 } from '#/services/ratingProofUpload';
 import { isBackblazeConfigured, getBackblazeConfigStatus } from '#/services/backblazeUpload';
 
+import {
+  COMPATIBLE_VIDEO_CAPTURE_OPTIONS,
+  COMPATIBLE_VIDEO_LIBRARY_OPTIONS,
+} from '../videoCaptureOptions';
+
 import type { ProofFormProps } from './AddRatingProofOverlay';
 
 interface VideoProofOverlayProps {
@@ -98,6 +103,7 @@ export function VideoProofForm({
         allowsEditing: true,
         quality: 0.8,
         videoMaxDuration: MAX_VIDEO_DURATION_SECONDS,
+        ...COMPATIBLE_VIDEO_CAPTURE_OPTIONS,
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -130,6 +136,7 @@ export function VideoProofForm({
         allowsEditing: true,
         quality: 0.8,
         videoMaxDuration: MAX_VIDEO_DURATION_SECONDS,
+        ...COMPATIBLE_VIDEO_LIBRARY_OPTIONS,
       });
 
       if (!result.canceled && result.assets[0]) {

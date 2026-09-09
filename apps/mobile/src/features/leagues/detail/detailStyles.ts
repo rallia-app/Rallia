@@ -306,6 +306,10 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
+  dockedBarNote: {
+    textAlign: 'center',
+    lineHeight: 16,
+  },
   participantEmpty: {
     padding: spacingPixels[4],
     alignItems: 'center',
