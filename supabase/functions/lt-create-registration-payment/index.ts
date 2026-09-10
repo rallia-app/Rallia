@@ -164,6 +164,8 @@ interface BeginRow {
   /** Season leg only. */
   season_user_id?: string;
   entry_cents: number;
+  /** GST/QST on the entry itself (20260910020252); 0 unless the event sets a mode. */
+  entry_tax_cents: number;
   service_fee_cents: number;
   fee_tax_cents: number;
   amount_charged_cents: number;
@@ -274,6 +276,7 @@ Deno.serve(async req => {
         clientSecret: null,
         paymentId: reg.payment_id,
         entryCents: reg.entry_cents,
+        entryTaxCents: reg.entry_tax_cents ?? 0,
         serviceFeeCents: reg.service_fee_cents,
         feeTaxCents: reg.fee_tax_cents,
         amountChargedCents: 0,
@@ -283,6 +286,16 @@ Deno.serve(async req => {
     }
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2023-10-16' });
+
+    // The mode isn't on the RPC row, but the ledger row the RPC just wrote
+    // carries it, snapshotted. Read it back rather than re-deriving it from
+    // the event: the ledger is what the accountant reads.
+    const { data: ledger } = await admin
+      .from('lt_registration_payment')
+      .select('entry_tax_mode')
+      .eq('id', reg.payment_id)
+      .maybeSingle();
+    const entryTaxMode: string = ledger?.entry_tax_mode ?? 'none';
 
     const currency = (reg.currency || 'CAD').toLowerCase();
     // rallia_flow stays 'lt_registration' for both legs — the webhook keys off it
@@ -296,6 +309,8 @@ Deno.serve(async req => {
       payerUserId: user.id,
       organizerId: reg.organizer_id,
       entryCents: String(reg.entry_cents),
+      entryTaxCents: String(reg.entry_tax_cents ?? 0),
+      entryTaxMode,
       serviceFeeCents: String(reg.service_fee_cents),
       feeTaxCents: String(reg.fee_tax_cents),
       organizerAmountCents: String(reg.organizer_amount_cents),
@@ -393,13 +408,25 @@ Deno.serve(async req => {
       currency === 'cad'
         ? `${(cents / 100).toFixed(2).replace('.', ',')} $`
         : `${(cents / 100).toFixed(2)} ${currency.toUpperCase()}`;
+    // The entry line says exactly what the tax did. 'added' puts it on top,
+    // 'included' names the carve-out, 'none' means the organizer owns it and
+    // the price was quoted all-in. Stripe prints this on the receipt email.
+    const entryTax = reg.entry_tax_cents ?? 0;
+    let entryLine = `Entrée ${money(reg.entry_cents)}`;
+    if (entryTaxMode === 'added' && entryTax > 0) {
+      entryLine += ` + TPS/TVQ ${money(entryTax)}`;
+    } else if (entryTaxMode === 'included' && entryTax > 0) {
+      entryLine += ` (TPS/TVQ incluses : ${money(entryTax)})`;
+    } else if (reg.service_fee_cents === 0 || reg.fee_payer === 'organizer_absorbs') {
+      entryLine += ' (taxes incluses)';
+    }
     if (reg.fee_payer === 'player_pays' && reg.service_fee_cents > 0) {
-      description += ` · Entrée ${money(reg.entry_cents)} + Frais de service ${money(reg.service_fee_cents)}`;
+      description += ` · ${entryLine} + Frais de service ${money(reg.service_fee_cents)}`;
       if (reg.fee_tax_cents > 0) description += ` + TPS/TVQ ${money(reg.fee_tax_cents)}`;
     } else if (reg.fee_payer === 'organizer_absorbs') {
-      description += ` · Entrée ${money(reg.entry_cents)} (taxes incluses, frais de service assumés par l'organisateur)`;
+      description += ` · ${entryLine.replace(')', ", frais de service assumés par l'organisateur)")}`;
     } else {
-      description += ` · Entrée ${money(reg.entry_cents)} (taxes incluses)`;
+      description += ` · ${entryLine}`;
     }
 
     const params: Stripe.PaymentIntentCreateParams = {
@@ -429,6 +456,7 @@ Deno.serve(async req => {
       clientSecret: paymentIntent.client_secret,
       paymentId: reg.payment_id,
       entryCents: reg.entry_cents,
+      entryTaxCents: entryTax,
       serviceFeeCents: reg.service_fee_cents,
       feeTaxCents: reg.fee_tax_cents,
       amountChargedCents: reg.amount_charged_cents,

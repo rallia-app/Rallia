@@ -119,12 +119,22 @@ export const TournamentCard: React.FC<{
   const prizeLabel = prizeAmountLabel(tournament, locale, t);
   // Cost, not payout. Only paid events carry it, so a card without the chip
   // reads as free — and the prize badge stops being the only money on the card.
+  // "15 $ + taxes" when the tax rides on top, so the card never understates
+  // the charge.
   const entryFeeLabel =
     tournament.entry_fee_cents > 0
-      ? formatPrice(tournament.entry_fee_cents, tournament.currency, {
-          locale,
-          trimZeroCents: true,
-        })
+      ? tournament.entry_tax_mode === 'added'
+        ? t('tournamentList.entryFeePlusTaxes').replace(
+            '{amount}',
+            formatPrice(tournament.entry_fee_cents, tournament.currency, {
+              locale,
+              trimZeroCents: true,
+            })
+          )
+        : formatPrice(tournament.entry_fee_cents, tournament.currency, {
+            locale,
+            trimZeroCents: true,
+          })
       : null;
   const venue = tournament.venue_name || tournament.city;
 

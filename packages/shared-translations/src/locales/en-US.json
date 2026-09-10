@@ -4686,6 +4686,7 @@
       "pay": "Pay",
       "confirmTitle": "Confirm your spot",
       "breakdownEntry": "Entry fee: {amount}",
+      "breakdownEntryTax": "GST + QST on the entry fee: {amount}",
       "breakdownServiceFee": "Rallia service fee: {amount}",
       "breakdownFeeTax": "GST + QST on the service fee: {amount}",
       "breakdownCredit": "Rallia credit: -{amount}",
@@ -5406,7 +5407,8 @@
       "title": "No tournaments found",
       "description": "No tournaments match the \"{filter}\" filter"
     },
-    "dateRange": "{start} – {end}"
+    "dateRange": "{start} – {end}",
+    "entryFeePlusTaxes": "{amount} + taxes"
   },
   "bracketSetup": {
     "title": "Set up bracket",
@@ -5468,6 +5470,7 @@
       "withdrawnNoRefund": "You've withdrawn. No refund applies.",
       "confirmTitle": "Confirm registration",
       "breakdownEntry": "Entry fee: {amount}",
+      "breakdownEntryTax": "GST + QST on the entry fee: {amount}",
       "breakdownServiceFee": "Service fee: {amount}",
       "breakdownFeeTax": "GST + QST on the service fee: {amount}",
       "breakdownCredit": "Rallia credit: -{amount}",
@@ -12617,6 +12620,7 @@
     "mixedDoubles": "Mixed Doubles",
     "free": "Free entry",
     "entryFee": "{amount} entry",
+    "entryFeePlusTaxes": "{amount} + taxes entry",
     "prizePool": "{amount} in prizes",
     "prizePoolUpTo": "up to {amount} in prizes",
     "spotsLeft": "{count, plural, =1 {1 spot left} other {# spots left}}",
