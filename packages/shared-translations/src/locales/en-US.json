@@ -3066,6 +3066,8 @@
     "failedToLoad": "Failed to load players",
     "checkConnection": "Please check your connection and try again",
     "favorites": {
+      "addToFavorites": "Add to favorites",
+      "removeFromFavorites": "Remove from favorites",
       "addedToFavorites": "Added to favorites",
       "removedFromFavorites": "Removed from favorites"
     },
