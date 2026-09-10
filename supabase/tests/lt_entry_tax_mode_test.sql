@@ -280,4 +280,50 @@ BEGIN
     RAISE NOTICE '5. refund paths OK';
 END $$;
 
+-- --------------------------------------------------------------------------
+-- 6. the credit is a price reduction: tax rides on what is actually paid
+--    (20260910143506). Mirrors Série 3: house organizer, fee waived, 15 $.
+-- --------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_org uuid; v_players uuid[]; v_tid uuid;
+    v_t tournaments; v_b record; v_p lt_registration_payment;
+BEGIN
+    SELECT o_org, o_players, o_tid INTO v_org, v_players, v_tid
+      FROM pg_temp.mk_taxed_draft('Entry tax — credit', 'included', 1500);
+    UPDATE tournaments SET fee_pct_bps_override = 0, fee_flat_cents_override = 0 WHERE id = v_tid;
+    UPDATE profile SET is_house_organizer = true WHERE id = v_org;
+    PERFORM pg_temp.setup_payouts(v_org);
+    SELECT * INTO v_t FROM tournaments WHERE id = v_tid;
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_org::text)::text, true);
+    PERFORM tournament_open_registration(v_tid, v_t.version);
+
+    INSERT INTO player_credit (player_id, amount_cents, source)
+    VALUES (v_players[2], 1000, 'test_partial'), (v_players[3], 1500, 'test_full');
+
+    -- 10 $ credit on 15 $: pays 5 $, and the tax is the 65c inside those 5 $.
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[2]::text)::text, true);
+    SELECT * INTO v_b FROM tournament_begin_paid_registration(v_tid);
+    ASSERT v_b.credit_applied_cents = 1000,  'partial credit 1000, got ' || v_b.credit_applied_cents;
+    ASSERT v_b.amount_charged_cents = 500,   'pays 500, got ' || v_b.amount_charged_cents;
+    ASSERT v_b.entry_tax_cents = 65,         'tax inside 500 is 65, got ' || v_b.entry_tax_cents;
+    SELECT * INTO v_p FROM lt_registration_payment WHERE id = v_b.payment_id;
+    ASSERT v_p.entry_tax_cents = 65,         'ledger tax 65, got ' || v_p.entry_tax_cents;
+
+    -- Fully covered: nothing paid, nothing taxed.
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[3]::text)::text, true);
+    SELECT * INTO v_b FROM tournament_begin_paid_registration(v_tid);
+    ASSERT v_b.amount_charged_cents = 0,     'fully covered pays 0, got ' || v_b.amount_charged_cents;
+    ASSERT v_b.entry_tax_cents = 0,          'fully covered owes no tax, got ' || v_b.entry_tax_cents;
+
+    -- No credit: the figure is exactly the mode's own.
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_players[4]::text)::text, true);
+    SELECT * INTO v_b FROM tournament_begin_paid_registration(v_tid);
+    ASSERT v_b.credit_applied_cents = 0,     'no credit, got ' || v_b.credit_applied_cents;
+    ASSERT v_b.amount_charged_cents = 1500,  'pays 1500, got ' || v_b.amount_charged_cents;
+    ASSERT v_b.entry_tax_cents = 195,        'no credit keeps 195, got ' || v_b.entry_tax_cents;
+
+    RAISE NOTICE '6. credit-aware entry tax OK';
+END $$;
+
 ROLLBACK;
