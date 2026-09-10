@@ -216,6 +216,12 @@ COMMIT;
 -- Le mode `included` corrige la comptabilité SANS toucher au prix. Aucun
 -- geste Stripe, aucun remboursement, aucune notification.
 --
+-- ⚠️ Série 3 est passée en `added` (17,25 $) par migration le 10 septembre,
+-- pas par cette étape : le 3a filtre sur `none` et la laisse tranquille. Le
+-- 3b, lui, rejoue bien ses lignes payées AVANT la bascule (15 $ encaissés
+-- pendant le `none`) en taxes incluses : c'est la seule lecture honnête d'un
+-- 15 $ déjà perçu, et le mode par ligne existe précisément pour ça.
+--
 -- ⚠️ LE PIÈGE : le grand livre (`lt_registration_payment`) fige
 -- `entry_tax_cents` au moment où l'inscription COMMENCE. Basculer un
 -- événement ne corrige que les inscriptions FUTURES. Tout ce qui a été payé

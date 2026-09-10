@@ -53,6 +53,7 @@ interface TournamentOgData {
   venue_name: string | null;
   status: string;
   entry_fee_cents: number;
+  entry_tax_mode: 'none' | 'included' | 'added' | null;
   currency: string;
   entry_format: 'singles' | 'doubles' | 'mixed_doubles';
   max_participants: number;
@@ -74,7 +75,7 @@ async function getTournament(id: string): Promise<TournamentOgData | null> {
     .select(
       `
       name, start_date, end_date, city, venue_name, status,
-      entry_fee_cents, currency, entry_format, max_participants,
+      entry_fee_cents, entry_tax_mode, currency, entry_format, max_participants,
       min_rating, max_rating, prize_money_cents, prize_is_prorated, registration_closes_at, logo_url,
       sport:sport_id (name),
       facility:facility_id (name, city)
@@ -185,7 +186,7 @@ function deriveTournamentCard(tournament: TournamentOgData, locale: string, t: T
   }
   if (tournament.entry_fee_cents > 0) {
     badges.push(
-      t('entryFee', {
+      t(tournament.entry_tax_mode === 'added' ? 'entryFeePlusTaxes' : 'entryFee', {
         amount: formatMoney(tournament.entry_fee_cents, tournament.currency, locale),
       })
     );

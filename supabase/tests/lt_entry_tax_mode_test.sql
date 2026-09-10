@@ -34,21 +34,31 @@
 BEGIN;
 
 -- --------------------------------------------------------------------------
--- 1. every existing event defaults to 'none', so nothing changed for anybody
+-- 1. third-party events are never taxed by Rallia
 -- Runs before this file creates any fixture of its own, so the counts below
 -- are the real world's, not ours.
 -- --------------------------------------------------------------------------
+-- Rallia-run events may legitimately carry a mode (Série 3 went 'added' by
+-- 20260910153508). The invariant is narrower and permanent: no THIRD-PARTY
+-- event is ever taxed by Rallia, and the plumbing itself never rewrote a
+-- ledger row (only the runbook does, on purpose).
 DO $$
 DECLARE
     v_bad integer;
 BEGIN
-    SELECT count(*) INTO v_bad FROM tournaments WHERE entry_tax_mode <> 'none';
-    ASSERT v_bad = 0, 'no tournament should be taxed yet, found ' || v_bad;
-    SELECT count(*) INTO v_bad FROM seasons WHERE entry_tax_mode <> 'none';
-    ASSERT v_bad = 0, 'no season should be taxed yet, found ' || v_bad;
-    SELECT count(*) INTO v_bad FROM lt_registration_payment WHERE entry_tax_cents <> 0;
-    ASSERT v_bad = 0, 'no historical payment should carry entry tax, found ' || v_bad;
-    RAISE NOTICE '1. default is inert OK';
+    SELECT count(*) INTO v_bad
+      FROM tournaments t JOIN profile pr ON pr.id = t.organizer_id
+     WHERE t.entry_tax_mode <> 'none' AND NOT pr.is_house_organizer;
+    ASSERT v_bad = 0, 'a third-party tournament carries an entry tax mode, found ' || v_bad;
+    SELECT count(*) INTO v_bad
+      FROM seasons s JOIN leagues l ON l.id = s.league_id JOIN profile pr ON pr.id = l.organizer_id
+     WHERE s.entry_tax_mode <> 'none' AND NOT pr.is_house_organizer;
+    ASSERT v_bad = 0, 'a third-party season carries an entry tax mode, found ' || v_bad;
+    SELECT count(*) INTO v_bad FROM lt_registration_payment p
+      JOIN profile pr ON pr.id = p.organizer_id
+     WHERE p.entry_tax_cents <> 0 AND NOT pr.is_house_organizer;
+    ASSERT v_bad = 0, 'a third-party payment carries entry tax, found ' || v_bad;
+    RAISE NOTICE '1. third-party events stay untaxed OK';
 END $$;
 
 CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void

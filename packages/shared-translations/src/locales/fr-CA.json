@@ -4686,6 +4686,7 @@
       "pay": "Payer",
       "confirmTitle": "Confirme ta place",
       "breakdownEntry": "Entrée : {amount}",
+      "breakdownEntryTax": "TPS + TVQ sur l'entrée : {amount}",
       "breakdownServiceFee": "Frais de service Rallia : {amount}",
       "breakdownFeeTax": "TPS + TVQ sur les frais de service : {amount}",
       "breakdownCredit": "Crédit Rallia : -{amount}",
@@ -5406,7 +5407,8 @@
       "title": "Aucun tournoi trouvé",
       "description": "Aucun tournoi ne correspond au filtre « {filter} »"
     },
-    "dateRange": "{start} – {end}"
+    "dateRange": "{start} – {end}",
+    "entryFeePlusTaxes": "{amount} + taxes"
   },
   "bracketSetup": {
     "title": "Préparer le tableau",
@@ -5468,6 +5470,7 @@
       "withdrawnNoRefund": "Tu t'es retiré. Aucun remboursement ne s'applique.",
       "confirmTitle": "Confirmer l'inscription",
       "breakdownEntry": "Entrée : {amount}",
+      "breakdownEntryTax": "TPS + TVQ sur l'entrée : {amount}",
       "breakdownServiceFee": "Frais de service : {amount}",
       "breakdownFeeTax": "TPS + TVQ sur les frais de service : {amount}",
       "breakdownCredit": "Crédit Rallia : -{amount}",
@@ -12617,6 +12620,7 @@
     "mixedDoubles": "Double mixte",
     "free": "Entrée gratuite",
     "entryFee": "Entrée {amount}",
+    "entryFeePlusTaxes": "Entrée {amount} + taxes",
     "prizePool": "{amount} en prix",
     "prizePoolUpTo": "jusqu'à {amount} en prix",
     "spotsLeft": "{count, plural, =1 {1 place restante} other {# places restantes}}",

@@ -756,7 +756,10 @@ export async function registerForTournament(
 
 /** All-in price breakdown shown before a player pays. Mirrors tournament_fee_quote. */
 export interface TournamentFeeQuote {
+  /** The listed entry price. */
   entryCents: number;
+  /** GST/QST on the entry itself, 0 unless the event carries an entry_tax_mode. */
+  entryTaxCents: number;
   serviceFeeCents: number;
   /** GST/QST on the service fee (Rallia remits). */
   feeTaxCents: number;
@@ -788,6 +791,7 @@ export async function getTournamentFeeQuote(
   if (!row) return null;
   return {
     entryCents: row.entry_cents,
+    entryTaxCents: row.entry_tax_cents ?? 0,
     serviceFeeCents: row.service_fee_cents,
     feeTaxCents: row.fee_tax_cents,
     totalCents: row.total_cents,

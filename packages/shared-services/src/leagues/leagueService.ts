@@ -320,6 +320,8 @@ export async function closeLeague(
 
 export interface SeasonFeeQuote {
   entryCents: number;
+  /** GST/QST on the entry itself, 0 unless the season carries an entry_tax_mode. */
+  entryTaxCents: number;
   serviceFeeCents: number;
   /** GST/QST on the service fee (Rallia remits). Never refunded. */
   feeTaxCents: number;
@@ -343,6 +345,7 @@ export async function getSeasonFeeQuote(seasonId: string): Promise<SeasonFeeQuot
   if (!row || row.entry_cents <= 0) return null;
   return {
     entryCents: row.entry_cents,
+    entryTaxCents: row.entry_tax_cents ?? 0,
     serviceFeeCents: row.service_fee_cents,
     feeTaxCents: row.fee_tax_cents,
     totalCents: row.total_cents,

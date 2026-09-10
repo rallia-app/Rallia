@@ -803,6 +803,12 @@ export const LeagueDetail: React.FC = () => {
             '{amount}',
             money(seasonFeeQuote.entryCents)
           ),
+          seasonFeeQuote.entryTaxCents > 0
+            ? t('leagueDetail.paid.breakdownEntryTax').replace(
+                '{amount}',
+                money(seasonFeeQuote.entryTaxCents)
+              )
+            : null,
           chargesServiceFee
             ? t('leagueDetail.paid.breakdownServiceFee').replace(
                 '{amount}',
@@ -825,6 +831,12 @@ export const LeagueDetail: React.FC = () => {
             '{amount}',
             money(seasonFeeQuote.entryCents)
           ),
+          seasonFeeQuote.entryTaxCents > 0
+            ? t('leagueDetail.paid.breakdownEntryTax').replace(
+                '{amount}',
+                money(seasonFeeQuote.entryTaxCents)
+              )
+            : null,
           t('leagueDetail.paid.feeCoveredByOrganizer'),
           seasonCreditLine,
           t('leagueDetail.paid.breakdownTotalTaxesIncluded').replace(

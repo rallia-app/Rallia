@@ -693,6 +693,12 @@ export const TournamentDetail: React.FC = () => {
                 '{amount}',
                 money(feeQuote.entryCents)
               ),
+              feeQuote.entryTaxCents > 0
+                ? t('tournamentDetail.payments.breakdownEntryTax').replace(
+                    '{amount}',
+                    money(feeQuote.entryTaxCents)
+                  )
+                : null,
               chargesServiceFee
                 ? t('tournamentDetail.payments.breakdownServiceFee').replace(
                     '{amount}',
@@ -718,6 +724,12 @@ export const TournamentDetail: React.FC = () => {
                 '{amount}',
                 money(feeQuote.entryCents)
               ),
+              feeQuote.entryTaxCents > 0
+                ? t('tournamentDetail.payments.breakdownEntryTax').replace(
+                    '{amount}',
+                    money(feeQuote.entryTaxCents)
+                  )
+                : null,
               t('tournamentDetail.payments.feeCoveredByOrganizer'),
               creditLine,
               t('tournamentDetail.payments.breakdownTotalTaxesIncluded').replace(
@@ -2612,8 +2624,21 @@ export const TournamentDetail: React.FC = () => {
   const showRegisteredChip =
     !!myActiveRegistration && !wasCancelled && tournament.status !== 'archived';
   const showRankingChip = !!rankingHeadline && awardsRankingPoints;
+  // "15 $ + taxes" when the tax rides on top: the listed price is not the
+  // charge, and the spec sheet must not read like it is.
   const entryFeeLabel = isPaidTournament
-    ? formatPrice(tournament.entry_fee_cents, tournament.currency, { locale, trimZeroCents: true })
+    ? tournament.entry_tax_mode === 'added'
+      ? t('tournamentList.entryFeePlusTaxes').replace(
+          '{amount}',
+          formatPrice(tournament.entry_fee_cents, tournament.currency, {
+            locale,
+            trimZeroCents: true,
+          })
+        )
+      : formatPrice(tournament.entry_fee_cents, tournament.currency, {
+          locale,
+          trimZeroCents: true,
+        })
     : null;
   // Two different numbers, deliberately — see prizeLabel.ts. The spec sheet's
   // row is labelled "Bourse", so it carries the whole pool; the unlabelled
