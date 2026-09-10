@@ -3066,6 +3066,8 @@
     "failedToLoad": "Échec du chargement des joueurs",
     "checkConnection": "Veuillez vérifier votre connexion et réessayer",
     "favorites": {
+      "addToFavorites": "Ajouter aux favoris",
+      "removeFromFavorites": "Retirer des favoris",
       "addedToFavorites": "Ajouté aux favoris",
       "removedFromFavorites": "Retiré des favoris"
     },
