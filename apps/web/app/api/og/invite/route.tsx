@@ -59,6 +59,7 @@ interface TournamentOgData {
   min_rating: number | null;
   max_rating: number | null;
   prize_money_cents: number | null;
+  prize_is_prorated: boolean | null;
   registration_closes_at: string | null;
   logo_url: string | null;
   sport: { name: string } | null;
@@ -74,7 +75,7 @@ async function getTournament(id: string): Promise<TournamentOgData | null> {
       `
       name, start_date, end_date, city, venue_name, status,
       entry_fee_cents, currency, entry_format, max_participants,
-      min_rating, max_rating, prize_money_cents, registration_closes_at, logo_url,
+      min_rating, max_rating, prize_money_cents, prize_is_prorated, registration_closes_at, logo_url,
       sport:sport_id (name),
       facility:facility_id (name, city)
     `
@@ -147,6 +148,12 @@ function formatMoney(cents: number, currency: string, locale: string): string {
 type Fonts = { name: string; data: ArrayBuffer; style: 'normal'; weight: 500 | 600 | 700 }[];
 type Translator = Awaited<ReturnType<typeof getTranslations>>;
 
+/** The pool, read as a ceiling when it prorates with paid entries. */
+function prizeLabel(tournament: TournamentOgData, locale: string, t: Translator): string {
+  const amount = formatMoney(tournament.prize_money_cents ?? 0, tournament.currency, locale);
+  return t(tournament.prize_is_prorated ? 'prizePoolUpTo' : 'prizePool', { amount });
+}
+
 /** Display values shared by the landscape OG card and the story poster. */
 function deriveTournamentCard(tournament: TournamentOgData, locale: string, t: Translator) {
   const rawSport = tournament.sport?.name;
@@ -186,11 +193,7 @@ function deriveTournamentCard(tournament: TournamentOgData, locale: string, t: T
     badges.push(t('free'));
   }
   if (tournament.prize_money_cents && tournament.prize_money_cents > 0) {
-    badges.push(
-      t('prizePool', {
-        amount: formatMoney(tournament.prize_money_cents, tournament.currency, locale),
-      })
-    );
+    badges.push(prizeLabel(tournament, locale, t));
   }
 
   const isOpen = tournament.status === 'registration_open';
@@ -432,13 +435,7 @@ async function tournamentImage(tournament: TournamentOgData, locale: string, fon
             </span>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                 <svg
@@ -480,25 +477,30 @@ async function tournamentImage(tournament: TournamentOgData, locale: string, fon
                   </span>
                 </div>
               )}
-              {badges.slice(0, 2).map((badge, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '7px 16px',
-                    borderRadius: 9,
-                    background: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                  }}
-                >
-                  <span style={{ fontSize: 17, fontWeight: 500, color: primary[100] }}>
-                    {badge}
-                  </span>
-                </div>
-              ))}
             </div>
-            {pill}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* Last two = entry and prize; the art already carries level and format. */}
+                {badges.slice(-2).map((badge, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '7px 16px',
+                      borderRadius: 9,
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                    }}
+                  >
+                    <span style={{ fontSize: 17, fontWeight: 500, color: primary[100] }}>
+                      {badge}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {pill}
+            </div>
           </div>
         </div>
       </div>,
@@ -826,11 +828,7 @@ async function tournamentStoryImage(
   } as const;
 
   const hasPrize = !!tournament.prize_money_cents && tournament.prize_money_cents > 0;
-  const prizeStr = hasPrize
-    ? t('prizePool', {
-        amount: formatMoney(tournament.prize_money_cents!, tournament.currency, locale),
-      })
-    : '';
+  const prizeStr = hasPrize ? prizeLabel(tournament, locale, t) : '';
   // The gold hero line already shows the prize — don't repeat it as a badge.
   const shownBadges = hasPrize ? badges.filter(b => b !== prizeStr) : badges;
 

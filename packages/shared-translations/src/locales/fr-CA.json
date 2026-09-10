@@ -12617,6 +12617,7 @@
     "free": "Entrée gratuite",
     "entryFee": "Entrée {amount}",
     "prizePool": "{amount} en prix",
+    "prizePoolUpTo": "jusqu'à {amount} en prix",
     "spotsLeft": "{count, plural, =1 {1 place restante} other {# places restantes}}",
     "full": "Complet",
     "registrationClosed": "Inscriptions fermées",
