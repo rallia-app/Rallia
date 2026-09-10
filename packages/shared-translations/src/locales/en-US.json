@@ -2112,6 +2112,7 @@
     "kickConfirmTitle": "Remove Player?",
     "kickConfirmMessage": "This player will be removed from the game and notified.",
     "genderMismatch": "This game is only open to players of a different gender.",
+    "matchFull": "This game just filled up.",
     "invitations": "Invitations",
     "pendingInvitations": "Pending Invitations",
     "declinedInvitations": "Declined",

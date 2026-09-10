@@ -12568,6 +12568,10 @@ export type Database = {
         Args: { network_id_param: string; user_id_param: string }
         Returns: boolean
       }
+      is_network_shared_match: {
+        Args: { p_match_id: string; p_viewer: string }
+        Returns: boolean
+      }
       is_org_admin: {
         Args: { org_id_param: string; user_id_param: string }
         Returns: boolean

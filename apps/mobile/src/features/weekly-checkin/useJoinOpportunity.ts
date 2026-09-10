@@ -21,6 +21,7 @@ import type { MatchWithDetails } from '@rallia/shared-types';
 
 import * as Analytics from '#/services/analytics';
 import { useTranslation } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 
 export type JoinOutcome = 'joined' | 'requested' | 'waitlisted';
 
@@ -117,7 +118,10 @@ export function useJoinOpportunity(
           }));
         } else {
           errorHaptic();
-          const text = message === 'GENDER_MISMATCH' ? t('matchActions.genderMismatch') : message;
+          const text = rpcErrorMessage(err, t, 'common.rpcErrors.generic', {
+            GENDER_MISMATCH: 'matchActions.genderMismatch',
+            MATCH_FULL: 'matchActions.matchFull',
+          });
           if (notifyError) notifyError(text);
           else toast.error(text);
         }

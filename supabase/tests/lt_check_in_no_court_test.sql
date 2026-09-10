@@ -38,9 +38,12 @@ BEGIN
     v_p := pg_temp.players(3);
 
     -- ---------------------------------------------- a game with no address
-    INSERT INTO match (sport_id, created_by, match_date, start_time, end_time, location_type)
+    -- Doubles: the fixture seats three players, and a singles game only has two
+    -- seats now that match_participant_capacity_guard enforces the format.
+    INSERT INTO match (sport_id, created_by, match_date, start_time, end_time,
+                       location_type, format)
     VALUES ((SELECT id FROM sport WHERE name = 'tennis'), v_p[1],
-            now()::date, '19:00', '20:30', 'tbd')
+            now()::date, '19:00', '20:30', 'tbd', 'doubles')
     RETURNING id INTO v_m;
     -- The creator is added by a trigger, so upsert rather than insert.
     INSERT INTO match_participant (match_id, player_id, team_number, status)

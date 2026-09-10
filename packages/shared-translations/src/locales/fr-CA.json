@@ -2112,6 +2112,7 @@
     "kickConfirmTitle": "Retirer le joueur?",
     "kickConfirmMessage": "Ce joueur sera retiré de la partie et sera notifié.",
     "genderMismatch": "Cette partie est réservée aux joueurs d'un genre différent.",
+    "matchFull": "Cette partie vient de se remplir.",
     "invitations": "Invitations",
     "pendingInvitations": "Invitations en attente",
     "declinedInvitations": "Refusées",

@@ -1398,6 +1398,9 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       .single();
 
     if (updateError) {
+      // The capacity guard is the authority: our own count above can be short
+      // when RLS hides a participant row from this reader.
+      if (updateError.message.includes('MATCH_FULL')) throw new Error('MATCH_FULL');
       throw new Error(`Failed to rejoin match: ${updateError.message}`);
     }
     participant = updatedParticipant as MatchParticipant;
@@ -1420,6 +1423,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       if (insertError.code === '23505') {
         throw new Error('You are already in this match');
       }
+      if (insertError.message.includes('MATCH_FULL')) throw new Error('MATCH_FULL');
       throw new Error(`Failed to join match: ${insertError.message}`);
     }
     participant = newParticipant as MatchParticipant;
@@ -1876,7 +1880,7 @@ export async function acceptJoinRequest(
   const availableSpots = totalSpots - joinedParticipants;
 
   if (availableSpots <= 0) {
-    throw new Error('Match is full. Cannot accept more players.');
+    throw new Error('MATCH_FULL');
   }
 
   // Update the participant status to 'joined'
@@ -1892,6 +1896,7 @@ export async function acceptJoinRequest(
     .single();
 
   if (updateError) {
+    if (updateError.message.includes('MATCH_FULL')) throw new Error('MATCH_FULL');
     throw new Error(`Failed to accept join request: ${updateError.message}`);
   }
 
