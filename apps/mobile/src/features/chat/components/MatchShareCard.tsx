@@ -58,6 +58,7 @@ import type { MatchDetailData } from '#/context/MatchDetailSheetContext';
 import { useMatchDetailSheet } from '#/context/MatchDetailSheetContext';
 import * as Analytics from '#/services/analytics';
 import { useAuth, useTranslation, useThemeStyles } from '#/hooks';
+import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { formatTimeOfDay } from '#/utils/dateFormatting';
 
 import { ChatCardFallback, chatCardShell } from './ChatCardShell';
@@ -95,9 +96,16 @@ export function MatchShareCard({ message }: MatchShareCardProps) {
       // Not every game is direct-join; say which one this was.
       if (result?.status === 'requested') toast.success(t('quickGame.card.joinRequested'));
     },
-    onJoinError: () => {
+    onJoinError: error => {
       void warningHaptic();
-      toast.error(t('quickGame.card.joinFailed'));
+      // A game that filled between the render and the tap is the likeliest
+      // failure here, and "try again" would be the wrong thing to tell them.
+      toast.error(
+        rpcErrorMessage(error, t, 'quickGame.card.joinFailed', {
+          MATCH_FULL: 'matchActions.matchFull',
+          GENDER_MISMATCH: 'matchActions.genderMismatch',
+        })
+      );
     },
   });
 

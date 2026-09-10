@@ -964,6 +964,7 @@ export const MatchDetailSheet: React.FC = () => {
       toast.error(
         rpcErrorMessage(error, t, 'common.rpcErrors.generic', {
           GENDER_MISMATCH: 'matchActions.genderMismatch',
+          MATCH_FULL: 'matchActions.matchFull',
         })
       );
     },
@@ -1012,7 +1013,11 @@ export const MatchDetailSheet: React.FC = () => {
     onAcceptError: error => {
       errorHaptic();
       setAcceptingRequestId(null);
-      toast.error(rpcErrorMessage(error, t, 'common.rpcErrors.generic'));
+      toast.error(
+        rpcErrorMessage(error, t, 'common.rpcErrors.generic', {
+          MATCH_FULL: 'matchActions.matchFull',
+        })
+      );
     },
     onRejectSuccess: participant => {
       successHaptic();
@@ -2288,8 +2293,12 @@ export const MatchDetailSheet: React.FC = () => {
     });
   });
 
-  // Empty slots
-  for (let i = 0; i < participantInfo.spotsLeft; i++) {
+  // Empty slots, counted from the seats already drawn rather than from
+  // spotsLeft: the host slot above is drawn from created_by_player even when no
+  // participant row backs it, so a hidden or missing host row would otherwise
+  // add a seat the game does not have.
+  const emptySlots = Math.max(0, participantInfo.total - participantAvatars.length);
+  for (let i = 0; i < emptySlots; i++) {
     participantAvatars.push({
       key: `empty-${i}`,
       avatarUrl: null,

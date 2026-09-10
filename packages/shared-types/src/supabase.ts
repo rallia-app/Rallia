@@ -2806,6 +2806,8 @@ export type Database = {
           credit_applied_cents: number
           currency: string
           entry_cents: number
+          entry_tax_cents: number
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           expires_at: string | null
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
           fee_tax_cents: number
@@ -2837,6 +2839,8 @@ export type Database = {
           credit_applied_cents?: number
           currency?: string
           entry_cents: number
+          entry_tax_cents?: number
+          entry_tax_mode?: Database["public"]["Enums"]["entry_tax_mode_enum"]
           expires_at?: string | null
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
           fee_tax_cents?: number
@@ -2868,6 +2872,8 @@ export type Database = {
           credit_applied_cents?: number
           currency?: string
           entry_cents?: number
+          entry_tax_cents?: number
+          entry_tax_mode?: Database["public"]["Enums"]["entry_tax_mode_enum"]
           expires_at?: string | null
           fee_payer?: Database["public"]["Enums"]["fee_payer_enum"]
           fee_tax_cents?: number
@@ -8579,6 +8585,7 @@ export type Database = {
           currency: string
           end_date: string
           entry_fee_cents: number
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
@@ -8606,6 +8613,7 @@ export type Database = {
           currency?: string
           end_date: string
           entry_fee_cents?: number
+          entry_tax_mode?: Database["public"]["Enums"]["entry_tax_mode_enum"]
           fee_cap_cents_override?: number | null
           fee_flat_cents_override?: number | null
           fee_payer?: Database["public"]["Enums"]["fee_payer_enum"]
@@ -8633,6 +8641,7 @@ export type Database = {
           currency?: string
           end_date?: string
           entry_fee_cents?: number
+          entry_tax_mode?: Database["public"]["Enums"]["entry_tax_mode_enum"]
           fee_cap_cents_override?: number | null
           fee_flat_cents_override?: number | null
           fee_payer?: Database["public"]["Enums"]["fee_payer_enum"]
@@ -9993,6 +10002,7 @@ export type Database = {
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           facility_id: string | null
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
@@ -10063,6 +10073,7 @@ export type Database = {
           end_date: string
           entry_fee_cents?: number
           entry_format?: Database["public"]["Enums"]["entry_format"]
+          entry_tax_mode?: Database["public"]["Enums"]["entry_tax_mode_enum"]
           facility_id?: string | null
           fee_cap_cents_override?: number | null
           fee_flat_cents_override?: number | null
@@ -10133,6 +10144,7 @@ export type Database = {
           end_date?: string
           entry_fee_cents?: number
           entry_format?: Database["public"]["Enums"]["entry_format"]
+          entry_tax_mode?: Database["public"]["Enums"]["entry_tax_mode_enum"]
           facility_id?: string | null
           fee_cap_cents_override?: number | null
           fee_flat_cents_override?: number | null
@@ -10572,6 +10584,13 @@ export type Database = {
         Returns: undefined
       }
       complete_onboarding: { Args: { p_player_id?: string }; Returns: Json }
+      compute_entry_tax_cents: {
+        Args: {
+          p_entry_cents: number
+          p_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
+        }
+        Returns: number
+      }
       compute_fee_tax_cents: { Args: { p_fee_cents: number }; Returns: number }
       compute_service_fee_cents: {
         Args: {
@@ -12549,6 +12568,10 @@ export type Database = {
         Args: { network_id_param: string; user_id_param: string }
         Returns: boolean
       }
+      is_network_shared_match: {
+        Args: { p_match_id: string; p_viewer: string }
+        Returns: boolean
+      }
       is_org_admin: {
         Args: { org_id_param: string; user_id_param: string }
         Returns: boolean
@@ -13199,6 +13222,14 @@ export type Database = {
         Returns: string
       }
       lt_ensure_ranking_season: { Args: { p_at: string }; Returns: string }
+      lt_entry_charged_cents: {
+        Args: {
+          p_entry_cents: number
+          p_entry_tax_cents: number
+          p_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
+        }
+        Returns: number
+      }
       lt_event_earnings: {
         Args: { p_season_id?: string; p_tournament_id?: string }
         Returns: {
@@ -14149,6 +14180,7 @@ export type Database = {
           credit_applied_cents: number
           currency: string
           entry_cents: number
+          entry_tax_cents: number
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
           fee_tax_cents: number
           organizer_amount_cents: number
@@ -14171,6 +14203,7 @@ export type Database = {
           currency: string
           end_date: string
           entry_fee_cents: number
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
@@ -14207,6 +14240,7 @@ export type Database = {
           currency: string
           end_date: string
           entry_fee_cents: number
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
@@ -14255,6 +14289,7 @@ export type Database = {
           currency: string
           end_date: string
           entry_fee_cents: number
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
@@ -14312,6 +14347,7 @@ export type Database = {
           credit_applicable_cents: number
           currency: string
           entry_cents: number
+          entry_tax_cents: number
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
           fee_tax_cents: number
           organizer_receives_cents: number
@@ -14332,6 +14368,7 @@ export type Database = {
           currency: string
           end_date: string
           entry_fee_cents: number
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
@@ -14418,6 +14455,7 @@ export type Database = {
           currency: string
           end_date: string
           entry_fee_cents: number
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
@@ -15169,6 +15207,7 @@ export type Database = {
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           facility_id: string | null
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
@@ -15282,6 +15321,7 @@ export type Database = {
           credit_applied_cents: number
           currency: string
           entry_cents: number
+          entry_tax_cents: number
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
           fee_tax_cents: number
           organizer_amount_cents: number
@@ -15316,6 +15356,7 @@ export type Database = {
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           facility_id: string | null
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
@@ -15395,6 +15436,7 @@ export type Database = {
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           facility_id: string | null
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
@@ -15502,6 +15544,7 @@ export type Database = {
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           facility_id: string | null
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
@@ -15610,6 +15653,7 @@ export type Database = {
           credit_applicable_cents: number
           currency: string
           entry_cents: number
+          entry_tax_cents: number
           fee_payer: Database["public"]["Enums"]["fee_payer_enum"]
           fee_tax_cents: number
           organizer_receives_cents: number
@@ -15897,6 +15941,7 @@ export type Database = {
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           facility_id: string | null
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
@@ -16155,6 +16200,7 @@ export type Database = {
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           facility_id: string | null
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
@@ -16343,6 +16389,7 @@ export type Database = {
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           facility_id: string | null
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
@@ -16484,6 +16531,7 @@ export type Database = {
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           facility_id: string | null
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
@@ -16563,6 +16611,7 @@ export type Database = {
           end_date: string
           entry_fee_cents: number
           entry_format: Database["public"]["Enums"]["entry_format"]
+          entry_tax_mode: Database["public"]["Enums"]["entry_tax_mode_enum"]
           facility_id: string | null
           fee_cap_cents_override: number | null
           fee_flat_cents_override: number | null
@@ -16810,6 +16859,7 @@ export type Database = {
         | "skipped_preference"
         | "skipped_missing_contact"
       entry_format: "singles" | "doubles" | "mixed_doubles"
+      entry_tax_mode_enum: "none" | "included" | "added"
       facility_contact_type_enum:
         | "general"
         | "reservation"
@@ -17499,6 +17549,7 @@ export const Constants = {
         "skipped_missing_contact",
       ],
       entry_format: ["singles", "doubles", "mixed_doubles"],
+      entry_tax_mode_enum: ["none", "included", "added"],
       facility_contact_type_enum: [
         "general",
         "reservation",

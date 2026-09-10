@@ -3,6 +3,8 @@ import { describe, it, expect } from '@jest/globals';
 import {
   computeServiceFeeCents,
   computeFeeTaxCents,
+  computeEntryTaxCents,
+  entryChargedCents,
   quoteRegistration,
   DEFAULT_SERVICE_FEE_PARAMS,
 } from './serviceFee';
@@ -70,6 +72,7 @@ describe('quoteRegistration', () => {
   it('player_pays: fee + tax on top, organizer gets full entry ($50 → $52.87 / $50)', () => {
     expect(quoteRegistration(5000, 'player_pays')).toEqual({
       entryCents: 5000,
+      entryTaxCents: 0,
       serviceFeeCents: 250,
       feeTaxCents: 37,
       totalCents: 5287,
@@ -81,6 +84,7 @@ describe('quoteRegistration', () => {
   it('organizer_absorbs: player pays entry, fee + tax netted out ($50 → $50 / $47.13)', () => {
     expect(quoteRegistration(5000, 'organizer_absorbs')).toEqual({
       entryCents: 5000,
+      entryTaxCents: 0,
       serviceFeeCents: 250,
       feeTaxCents: 37,
       totalCents: 5000,
@@ -98,5 +102,76 @@ describe('quoteRegistration', () => {
         organizerReceivesCents: 0,
       });
     }
+  });
+});
+
+describe('computeEntryTaxCents (entry-side GST+QST)', () => {
+  it('none never taxes, whatever the entry', () => {
+    expect(computeEntryTaxCents(5000, 'none')).toBe(0);
+    expect(computeEntryTaxCents(5000)).toBe(0); // the default
+  });
+
+  it('a free entry is never taxed', () => {
+    expect(computeEntryTaxCents(0, 'included')).toBe(0);
+    expect(computeEntryTaxCents(0, 'added')).toBe(0);
+  });
+
+  // Same worked examples as supabase/tests/lt_entry_tax_mode_test.sql.
+  it.each([
+    ['$15 added', 1500, 'added' as const, 225],
+    ['$15 included', 1500, 'included' as const, 195],
+    ['$50 added', 5000, 'added' as const, 749],
+    ['$50 included', 5000, 'included' as const, 651],
+  ])('%s → %i¢', (_label, entry, mode, expected) => {
+    expect(computeEntryTaxCents(entry, mode)).toBe(expected);
+  });
+
+  // The property that keeps a tax-included price honest: multiplying the gross
+  // by 14.975% would over-collect, so 'included' divides instead.
+  it.each([1500, 5000, 2500, 12345])('included round-trips %i¢ exactly', entry => {
+    const tax = computeEntryTaxCents(entry, 'included');
+    expect(Math.round((entry - tax) * 1.14975)).toBe(entry);
+  });
+});
+
+describe('entryChargedCents', () => {
+  it('only added sits on top of the entry', () => {
+    expect(entryChargedCents(5000, 0, 'none')).toBe(5000);
+    expect(entryChargedCents(5000, 651, 'included')).toBe(5000);
+    expect(entryChargedCents(5000, 749, 'added')).toBe(5749);
+  });
+});
+
+describe('quoteRegistration with an entry tax', () => {
+  it('included does not move a single total: only the split is new', () => {
+    const none = quoteRegistration(5000, 'player_pays', DEFAULT_SERVICE_FEE_PARAMS, 'none');
+    const included = quoteRegistration(5000, 'player_pays', DEFAULT_SERVICE_FEE_PARAMS, 'included');
+
+    expect(included.totalCents).toBe(none.totalCents);
+    expect(included.organizerReceivesCents).toBe(none.organizerReceivesCents);
+    expect(included.entryCents).toBe(5000);
+    expect(included.entryTaxCents).toBe(651);
+  });
+
+  it('added raises the charge and what settles to the organizer', () => {
+    expect(quoteRegistration(5000, 'player_pays', DEFAULT_SERVICE_FEE_PARAMS, 'added')).toEqual({
+      entryCents: 5000,
+      entryTaxCents: 749,
+      serviceFeeCents: 250,
+      feeTaxCents: 37,
+      totalCents: 6036,
+      organizerReceivesCents: 5749,
+      feePayer: 'player_pays',
+    });
+  });
+
+  it('organizer_absorbs absorbs the fee, never the entry tax', () => {
+    expect(
+      quoteRegistration(5000, 'organizer_absorbs', DEFAULT_SERVICE_FEE_PARAMS, 'added')
+    ).toMatchObject({
+      entryTaxCents: 749,
+      totalCents: 5749,
+      organizerReceivesCents: 5749 - 250 - 37,
+    });
   });
 });
