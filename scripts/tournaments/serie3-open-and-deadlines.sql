@@ -10,8 +10,9 @@
 --
 --   ÉTAPE 1  ouvrir les inscriptions       -> le mercredi 9 septembre, 9 h
 --   ÉTAPE 2  poser les échéances de tours  -> juste après chaque tirage
+--   ÉTAPE 3  taxes sur l'entrée (TPS/TVQ)  -> dès que le comptable confirme
 --
--- À jouer une étape à la fois. LE MEILLEUR CHEMIN EST L'APP dans les deux cas ;
+-- À jouer une étape à la fois. LE MEILLEUR CHEMIN EST L'APP quand il en offre un ;
 -- ces blocs existent pour le dashboard, où `auth.uid()` est absent.
 --
 -- ------------------------------------------------------------------------
@@ -191,6 +192,95 @@ COMMIT;
 --         PERFORM public.lt_notify_tournament_deadline_changed(v_id, 'main', '{1,2,3}'::smallint[]);
 --     END LOOP;
 -- END $$;
+--
+-- COMMIT;
+
+
+-- ============================================================================
+-- ÉTAPE 3 : TPS/TVQ sur l'entrée. DÈS QUE LE COMPTABLE CONFIRME, PAS AVANT.
+--
+-- Contexte : 20260910020252_lt_entry_tax_mode.sql. Les frais de service sont
+-- à zéro sur un événement Rallia (Rallia ne se facture pas elle-même), et la
+-- taxe était accrochée aux frais : chaque inscription Série 3 est donc
+-- enregistrée avec ZÉRO taxe, alors que l'entrée est une fourniture par un
+-- inscrit à la TPS/TVQ. Le mode `included` corrige la comptabilité SANS
+-- toucher au prix : 15 $ reste 15 $ pour le joueur, 13,05 $ + 1,95 $ dans nos
+-- livres. Aucun geste Stripe, aucun remboursement, aucune notification.
+--
+-- ⚠️ LE PIÈGE : le grand livre (`lt_registration_payment`) fige
+-- `entry_tax_cents` au moment où l'inscription COMMENCE. Basculer le tournoi
+-- ne corrige que les inscriptions FUTURES. Tout ce qui a été payé pendant que
+-- le tournoi était en `none` porte un 0 permanent. D'où le 3b : on rejoue le
+-- calcul sur les lignes existantes des deux tableaux. Le montant est celui de
+-- `compute_entry_tax_cents`, la même fonction que l'RPC ; on n'écrit jamais un
+-- chiffre à la main.
+--
+-- Prérequis : la migration est appliquée sur cet environnement (le garde-fou
+-- le vérifie). Toute la transaction s'annule si quelque chose cloche.
+--
+-- Décommenter au moment voulu.
+-- ============================================================================
+
+-- BEGIN;
+--
+-- DO $$
+-- DECLARE
+--     v_flipped    integer;
+--     v_backfilled integer;
+--     v_tax_total  integer;
+-- BEGIN
+--     IF to_regprocedure('public.compute_entry_tax_cents(integer, entry_tax_mode_enum)') IS NULL THEN
+--         RAISE EXCEPTION 'La migration 20260910020252 n''est pas appliquée ici : rien à faire.';
+--     END IF;
+--
+--     -- 3a. Basculer les deux tableaux. Vaut pour toute inscription à venir.
+--     UPDATE public.tournaments
+--        SET entry_tax_mode = 'included',
+--            updated_at     = now()
+--      WHERE name LIKE 'Série 3 Montréal · Tennis ·%'
+--        AND entry_tax_mode = 'none';
+--     GET DIAGNOSTICS v_flipped = ROW_COUNT;
+--
+--     -- 3b. Rejouer le calcul sur ce qui est DÉJÀ dans le grand livre, tous
+--     -- statuts confondus : une ligne remboursée doit aussi montrer la taxe
+--     -- perçue puis rendue, le comptable lit refund_amount_cents à côté.
+--     UPDATE public.lt_registration_payment p
+--        SET entry_tax_cents = public.compute_entry_tax_cents(p.entry_cents, 'included'),
+--            entry_tax_mode  = 'included',
+--            updated_at      = now()
+--       FROM public.tournament_registrations r
+--       JOIN public.tournaments t ON t.id = r.tournament_id
+--      WHERE p.tournament_registration_id = r.id
+--        AND t.name LIKE 'Série 3 Montréal · Tennis ·%'
+--        AND p.entry_tax_mode = 'none';
+--     GET DIAGNOSTICS v_backfilled = ROW_COUNT;
+--
+--     INSERT INTO public.leagues_tournaments_audit (scope, entity_id, action, actor_id, payload_after)
+--     SELECT 'tournament', t.id, 'set_entry_tax_mode', t.organizer_id,
+--            jsonb_build_object('entry_tax_mode', 'included',
+--                               'backfilled_payments', v_backfilled, 'via', 'dashboard_sql')
+--       FROM public.tournaments t
+--      WHERE t.name LIKE 'Série 3 Montréal · Tennis ·%';
+--
+--     SELECT COALESCE(SUM(p.entry_tax_cents), 0) INTO v_tax_total
+--       FROM public.lt_registration_payment p
+--       JOIN public.tournament_registrations r ON r.id = p.tournament_registration_id
+--       JOIN public.tournaments t ON t.id = r.tournament_id
+--      WHERE t.name LIKE 'Série 3 Montréal · Tennis ·%'
+--        AND p.status = 'succeeded';
+--
+--     RAISE NOTICE '% tableau(x) basculé(s), % ligne(s) rejouée(s), TPS/TVQ sur les paiements réussis : % $',
+--                  v_flipped, v_backfilled, ROUND(v_tax_total / 100.0, 2);
+-- END $$;
+--
+-- -- Contrôle : chaque paiement réussi doit lire 1500 / 195 / included.
+-- SELECT t.name, p.status, p.entry_cents, p.entry_tax_cents, p.entry_tax_mode,
+--        p.amount_charged_cents, p.credit_applied_cents
+--   FROM public.lt_registration_payment p
+--   JOIN public.tournament_registrations r ON r.id = p.tournament_registration_id
+--   JOIN public.tournaments t ON t.id = r.tournament_id
+--  WHERE t.name LIKE 'Série 3 Montréal · Tennis ·%'
+--  ORDER BY t.name, p.created_at;
 --
 -- COMMIT;
 
