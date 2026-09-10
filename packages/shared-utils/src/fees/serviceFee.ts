@@ -16,6 +16,16 @@
 
 export type FeePayer = 'player_pays' | 'organizer_absorbs';
 
+/**
+ * How GST/QST applies to the ENTRY (not the service fee).
+ * - none:     third-party organizer, merchant of record, owns the entry tax.
+ *             The default, and today's behaviour everywhere.
+ * - included: the listed entry is the all-in price; tax is carved out of it,
+ *             so the player is charged exactly what 'none' charges.
+ * - added:    tax charged on top of the listed entry.
+ */
+export type EntryTaxMode = 'none' | 'included' | 'added';
+
 export interface ServiceFeeParams {
   /** Percentage of entry, in basis points (500 = 5%). */
   pctBps: number;
@@ -58,8 +68,39 @@ export const FEE_TAX_RATE_DEN = 100000;
 export const computeFeeTaxCents = (feeCents: number): number =>
   Math.round((Math.max(0, feeCents || 0) * FEE_TAX_RATE_NUM) / FEE_TAX_RATE_DEN);
 
+/** Denominator for backing tax OUT of a tax-included price (100000 + 14975). */
+export const ENTRY_TAX_INCLUSIVE_DEN = 114975;
+
+/**
+ * GST/QST (cents) on an entry fee. Mirrors `compute_entry_tax_cents`.
+ * 'included' divides rather than multiplies, so that base + tax reconstructs
+ * the listed price exactly; multiplying by 14.975% would over-collect.
+ */
+export const computeEntryTaxCents = (entryCents: number, mode: EntryTaxMode = 'none'): number => {
+  const entry = Math.max(0, Math.trunc(entryCents || 0));
+  if (entry <= 0 || mode === 'none') return 0;
+  const den = mode === 'included' ? ENTRY_TAX_INCLUSIVE_DEN : FEE_TAX_RATE_DEN;
+  return Math.round((entry * FEE_TAX_RATE_NUM) / den);
+};
+
+/**
+ * Entry-side cents the player is charged, and therefore the refundable base.
+ * Mirrors `lt_entry_charged_cents`: 'included' already holds the tax inside
+ * the entry, only 'added' sits on top of it.
+ */
+export const entryChargedCents = (
+  entryCents: number,
+  entryTaxCents: number,
+  mode: EntryTaxMode = 'none'
+): number =>
+  Math.max(0, Math.trunc(entryCents || 0)) +
+  (mode === 'added' ? Math.max(0, Math.trunc(entryTaxCents || 0)) : 0);
+
 export interface RegistrationQuote {
+  /** The listed entry price, unchanged by the tax mode. */
   entryCents: number;
+  /** GST/QST on the entry (0 unless the event sets a mode). */
+  entryTaxCents: number;
   serviceFeeCents: number;
   /** GST/QST on the service fee (Rallia remits). */
   feeTaxCents: number;
@@ -74,33 +115,41 @@ export interface RegistrationQuote {
  * All-in breakdown for a registration. Mirrors `tournament_fee_quote`:
  * - player_pays      → player charged entry + fee + fee tax, organizer gets entry.
  * - organizer_absorbs → player charged entry, organizer gets entry − fee − fee tax.
+ *
+ * Entry tax rides on top of that only in 'added' mode; 'included' is a pure
+ * bookkeeping split that leaves every total identical to 'none'.
  */
 export const quoteRegistration = (
   entryCents: number,
   feePayer: FeePayer = 'player_pays',
-  params: ServiceFeeParams = DEFAULT_SERVICE_FEE_PARAMS
+  params: ServiceFeeParams = DEFAULT_SERVICE_FEE_PARAMS,
+  entryTaxMode: EntryTaxMode = 'none'
 ): RegistrationQuote => {
   const entry = Math.max(0, Math.trunc(entryCents || 0));
   const serviceFeeCents = computeServiceFeeCents(entry, params);
   const feeTaxCents = computeFeeTaxCents(serviceFeeCents);
+  const entryTaxCents = computeEntryTaxCents(entry, entryTaxMode);
+  const entryCharge = entryChargedCents(entry, entryTaxCents, entryTaxMode);
 
   if (feePayer === 'player_pays') {
     return {
       entryCents: entry,
+      entryTaxCents,
       serviceFeeCents,
       feeTaxCents,
-      totalCents: entry + serviceFeeCents + feeTaxCents,
-      organizerReceivesCents: entry,
+      totalCents: entryCharge + serviceFeeCents + feeTaxCents,
+      organizerReceivesCents: entryCharge,
       feePayer,
     };
   }
 
   return {
     entryCents: entry,
+    entryTaxCents,
     serviceFeeCents,
     feeTaxCents,
-    totalCents: entry,
-    organizerReceivesCents: Math.max(entry - serviceFeeCents - feeTaxCents, 0),
+    totalCents: entryCharge,
+    organizerReceivesCents: Math.max(entryCharge - serviceFeeCents - feeTaxCents, 0),
     feePayer,
   };
 };
