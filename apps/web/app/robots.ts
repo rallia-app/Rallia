@@ -19,9 +19,29 @@ const DISALLOW_PRIVATE = [
   '/*/community/join/',
 ];
 
+// Link-preview crawlers that honour robots.txt. Under `*` they were refused both
+// the share pages and the /api/og image, so Facebook posts rendered no card
+// while WhatsApp (which ignores robots.txt) did. Nothing on a share page or an
+// OG image is private; the auth-gated areas stay blocked.
+const PREVIEW_CRAWLERS = ['facebookexternalhit', 'Twitterbot', 'LinkedInBot'] as const;
+const DISALLOW_FOR_PREVIEWS = [
+  '/monitoring/',
+  '/ingest/',
+  '/*/admin/',
+  '/*/app/',
+  '/*/dashboard/',
+  '/*/onboarding/',
+  '/*/sign-in',
+];
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
+      ...PREVIEW_CRAWLERS.map(bot => ({
+        userAgent: bot,
+        allow: ['/'],
+        disallow: DISALLOW_FOR_PREVIEWS,
+      })),
       {
         userAgent: '*',
         allow: '/',
