@@ -133,13 +133,21 @@ COMMIT;
 --   2a. après `tournament_generate_pools`     -> ligne ('pool', 0)
 --   2b. après `tournament_generate_knockout`  -> main 1..3 = quarts, demies, finale
 --
--- 2 qualifiés par poule sur un tableau de 16 = 8 qualifiés = tableau de 8 =
+-- AVANCÉ (plafond 16) : 2 qualifiés par poule = 8 qualifiés = tableau de 8 =
 -- TROIS tours. Vérifié sur une fixture locale : 4 quarts + 2 demies + 1 finale.
 -- Si le remplissage est plus mince, le nombre de tours CHANGE et ce bloc doit
 -- suivre (9 à 12 inscrits -> 3 poules -> 6 qualifiés -> tableau de 8 avec 2
 -- byes, toujours 3 tours ; 6 à 8 inscrits -> 2 poules -> 4 qualifiés ->
 -- tableau de 4, DEUX tours seulement : ne pas insérer de round 3).
 -- Sous 6 inscrits le tirage ne se génère pas du tout (INSUFFICIENT_PARTICIPANTS).
+--
+-- INTERMÉDIAIRE (plafond 32 depuis 20260914223807) : dès le 17e inscrit le
+-- tableau final devient un 16 (avec byes sous 29), donc QUATRE tours, et le
+-- règlement annonce 1er / 5 / 8 / 12 octobre. À 16 inscrits ou moins, c'est
+-- la forme de l'Avancé ci-dessus : trois tours, 2 / 7 / 12. Le bloc 2b-bis
+-- pose les quatre dates et n'écrit que les tours qui existent vraiment ; le
+-- 2b ne touche plus que l'Avancé. Le règlement de l'Intermédiaire est FAUX
+-- s'il finit sous 17 : le corriger dans l'app le même jour.
 --
 -- Décommenter au moment voulu.
 -- ============================================================================
@@ -155,7 +163,7 @@ COMMIT;
 -- ON CONFLICT (tournament_id, bracket_side, round_number)
 -- DO UPDATE SET deadline_at = EXCLUDED.deadline_at, updated_at = now();
 --
--- -- 2b. 5 jours par tour, comme annoncé dans le règlement.
+-- -- 2b. Avancé : 5 jours par tour, comme annoncé dans le règlement.
 -- INSERT INTO public.tournament_round_deadlines (tournament_id, bracket_side, round_number, deadline_at)
 -- SELECT t.id, 'main', d.round_number, d.deadline_at
 --   FROM public.tournaments t
@@ -164,7 +172,28 @@ COMMIT;
 --        (2::smallint, '2026-10-07 23:59:00 America/Toronto'::timestamptz),  -- demies
 --        (3::smallint, '2026-10-12 23:59:00 America/Toronto'::timestamptz)   -- finale
 --  ) AS d(round_number, deadline_at)
---  WHERE t.name LIKE 'Série 3 Montréal · Tennis ·%'
+--  WHERE t.name = 'Série 3 Montréal · Tennis · Avancé'
+--    AND t.status = 'in_progress'
+--    -- Ne pose un tour que s'il EXISTE vraiment dans ce tableau.
+--    AND EXISTS (SELECT 1 FROM public.tournament_matches m
+--                 WHERE m.tournament_id = t.id AND m.bracket_side = 'main'
+--                   AND m.round_number = d.round_number)
+-- ON CONFLICT (tournament_id, bracket_side, round_number)
+-- DO UPDATE SET deadline_at = EXCLUDED.deadline_at, updated_at = now();
+--
+-- -- 2b-bis. Intermédiaire : 4 tours en 15 jours, comme annoncé au règlement.
+-- -- Si le tableau a fini à 16 ou moins, il n'a que 3 tours : remplacer les
+-- -- dates par celles du 2b (2 / 7 / 12), le filtre EXISTS n'écrit rien de trop.
+-- INSERT INTO public.tournament_round_deadlines (tournament_id, bracket_side, round_number, deadline_at)
+-- SELECT t.id, 'main', d.round_number, d.deadline_at
+--   FROM public.tournaments t
+--  CROSS JOIN (VALUES
+--        (1::smallint, '2026-10-01 23:59:00 America/Toronto'::timestamptz),  -- huitièmes
+--        (2::smallint, '2026-10-05 23:59:00 America/Toronto'::timestamptz),  -- quarts
+--        (3::smallint, '2026-10-08 23:59:00 America/Toronto'::timestamptz),  -- demies
+--        (4::smallint, '2026-10-12 23:59:00 America/Toronto'::timestamptz)   -- finale
+--  ) AS d(round_number, deadline_at)
+--  WHERE t.name = 'Série 3 Montréal · Tennis · Intermédiaire'
 --    AND t.status = 'in_progress'
 --    -- Ne pose un tour que s'il EXISTE vraiment dans ce tableau.
 --    AND EXISTS (SELECT 1 FROM public.tournament_matches m
@@ -189,12 +218,39 @@ COMMIT;
 --         VALUES ('tournament', v_id, 'set_round_deadlines', v_org,
 --                 jsonb_build_object('via', 'dashboard_sql'));
 --         PERFORM public.lt_notify_tournament_deadline_changed(v_id, 'pool', '{0}'::smallint[]);
---         PERFORM public.lt_notify_tournament_deadline_changed(v_id, 'main', '{1,2,3}'::smallint[]);
+--         PERFORM public.lt_notify_tournament_deadline_changed(v_id, 'main',
+--             ARRAY(SELECT DISTINCT m.round_number FROM public.tournament_matches m
+--                    WHERE m.tournament_id = v_id AND m.bracket_side = 'main')::smallint[]);
 --     END LOOP;
 -- END $$;
 --
 -- COMMIT;
 
+
+-- ============================================================================
+-- ÉTAPE 2c (OPTIONNELLE) : redire « il reste des places » à l'Intermédiaire.
+--
+-- Le rappel « ferme bientôt » (process_tournament_closing_soon_fanout) est
+-- UNE SEULE fois par tournoi (index unique sur tournament_id). Il est entré
+-- dans sa fenêtre de 48 h le 13 septembre au soir ; si le tableau était déjà
+-- complet à ce moment, le job s'est fermé sans rien envoyer (« Full draw:
+-- nothing to sell »). Relever le plafond à 32 ne le réveille pas.
+--
+-- Remettre le job en `pending` le fait repartir à la prochaine passe du
+-- worker, avec le vrai nombre de places libres dans le texte, et il DÉDOUBLE
+-- par joueur : quiconque a déjà reçu le rappel ne le reçoit pas deux fois.
+-- Audience : les joueurs notifiés à l'ouverture (~300 Intermédiaire).
+-- C'est un envoi à des centaines de personnes : décision humaine, pas réflexe.
+-- ============================================================================
+
+-- UPDATE public.tournament_closing_fanout_job j
+--    SET status = 'pending', attempts = 0, last_error = NULL, updated_at = now()
+--   FROM public.tournaments t
+--  WHERE t.id = j.tournament_id
+--    AND t.name = 'Série 3 Montréal · Tennis · Intermédiaire'
+--    AND t.status = 'registration_open'
+--    AND t.registration_closes_at > now()
+--    AND j.status = 'done';
 
 -- ============================================================================
 -- ÉTAPE 3 : TPS/TVQ sur l'entrée. TOUS les événements Rallia, pas que la Série 3.
