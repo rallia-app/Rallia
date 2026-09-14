@@ -261,11 +261,80 @@ vrai tableau après. Rien à changer.
 1. Colonnes `capacity_mode`, `min_days_per_round`, `prize_per_entry_cents`,
    avec des défauts qui ne changent rien. Fonction de dérivation, SQL pur,
    testée unitairement contre la table de la section 4.
-2. Branche liste d'attente dans `tournament_register`, vente du pas comme
-   une unité (débit différé jusqu'au pas plein), promotion à la libération
-   d'une place, les deux notifications. Tester avec les fixtures
-   payantes.
+2. Branche liste d'attente dans `tournament_register`, promotion à la
+   libération d'une place, les deux notifications. Débit immédiat, comme
+   aujourd'hui. Tester avec les fixtures payantes.
 3. Extension par pas et texte de la carte. Mesurer la vitesse de remplissage
    sur la prochaine série contre la Série 3 avant de retirer quoi que ce soit.
 4. Clone en tableau frère. Seulement si une liste d'attente atteint un jour
    une poule.
+5. Vente du pas comme une unité, par carte enregistrée et débit hors session.
+   Deuxième phase, voir la section 10.
+
+## 10. Faisabilité
+
+Vérifiée le 14 septembre contre `lt-create-registration-payment`,
+`lt-reap-stale-registration-payments` et le RPC d'inscription. Tout est
+faisable sauf un mécanisme tel qu'écrit : la poule vendue comme une unité
+(4 ter, 6.2) entre en collision avec la façon dont l'argent est pris.
+
+### 10.1 Comment le paiement fonctionne aujourd'hui
+
+L'inscription crée immédiatement un PaymentIntent Stripe, débité au nom du
+compte Connect de l'organisateur avec les fonds routés vers lui, et le joueur
+le paie dans la feuille de paiement de l'app. L'inscription reste en
+`payment_pending` avec une expiration ; une fonction edge balaie les
+réservations périmées en annulant l'intent chez Stripe puis en libérant la
+place. La taxe d'entrée et le crédit de parrainage sont figés dans le grand
+livre à ce moment-là.
+
+### 10.2 Pourquoi « débiter quand la poule est pleine » est la partie dure
+
+Différer le débit impose l'un de trois patrons Stripe, chacun avec un coût.
+
+- **Autoriser maintenant, capturer plus tard.** Une autorisation de carte
+  vit 7 jours. La fenêtre de la Série 3 durait 6 jours : les réservations de
+  la dernière poule pourraient expirer avant que le pas se remplisse, et une
+  réautorisation exige que le joueur revienne dans l'app.
+- **Enregistrer la carte, débiter hors session plus tard.** Demande un
+  client Stripe et un moyen de paiement enregistré par joueur, plus la
+  gestion des refus et des échecs d'authentification bancaire au moment du
+  débit. Faisable, mais c'est un nouveau parcours dans l'app et dans le
+  webhook, et un joueur peut quand même finir « confirmé » puis impayé.
+- **Aucune carte avant que la poule soit pleine, puis une fenêtre de
+  paiement.** Aucune complexité Stripe, mais la poule peut caler sur un
+  joueur qui ne revient jamais, exactement le problème que la vente à l'unité
+  devait empêcher.
+
+Le grand livre fige aussi la taxe et le crédit au début de l'inscription : un
+débit différé doit recalculer les deux au moment du débit. Le système de
+réserve de crédit a déjà eu un incident sur ce genre de décalage
+(`20260826190000`).
+
+### 10.3 Ce qui est simple
+
+- Le plafond dérivé (6.1) : une fonction SQL pure, testable contre la table
+  de 4 bis.
+- La liste d'attente (6.3) : `waitlisted` existe déjà dans l'enum ; seule la
+  branche du RPC d'inscription est à écrire.
+- Le multiplicateur de points : rien à changer.
+- Le taux de bourse (6.5) : une colonne et l'assistant d'étiquette.
+- Les deux notifications : type, textes dans les deux langues, fan-out, le
+  patron habituel.
+- Le texte de la carte : un changement de hook.
+
+### 10.4 Ce qui est moyen
+
+- La libération d'une place a trois producteurs : retrait, remboursement,
+  balayeur. La promotion depuis la liste d'attente passe par un seul point
+  « place libérée », pas trois rustines.
+- Le clone en tableau frère (6.4) : borné, mais il touche inscriptions et
+  paiements.
+
+### 10.5 Recommandation
+
+Livrer d'abord le plafond dérivé, l'extension par pas avec débit immédiat, et
+la liste d'attente. Laisser le rééquilibrage existant du générateur absorber
+une dernière poule partielle, ce qu'il fait déjà aujourd'hui. Traiter la
+vente à l'unité comme une deuxième phase ; si elle se fait, prendre la carte
+enregistrée, seul patron qui survit à une fenêtre d'une semaine.
