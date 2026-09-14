@@ -23,7 +23,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import {
   Button,
@@ -389,18 +388,13 @@ export function MatchShareCard({ message }: MatchShareCardProps) {
           </View>
         </View>
 
-        {/* Chips scroll sideways rather than wrap, as on MatchCard, so the
-            card keeps one height whatever the game carries. */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          nestedScrollEnabled
-          style={styles.chipsScroll}
-          contentContainerStyle={styles.chipsContent}
-        >
-          <View style={[styles.tag, chipNeutral]}>
-            <Ionicons name="location-outline" size={13} color={colors.textMuted} />
-            <Text size="xs" color={colors.textMuted} numberOfLines={1}>
+        {/* Where leads the row as plain text, not a chip: it is the one fact
+            that decides whether you can make it. The row wraps so nothing
+            hides off-screen. */}
+        <View style={styles.chipsRow}>
+          <View style={styles.location}>
+            <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+            <Text size="xs" color={colors.textMuted} numberOfLines={1} style={styles.locationText}>
               {metadata.place_name ?? t('quickGame.card.locationTbd')}
             </Text>
           </View>
@@ -442,7 +436,7 @@ export function MatchShareCard({ message }: MatchShareCardProps) {
               </Text>
             </View>
           ) : null}
-        </ScrollView>
+        </View>
 
         <View style={chatCardShell.cardCta}>
           {showJoin ? (
@@ -543,13 +537,21 @@ const styles = StyleSheet.create({
   soonIcon: {
     marginRight: spacingPixels[1],
   },
-  chipsScroll: {
-    marginTop: spacingPixels[3],
-  },
-  chipsContent: {
+  chipsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacingPixels[2],
+    marginTop: spacingPixels[3],
+  },
+  location: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[1],
+    maxWidth: '100%',
+  },
+  locationText: {
+    flexShrink: 1,
   },
   tag: {
     flexDirection: 'row',
