@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -14,8 +14,14 @@ import * as Application from 'expo-application';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { SelectableChip, Text, useToast } from '@rallia/shared-components';
-import { Logger, supabase } from '@rallia/shared-services';
+import { SelectableChip, Spinner, Text, useToast } from '@rallia/shared-components';
+import {
+  AuthSessionUnavailableError,
+  isAuthSessionUnavailable,
+  Logger,
+  requireSession,
+  supabase,
+} from '@rallia/shared-services';
 import { useTheme, useAdminStatus, useProfile } from '@rallia/shared-hooks';
 import type { Locale } from '@rallia/shared-translations';
 import {
@@ -80,6 +86,12 @@ function SettingsItem({
 type FunctionErrorBody = { code?: string; error?: string; blockers?: Record<string, unknown> };
 
 // supabase.functions.invoke surfaces a non-2xx as FunctionsHttpError carrying the Response on `context`.
+function functionErrorStatus(error: unknown): number | null {
+  const response = (error as { context?: unknown } | null)?.context;
+  const status = (response as { status?: unknown } | null)?.status;
+  return typeof status === 'number' ? status : null;
+}
+
 async function readFunctionErrorBody(error: unknown): Promise<FunctionErrorBody | null> {
   const response = (error as { context?: unknown } | null)?.context;
   if (!response || typeof (response as Response).json !== 'function') return null;
@@ -229,9 +241,14 @@ const SettingsScreen: React.FC = () => {
   };
 
   const [isDeleting, setIsDeleting] = useState(false);
+  // Alerts are native and outlive the React state that opened them: a second
+  // tap during the 5s request queues a whole confirm chain that fires after
+  // the account is gone and the session is signed out.
+  const deleteStateRef = useRef<'idle' | 'deleting' | 'deleted'>('idle');
   const [showAppInfo, setShowAppInfo] = useState(false);
 
   const handleDeleteAccount = () => {
+    if (deleteStateRef.current !== 'idle') return;
     warningHaptic();
     Alert.alert(
       t('settings.deleteAccountConfirmTitle'),
@@ -252,10 +269,17 @@ const SettingsScreen: React.FC = () => {
                   text: t('settings.deleteAccountConfirmButton'),
                   style: 'destructive',
                   onPress: async () => {
+                    if (deleteStateRef.current !== 'idle') return;
+                    deleteStateRef.current = 'deleting';
                     setIsDeleting(true);
                     try {
+                      // A dead session would go out as the anon key and come back 401.
+                      await requireSession('delete-account');
                       const { data, error } = await supabase.functions.invoke('delete-account');
                       if (error || !data?.success) {
+                        if (functionErrorStatus(error) === 401) {
+                          throw new AuthSessionUnavailableError('delete-account');
+                        }
                         const body = await readFunctionErrorBody(error);
                         if (body?.code === 'lt_records') {
                           Logger.info('Account deletion blocked by L&T records', {
@@ -278,10 +302,30 @@ const SettingsScreen: React.FC = () => {
                           body?.error || error?.message || data?.error || 'Deletion failed'
                         );
                       }
+                      deleteStateRef.current = 'deleted';
                       await signOut();
                       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
                       toast.success(t('settings.deleteAccountSuccess'));
                     } catch (error) {
+                      deleteStateRef.current = 'idle';
+                      if (isAuthSessionUnavailable(error)) {
+                        Logger.info('Account deletion needs a fresh sign-in');
+                        Alert.alert(
+                          t('settings.deleteAccountSessionExpiredTitle'),
+                          t('settings.deleteAccountSessionExpiredMessage'),
+                          [
+                            { text: t('common.cancel'), style: 'cancel' },
+                            {
+                              text: t('settings.logout'),
+                              onPress: async () => {
+                                await signOut();
+                                navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+                              },
+                            },
+                          ]
+                        );
+                        return;
+                      }
                       Logger.error('Failed to delete account', error as Error);
                       toast.error(t('errors.unknown'));
                     } finally {
@@ -545,8 +589,13 @@ const SettingsScreen: React.FC = () => {
               style={[styles.deleteAccountButton, { backgroundColor: colors.deleteButtonBg }]}
               onPress={handleDeleteAccount}
               activeOpacity={0.7}
+              disabled={isDeleting}
             >
-              <Ionicons name="trash-outline" size={18} color={colors.deleteButtonText} />
+              {isDeleting ? (
+                <Spinner size="sm" color={colors.deleteButtonText} />
+              ) : (
+                <Ionicons name="trash-outline" size={18} color={colors.deleteButtonText} />
+              )}
               <Text size="base" weight="medium" color={colors.deleteButtonText}>
                 {t('settings.deleteAccount')}
               </Text>
