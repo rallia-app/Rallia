@@ -259,6 +259,8 @@ declare module 'react-native-actions-sheet' {
       payload: {
         /** The community chat the game is announced in. */
         conversationId: string;
+        /** The community itself, recorded on the game as where it was posted from. */
+        networkId?: string | null;
         /** Community's sport when it is single-sport; null pins nothing. */
         networkSportId?: string | null;
         /** Community name, shown so the host knows where this is posted. */
