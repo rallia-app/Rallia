@@ -93,6 +93,8 @@
     "// db:seed:leagues:sessions": "Seed staging with [SEED-S] leagues covering the full session loop: publish, confirm, match sheet, score, ranking (requires STAGING_DB_URL)",
     "db:seed:tournaments:jdl-v4": "psql \"$STAGING_DB_URL\" -1 -v ON_ERROR_STOP=1 -f scripts/tournaments/seed-jdl-v4-funnel.sql",
     "// db:seed:tournaments:jdl-v4": "Seed staging with the [JDL v4] tournaments for the scheduling-funnel retest: the availability gate, one-tap booking and its tentative window, and the resolution ladder's real outcomes past a deadline (requires STAGING_DB_URL)",
+    "db:rearm:jdl-retest": "psql \"$STAGING_DB_URL\" -v ON_ERROR_STOP=1 -f scripts/tournaments/restamp-jdl-v4-entente.sql -f scripts/tournaments/rearm-jdl-v4-lock.sql && npm run db:seed:jdl-v5",
+    "// db:rearm:jdl-retest": "Run the MORNING Jean retests: re-arms the L'entente clocks (24 h booking, 48 h contest), locks him out of Le parcours again, and rebuilds the same-day [JDL v5] check-in games (requires STAGING_DB_URL)",
     "db:verify:jdl-v5": "psql \"$STAGING_DB_URL\" -v ON_ERROR_STOP=1 -f scripts/verify-jdl-v5-fixtures.sql",
     "// db:verify:jdl-v5": "Assert the [JDL v5] fixtures are in the state the retest guide walks; fails loudly per section (requires STAGING_DB_URL)",
     "db:seed:jdl-v5": "psql \"$STAGING_DB_URL\" -1 -v ON_ERROR_STOP=1 -f scripts/seed-jdl-v5-staging.sql",
