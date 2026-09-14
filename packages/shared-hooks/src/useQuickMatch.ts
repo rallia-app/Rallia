@@ -7,6 +7,7 @@
  * trigger already posts a 'match_share' card into every network chat the creator
  * belongs to the moment the row lands, respecting each network's sport scope and
  * the creator's visible_in_* flags. Posting from the client too would double up.
+ * An admin's game carries originNetworkId and the trigger posts it only there.
  * We only invalidate the conversation so the trigger's card appears immediately.
  */
 

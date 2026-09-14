@@ -122,6 +122,8 @@ export interface CreateMatchInput {
   /** When private: whether the match is visible in communities the creator is part of */
   visibleInCommunities?: boolean;
   joinMode?: MatchJoinModeEnum;
+  /** Community or group chat the game was posted from (quick game). */
+  originNetworkId?: string;
 
   /** Repeat this game weekly. The next occurrence is created once this one ends. */
   isRecurring?: boolean;
@@ -187,6 +189,7 @@ export async function createMatch(input: CreateMatchInput): Promise<Match> {
     visible_in_groups: input.visibleInGroups ?? true,
     visible_in_communities: input.visibleInCommunities ?? true,
     join_mode: input.joinMode ?? 'direct',
+    origin_network_id: emptyToNull(input.originNetworkId),
     notes: emptyToNull(input.notes),
   };
 

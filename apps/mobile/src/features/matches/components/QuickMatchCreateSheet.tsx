@@ -102,6 +102,7 @@ const durationMinutes = (duration: MatchDurationEnum, custom?: number | null): n
 
 export function QuickMatchCreateActionSheet({ payload }: SheetProps<'quick-match-create'>) {
   const conversationId = payload?.conversationId;
+  const networkId = payload?.networkId ?? null;
   const networkSportId = payload?.networkSportId ?? null;
   const networkName = payload?.networkName ?? null;
 
@@ -364,6 +365,8 @@ export function QuickMatchCreateActionSheet({ payload }: SheetProps<'quick-match
           visibleInCommunities: true,
           // The audience is a whole community, so the host approves each player.
           joinMode: 'request',
+          // Where it was posted from; for admins the card goes only there.
+          originNetworkId: networkId ?? undefined,
         },
       })
       .then(match => {
@@ -389,6 +392,7 @@ export function QuickMatchCreateActionSheet({ payload }: SheetProps<'quick-match
       .finally(() => setSubmitting(false));
   }, [
     conversationId,
+    networkId,
     playerId,
     sportId,
     sport,

@@ -2976,6 +2976,7 @@ export type Database = {
           min_rating_score_id: string | null
           mutually_cancelled: boolean | null
           notes: string | null
+          origin_network_id: string | null
           player_expectation: Database["public"]["Enums"]["match_type_enum"]
           preferred_opponent_gender:
             | Database["public"]["Enums"]["gender_enum"]
@@ -3030,6 +3031,7 @@ export type Database = {
           min_rating_score_id?: string | null
           mutually_cancelled?: boolean | null
           notes?: string | null
+          origin_network_id?: string | null
           player_expectation?: Database["public"]["Enums"]["match_type_enum"]
           preferred_opponent_gender?:
             | Database["public"]["Enums"]["gender_enum"]
@@ -3084,6 +3086,7 @@ export type Database = {
           min_rating_score_id?: string | null
           mutually_cancelled?: boolean | null
           notes?: string | null
+          origin_network_id?: string | null
           player_expectation?: Database["public"]["Enums"]["match_type_enum"]
           preferred_opponent_gender?:
             | Database["public"]["Enums"]["gender_enum"]
@@ -3141,6 +3144,13 @@ export type Database = {
             columns: ["min_rating_score_id"]
             isOneToOne: false
             referencedRelation: "rating_score"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_origin_network_id_fkey"
+            columns: ["origin_network_id"]
+            isOneToOne: false
+            referencedRelation: "network"
             referencedColumns: ["id"]
           },
           {

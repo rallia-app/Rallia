@@ -742,6 +742,8 @@
     "deleteAccountSuccess": "Your account has been deleted.",
     "deleteAccountBlockedTitle": "Account still linked to events",
     "deleteAccountBlockedMessage": "Your account is linked to tournament or league records (registrations, results or payments). Withdraw from any active events first, then write to contact@rallia.ca and we'll finish the deletion for you.",
+    "deleteAccountSessionExpiredTitle": "Session expired",
+    "deleteAccountSessionExpiredMessage": "Your session expired before we could confirm it was you. Sign out, sign back in, then try deleting your account again.",
     "contactSupport": "Contact Support",
     "previewMilestone1000": "Open the 1000-player announcement",
     "appInfo": "App Info",

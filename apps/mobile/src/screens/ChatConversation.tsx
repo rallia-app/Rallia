@@ -463,8 +463,9 @@ export default function ChatConversationScreen() {
   // we all play" but "here is a game, who's in". Hence a separate quick path.
   const canQuickCreateGame = useMemo(() => {
     if (!conversation || !playerId) return false;
-    return conversation.conversation_type === 'community';
-  }, [conversation, playerId]);
+    // Wait for the network so the game records which community it came from.
+    return conversation.conversation_type === 'community' && !!networkInfo;
+  }, [conversation, playerId, networkInfo]);
 
   const handleQuickCreateGame = useCallback(() => {
     if (!conversationId || !playerId) return;
@@ -476,6 +477,7 @@ export default function ChatConversationScreen() {
     SheetManager.show('quick-match-create', {
       payload: {
         conversationId,
+        networkId: networkInfo?.id ?? null,
         networkSportId: networkInfo?.sport_id ?? null,
         networkName: networkInfo?.name ?? null,
       },

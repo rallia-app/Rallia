@@ -742,6 +742,8 @@
     "deleteAccountSuccess": "Votre compte a été supprimé.",
     "deleteAccountBlockedTitle": "Compte encore lié à des événements",
     "deleteAccountBlockedMessage": "Votre compte est lié à des tournois ou des ligues (inscriptions, résultats ou paiements). Retirez-vous d'abord des événements en cours, puis écrivez-nous à contact@rallia.ca et nous finaliserons la suppression pour vous.",
+    "deleteAccountSessionExpiredTitle": "Session expirée",
+    "deleteAccountSessionExpiredMessage": "Votre session a expiré avant qu'on puisse confirmer votre identité. Déconnectez-vous, reconnectez-vous, puis réessayez de supprimer votre compte.",
     "contactSupport": "Contacter le support",
     "previewMilestone1000": "Ouvrir l'annonce des 1000 joueurs",
     "appInfo": "Info de l'app",
