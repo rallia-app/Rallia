@@ -49,11 +49,4 @@ BEGIN
     IF v_touched <> 2 THEN
         RAISE EXCEPTION 'Série 3: % tableau(x) mis à jour, 2 attendus', v_touched;
     END IF;
-
-    INSERT INTO public.leagues_tournaments_audit (scope, entity_id, action, actor_id, payload_after)
-    SELECT 'tournament', t.id, 'scheduling_funnel_enabled', t.organizer_id,
-           jsonb_build_object('min_availability_hours', t.min_availability_hours,
-                              'source', 'migration serie3_enable_scheduling_funnel')
-      FROM public.tournaments t
-     WHERE t.name LIKE 'Série 3 Montréal · Tennis ·%';
 END $$;
