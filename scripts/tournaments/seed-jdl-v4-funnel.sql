@@ -288,6 +288,14 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM player WHERE id = pg_temp.house() AND is_certified_organizer) THEN
         RAISE EXCEPTION 'the Rallia house organizer is missing or not certified on this database';
     END IF;
+    -- tournament_create asserts the caller plays the sport. The house account
+    -- was never onboarded as a player, so give it a tennis row here, on the
+    -- fixture database only.
+    INSERT INTO player_sport (player_id, sport_id, is_active)
+    SELECT pg_temp.house(), s.id, true FROM sport s WHERE s.name = 'tennis'
+    ON CONFLICT DO NOTHING;
+    UPDATE player_sport ps SET is_active = true
+      FROM sport s WHERE ps.player_id = pg_temp.house() AND ps.sport_id = s.id AND s.name = 'tennis';
 
     -- ===================================================== A. Le parcours
     -- Jean has NOT answered. Two opponents have, one has not, so after he

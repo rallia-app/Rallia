@@ -67,6 +67,15 @@ UPDATE lt_pairing_booking b
        accepted_at = NULL, accepted_by = NULL
   FROM pairing pr WHERE b.tournament_match_id = pr.id;
 
+-- Pairing rooms open when the gate trigger fires or when the app first taps
+-- the pairing. The seed answers the gate in replica mode, so nothing opened
+-- them, and on 2026-09-14 the booked pairing had no room for its card to
+-- land in. Open Jean's three rooms here, and let the untouched pairing get
+-- the real funnel card, which is where the forfeit control lives.
+SELECT public.lt_get_or_create_tournament_round_chat_unchecked(pr.id) FROM pairing pr;
+SELECT public.lt_post_system_match_organizer_card(pr.id)
+  FROM pairing pr WHERE NOT pr.has_booking AND NOT pr.has_score;
+
 -- The seed builds these games directly instead of through the card, so the
 -- pairing room can end up with no card and nothing to render the tentative
 -- band or the forfeit control on. Post one for the booked pairing, carrying
@@ -119,6 +128,7 @@ SELECT pr.id,
          WHERE d.tournament_id = tm.tournament_id AND d.bracket_side = 'pool') AS phase_deadline,
        b.tentative_until,
        (SELECT confirmation_deadline FROM match_result WHERE match_id = pr.match_id) AS contest_until,
+       EXISTS (SELECT 1 FROM conversation c WHERE c.tournament_match_id = pr.id) AS room,
        (SELECT count(*) FROM message x
           JOIN conversation c ON c.id = x.conversation_id
          WHERE c.tournament_match_id = pr.id AND x.message_type = 'match_organizer') AS cards
