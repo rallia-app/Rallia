@@ -13388,6 +13388,10 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: undefined
       }
+      lt_notify_pairing_deadline_regranted: {
+        Args: { p_deadline_at: string; p_tournament_match_id: string }
+        Returns: undefined
+      }
       lt_notify_pool_forfeit: {
         Args: { p_match_ids: string[]; p_registration_id: string }
         Returns: undefined

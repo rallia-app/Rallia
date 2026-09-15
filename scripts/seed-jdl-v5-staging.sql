@@ -451,7 +451,7 @@ BEGIN
     --    here, but MatchDetailSheet still gates the button on
     --    location_type IN ('facility','custom'), so nobody can press it. Left in
     --    deliberately as the reproduction, not as a passing case.
-    v_g := pg_temp.mk_game(v_opp, '[JDL v5] présence · sans lieu (bogue connu)',
+    v_g := pg_temp.mk_game(v_opp, '[JDL v5] présence · sans lieu',
                            now() + interval '5 minutes', NULL, 235);
     INSERT INTO match_participant (match_id, player_id, team_number, status, joined_at)
     VALUES (v_g, v_jdl, 2, 'joined', now()) ON CONFLICT DO NOTHING;
