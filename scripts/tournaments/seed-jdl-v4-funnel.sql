@@ -3,7 +3,8 @@
 -- ============================================================================
 -- Three pool tournaments under the '[JDL v4]' prefix, one per thing to walk:
 --
---   Le parcours   Jean is registered and has NOT answered the gate. This is
+--   Le parcours   Run by the Rallia house organizer; Jean is a plain registrant
+--                 (the lock exempts the organizer). He has NOT answered the gate. This is
 --                 the forcing function: the pool room is readable but its
 --                 composer is locked, the board names who everyone is waiting
 --                 on, and the only way in is "Donner mes dispos". Once he
@@ -12,7 +13,7 @@
 --                 nudged (that opponent is silent), and every pairing can be
 --                 conceded.
 --
---   L'entente     Jean has answered and an OPPONENT has already booked, so he
+--   L'entente     House-run too. Jean has answered and an OPPONENT has already booked, so he
 --                 lands on the tentative band: "Ça marche" makes the agreement
 --                 firm at once, "Proposer un autre moment" cancels it without
 --                 penalty and offers his slot instead. One counter per side.
@@ -90,14 +91,25 @@ CREATE OR REPLACE FUNCTION pg_temp.fakes(p_offset integer, n integer) RETURNS uu
      ORDER BY u.email OFFSET p_offset LIMIT n) t;
 $$;
 
-CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS void
+-- Returns whether it granted anything, so staff_off never strips a role the
+-- organizer already held.
+CREATE OR REPLACE FUNCTION pg_temp.staff_on(p uuid) RETURNS boolean
 LANGUAGE sql SECURITY DEFINER AS $$
-  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO admin (id, role) VALUES (p, 'support') ON CONFLICT (id) DO NOTHING
+  RETURNING true;
 $$;
 
-CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid) RETURNS void
+CREATE OR REPLACE FUNCTION pg_temp.staff_off(p uuid, p_granted boolean) RETURNS void
 LANGUAGE sql SECURITY DEFINER AS $$
-  DELETE FROM admin WHERE id = p;
+  DELETE FROM admin WHERE id = p AND p_granted;
+$$;
+
+-- The Rallia house organizer runs the fixtures Jean plays in as a plain
+-- registrant. The composer lock, the board and the nudges all exempt the
+-- organizer, so a tournament he organizes cannot show him any of them: that is
+-- how the lock "did not lock" on 2026-09-14.
+CREATE OR REPLACE FUNCTION pg_temp.house() RETURNS uuid LANGUAGE sql AS $$
+  SELECT 'a11a0000-0000-4000-8000-000000000001'::uuid;
 $$;
 
 -- A knockout event with the funnel on, its roster registered and drawn.
@@ -108,14 +120,15 @@ DECLARE
     v_t   tournaments;
     v_ver integer;
     v_u   uuid;
+    v_granted boolean;
 BEGIN
     PERFORM pg_temp.as_user(p_org);
-    PERFORM pg_temp.staff_on(p_org);
+    v_granted := COALESCE(pg_temp.staff_on(p_org), false);
     SELECT * INTO v_t FROM public.tournament_create(
         p_name, (SELECT id FROM sport WHERE name = 'tennis'),
         array_length(p_roster, 1)::smallint,
         now() - interval '10 days', now() + interval '20 days');
-    PERFORM pg_temp.staff_off(p_org);
+    PERFORM pg_temp.staff_off(p_org, v_granted);
 
     UPDATE tournaments
        SET scheduling_funnel_enabled = true, min_availability_hours = 6
@@ -160,16 +173,17 @@ DECLARE
     v_t   tournaments;
     v_ver integer;
     v_u   uuid;
+    v_granted boolean;
 BEGIN
     PERFORM pg_temp.as_user(p_org);
-    PERFORM pg_temp.staff_on(p_org);
+    v_granted := COALESCE(pg_temp.staff_on(p_org), false);
     SELECT * INTO v_t FROM public.tournament_create(
         p_name, (SELECT id FROM sport WHERE name = 'tennis'),
         array_length(p_roster, 1)::smallint,
         now() - interval '10 days', now() + interval '20 days',
         p_bracket_type => 'pool_knockout'::bracket_type,
         p_pool_size => 4::smallint, p_qualifiers_per_pool => 2::smallint);
-    PERFORM pg_temp.staff_off(p_org);
+    PERFORM pg_temp.staff_off(p_org, v_granted);
 
     UPDATE tournaments
        SET scheduling_funnel_enabled = true, min_availability_hours = 6
@@ -271,12 +285,15 @@ BEGIN
     IF v_jdl IS NULL THEN
         RAISE EXCEPTION 'jdl.sonkin@gmail.com not found: seed staging first';
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM player WHERE id = pg_temp.house() AND is_certified_organizer) THEN
+        RAISE EXCEPTION 'the Rallia house organizer is missing or not certified on this database';
+    END IF;
 
     -- ===================================================== A. Le parcours
     -- Jean has NOT answered. Two opponents have, one has not, so after he
     -- answers he gets two open rooms and one row to nudge.
     v_r := ARRAY[v_jdl] || pg_temp.fakes(60, 7);
-    v_a := pg_temp.mk_pool_event(v_jdl, '[JDL v4] Le parcours', v_r,
+    v_a := pg_temp.mk_pool_event(pg_temp.house(), '[JDL v4] Le parcours', v_r,
                                  now() + interval '12 days');
     PERFORM pg_temp.gate(v_a, v_r[2], 'engaged');
     PERFORM pg_temp.gate(v_a, v_r[3], 'engaged');
@@ -286,7 +303,7 @@ BEGIN
     -- Everyone answered, and an opponent has already booked one of Jean's
     -- games, so he lands on the tentative band with 24 h to answer.
     v_r := ARRAY[v_jdl] || pg_temp.fakes(68, 7);
-    v_b := pg_temp.mk_pool_event(v_jdl, '[JDL v4] L''entente', v_r,
+    v_b := pg_temp.mk_pool_event(pg_temp.house(), '[JDL v4] L''entente', v_r,
                                  now() + interval '12 days');
     FOR v_n IN 1..array_length(v_r, 1) LOOP
         PERFORM pg_temp.gate(v_b, v_r[v_n], 'engaged');
@@ -323,7 +340,7 @@ BEGIN
             now() + interval '22 hours');
 
     -- A second Jean pairing carries a score somebody ELSE declared, inside its
-    -- 48 h contest window. A declared score is final on entry now, so this
+    -- 12 h contest window. A declared score is final on entry now, so this
     -- window is the only counterweight the other side has, and until today
     -- nothing told them it existed.
     SELECT tm.* INTO v_tm
@@ -507,6 +524,7 @@ $$;
 
 -- What Jean will be looking at.
 SELECT t.name,
+       (t.organizer_id = pg_temp.jdl()) AS jean_organise,
        count(*) FILTER (WHERE tm.status = 'pending')   AS a_jouer,
        count(*) FILTER (WHERE tm.status = 'walkover')  AS forfaits,
        count(*) FILTER (WHERE tm.status = 'cancelled') AS annulees,
@@ -514,4 +532,4 @@ SELECT t.name,
   FROM tournaments t
   JOIN tournament_matches tm ON tm.tournament_id = t.id
  WHERE t.name LIKE '[JDL v4]%'
- GROUP BY t.name ORDER BY t.name;
+ GROUP BY t.name, t.organizer_id ORDER BY t.name;

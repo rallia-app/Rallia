@@ -196,7 +196,11 @@ export function TournamentRecordScoreActionSheet({
     lightHaptic();
     Alert.alert(
       t('tournamentDetail.restore.confirmTitle'),
-      t('tournamentDetail.restore.confirmBody'),
+      t(
+        restoreState?.deadlinePassed
+          ? 'tournamentDetail.restore.confirmBodyPastDeadline'
+          : 'tournamentDetail.restore.confirmBody'
+      ),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -205,7 +209,7 @@ export function TournamentRecordScoreActionSheet({
         },
       ]
     );
-  }, [restore, tournamentMatchId, tournamentId, t]);
+  }, [restore, restoreState?.deadlinePassed, tournamentMatchId, tournamentId, t]);
 
   // What each outcome needs before it can be written: a score for a real
   // result, a named winner for the two walkover-shaped ones, nothing at all

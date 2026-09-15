@@ -13219,6 +13219,7 @@ export type Database = {
       lt_champion_base: { Args: never; Returns: number }
       lt_close_due_session_confirmations: { Args: never; Returns: number }
       lt_close_due_tournament_registrations: { Args: never; Returns: number }
+      lt_contest_window: { Args: { p_match_id: string }; Returns: string }
       lt_draw_multiplier: { Args: { p_n: number }; Returns: number }
       lt_effective_match_deadline: {
         Args: {

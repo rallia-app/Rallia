@@ -5958,6 +5958,7 @@
       "cta": "Put the game back to unplayed",
       "confirmTitle": "Undo this decision?",
       "confirmBody": "The pairing goes back to unplayed, whoever it advanced comes back out of the next round, and the reputation hit it caused is removed. Use this when the app got it wrong, not to record a result.",
+      "confirmBodyPastDeadline": "The pairing goes back to unplayed, whoever it advanced comes back out of the next round, and the reputation hit it caused is removed. Since the deadline has passed, this pairing gets 72 hours to be played or for you to record the result. Use this when the app got it wrong, not to record a result.",
       "confirmCta": "Undo it",
       "windowClosed": "Too late to undo it here: the draw has moved past this pairing. Record the result instead.",
       "organizerOnly": "Only the organizer can undo an automatic decision.",

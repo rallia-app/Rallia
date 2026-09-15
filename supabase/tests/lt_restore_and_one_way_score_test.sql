@@ -9,9 +9,12 @@
 --                                       unwound, the reputation events the
 --                                       decision wrote DELETED, misfire audited
 --     * outside the window           -> RESTORE_WINDOW_CLOSED
+--     * after the deadline           -> the pairing is re-granted 72 h, so the
+--                                       resolver does not decide it again
 --
 --   one-way score registration
---     * a submitted score is verified AT ONCE, with a 48 h contest window
+--     * a submitted score is verified AT ONCE, with a 48 h contest window on a
+--       casual game and 12 h on a tournament pairing
 --     * confirming an already-standing score is a harmless no-op
 --     * the declarer cannot contest their own score
 --     * the opponent's contest disputes it, and on a tournament pairing flips
@@ -96,6 +99,59 @@ BEGIN
         RAISE EXCEPTION 'the restore was not counted as a misfire';
     END IF;
 
+    -- 2b. After the deadline a restore alone would be re-decided on the next
+    --     resolver run, so it comes with 72 h stamped on the pairing.
+    --     (Inside one transaction every audit row shares now(), so the earlier
+    --     restore is pushed back to read as older than the new decision.)
+    UPDATE leagues_tournaments_audit SET occurred_at = occurred_at - interval '1 minute'
+     WHERE entity_id = v_tm.id AND action = 'restore';
+    UPDATE tournament_matches
+       SET status = 'walkover', winner_registration_id = player1_registration_id,
+           score = '6-0 6-0', played_at = now(), deadline_override_at = NULL
+     WHERE id = v_tm.id;
+    INSERT INTO leagues_tournaments_audit (scope, entity_id, action, actor_id, payload_after)
+    VALUES ('tournament_match', v_tm.id, 'auto_walkover', v_t.organizer_id,
+            jsonb_build_object('tournament_id', v_t.id, 'rule', 'one_sided'));
+    INSERT INTO tournament_round_deadlines (tournament_id, bracket_side, round_number, deadline_at)
+    VALUES (v_t.id, 'pool', 0, now() - interval '1 hour')
+    ON CONFLICT (tournament_id, bracket_side, round_number)
+      DO UPDATE SET deadline_at = EXCLUDED.deadline_at;
+    IF (public.lt_match_restore_state(v_tm.id) ->> 'deadline_passed')::boolean IS NOT TRUE THEN
+        RAISE EXCEPTION 'restore state must say the deadline has passed';
+    END IF;
+    v_row := public.lt_restore_tournament_match(v_tm.id);
+    IF v_row.deadline_override_at IS NULL
+       OR v_row.deadline_override_at < now() + interval '71 hours'
+       OR v_row.deadline_override_at > now() + interval '73 hours' THEN
+        RAISE EXCEPTION 'a restore after the deadline must re-grant 72 h, got %', v_row.deadline_override_at;
+    END IF;
+    IF public.lt_effective_match_deadline(v_row) <= now() THEN
+        RAISE EXCEPTION 'the re-granted pairing is still due';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM leagues_tournaments_audit
+         WHERE entity_id = v_tm.id AND action = 'restore'
+           AND (payload_after ->> 'deadline_at')::timestamptz = v_row.deadline_override_at
+    ) THEN
+        RAISE EXCEPTION 'the re-granted deadline was not audited';
+    END IF;
+    -- Before the deadline nothing is stamped.
+    UPDATE tournament_round_deadlines SET deadline_at = now() + interval '5 days'
+     WHERE tournament_id = v_t.id AND bracket_side = 'pool' AND round_number = 0;
+    UPDATE leagues_tournaments_audit SET occurred_at = occurred_at - interval '1 minute'
+     WHERE entity_id = v_tm.id AND action = 'restore';
+    UPDATE tournament_matches
+       SET status = 'walkover', winner_registration_id = player1_registration_id,
+           deadline_override_at = NULL
+     WHERE id = v_tm.id;
+    INSERT INTO leagues_tournaments_audit (scope, entity_id, action, actor_id, payload_after)
+    VALUES ('tournament_match', v_tm.id, 'auto_walkover', v_t.organizer_id,
+            jsonb_build_object('tournament_id', v_t.id, 'rule', 'one_sided'));
+    v_row := public.lt_restore_tournament_match(v_tm.id);
+    IF v_row.deadline_override_at IS NOT NULL THEN
+        RAISE EXCEPTION 'a restore before the deadline must not touch the clock';
+    END IF;
+
     -- 3. Once the phase is consumed the bracket has moved on.
     UPDATE tournament_matches
        SET status = 'walkover', winner_registration_id = player1_registration_id
@@ -138,8 +194,18 @@ BEGIN
         RAISE EXCEPTION 'a declared score must stand on entry';
     END IF;
     IF v_mr.confirmation_deadline < now() + interval '47 hours' THEN
-        RAISE EXCEPTION 'expected a 48 h contest window, got %', v_mr.confirmation_deadline;
+        RAISE EXCEPTION 'expected a 48 h contest window on a casual game, got %', v_mr.confirmation_deadline;
     END IF;
+    -- 4b. Linked to a pairing, the same game would get 12 h: nothing waits on
+    --     a casual game, a draw waits on this one.
+    IF public.lt_contest_window(v_match) <> interval '48 hours' THEN
+        RAISE EXCEPTION 'a casual game must keep the 48 h window';
+    END IF;
+    UPDATE tournament_matches SET match_id = v_match WHERE id = v_tm.id;
+    IF public.lt_contest_window(v_match) <> interval '12 hours' THEN
+        RAISE EXCEPTION 'a pairing must get the 12 h window';
+    END IF;
+    UPDATE tournament_matches SET match_id = NULL WHERE id = v_tm.id;
 
     -- 5. Confirming what already stands is harmless.
     PERFORM pg_temp.as_user(v_u2[1]);
