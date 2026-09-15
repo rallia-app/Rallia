@@ -8,6 +8,7 @@
 -- Ce fichier ne porte que les deux gestes qu'une migration ne peut pas porter,
 -- parce qu'ils dépendent d'une DATE et d'un TIRAGE, pas du schéma :
 --
+--   ÉTAPE 0  activer le parcours + l'arbitrage -> AVANT le tirage du 16 (migration)
 --   ÉTAPE 1  ouvrir les inscriptions       -> le mercredi 9 septembre, 9 h
 --   ÉTAPE 2  poser les échéances de tours  -> juste après chaque tirage
 --   ÉTAPE 3  taxes sur l'entrée (TPS/TVQ)  -> dès que la prod a 20260910143506
@@ -44,6 +45,43 @@
 -- ⚠️ Et depuis 20260901030000, une échéance PASSÉE ne se déplace plus, par
 -- personne. `tournament_set_round_deadlines` refuse aussi d'AVANCER une
 -- échéance à moins de 48 h (DEADLINE_TOO_SOON). Corriger tôt ou pas du tout.
+-- ============================================================================
+
+
+-- ============================================================================
+-- ÉTAPE 0 : activer le parcours de planification et l'arbitrage automatique.
+-- À JOUER AVANT LE TIRAGE DES POULES DU 16 SEPTEMBRE. Porté par la migration
+-- serie3_enable_scheduling_funnel (date du 14 septembre), donc par la CI, pas
+-- par ce fichier. Rien à taper ici : ce bloc explique et vérifie.
+--
+-- Pourquoi c'est une étape à part : tout le nouveau tournoi (porte des dispos,
+-- salon verrouillé, réservation en une tape, échelle R0..R6) est OPT-IN par
+-- événement via `scheduling_funnel_enabled`, et la Série 3 a été semée sans.
+-- À false, `lt_resolve_due_tournament_matches` n'AUDITE que (préfixe dryrun_)
+-- et ne tranche jamais : la Série 3 aurait rejoué la Série 2.
+--
+-- Pourquoi AVANT le tirage : `tournament_generate_pools` déclenche la pose des
+-- cartes dans les salons, et le drapeau décide à cet instant laquelle. Posé
+-- après, il faut repasser `lt_regenerate_system_organizer_card` sur chaque
+-- pairage, à la main. La migration refuse d'ailleurs de s'appliquer si des
+-- poules existent déjà.
+--
+-- Ordre du 16, dans la même heure, dans cet ordre :
+--   0. vérifier ci-dessous que le drapeau est posé (prod a la migration)
+--   1. tirer les poules (app ou 2a)
+--   2. poser les échéances (2a)
+-- La porte des dispos refuse tant que l'échéance de phase n'existe pas
+-- (PHASE_DEADLINE_NOT_SET) : entre 1 et 2, les joueurs voient la porte mais ne
+-- peuvent pas répondre. Raison de plus pour ne pas laisser passer la nuit.
+--
+-- Vérification (à lire, rien à écrire) :
+SELECT t.name, t.status, t.scheduling_funnel_enabled, t.min_availability_hours,
+       (SELECT count(*) FROM tournament_matches m WHERE m.tournament_id = t.id) AS pairages
+  FROM tournaments t
+ WHERE t.name LIKE 'Série 3 Montréal · Tennis ·%'
+ ORDER BY t.name;
+-- Attendu avant le tirage : scheduling_funnel_enabled = true, min = 6, pairages = 0
+-- sur les DEUX lignes. Si false : la migration n'est pas en prod, ne pas tirer.
 -- ============================================================================
 
 
