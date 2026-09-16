@@ -39,7 +39,7 @@ import {
 import {
   useUnreadCountForSport,
   useProfile,
-  useTotalUnreadCount,
+  useUnreadConversationsCount,
   useOtherSportsUnreadCount,
   useProfileCompleteness,
   chatKeys,
@@ -983,13 +983,13 @@ function CommunityTabIcon({ color, size }: { color: string; size: number }) {
 }
 
 /**
- * Chat tab icon with tour step and unread badge
+ * Chat tab icon with tour step and a badge counting conversations with unread messages
  */
 function ChatTabIconWithTour({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
   const { session } = useAuth();
   const playerId = session?.user?.id;
-  const { data: unreadCount } = useTotalUnreadCount(playerId);
+  const { data: unreadCount } = useUnreadConversationsCount(playerId);
   const { colors } = useThemeStyles();
   const queryClient = useQueryClient();
 

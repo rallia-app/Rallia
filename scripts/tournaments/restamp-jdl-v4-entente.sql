@@ -10,6 +10,39 @@
 --   psql "$(cat supabase/.temp/pooler-url)" -f scripts/tournaments/restamp-jdl-v4-entente.sql
 BEGIN;
 
+-- The phase deadline is a clock too. On 2026-09-14 it had already passed, the
+-- ladder had cancelled every pairing the day before, and re-stamping the
+-- booking and the contest window re-armed nothing. Push it a week out and put
+-- the pairings the ladder settled back on the board, leaving the audit trail
+-- consistent so no pending pairing offers a restore.
+UPDATE tournament_round_deadlines d
+   SET deadline_at = now() + interval '7 days'
+  FROM tournaments t
+ WHERE d.tournament_id = t.id AND t.name = '[JDL v4] L''entente'
+   AND d.bracket_side = 'pool' AND d.deadline_at < now() + interval '3 days';
+
+CREATE TEMP TABLE unsettled ON COMMIT DROP AS
+SELECT tm.id
+  FROM tournament_matches tm
+  JOIN tournaments t ON t.id = tm.tournament_id
+ WHERE t.name = '[JDL v4] L''entente' AND tm.bracket_side = 'pool'
+   AND tm.status IN ('walkover', 'cancelled');
+
+UPDATE tournament_matches tm
+   SET status = 'pending', winner_registration_id = NULL, score = NULL,
+       played_at = NULL, deadline_override_at = NULL,
+       version = version + 1, updated_at = now()
+  FROM unsettled u WHERE tm.id = u.id;
+
+DELETE FROM reputation_event re
+ USING unsettled u
+ WHERE (re.metadata ->> 'tournamentMatchId')::uuid = u.id;
+
+INSERT INTO leagues_tournaments_audit (scope, entity_id, action, actor_id, payload_after)
+SELECT 'tournament_match', u.id, 'restore', 'a11a0000-0000-4000-8000-000000000001'::uuid,
+       jsonb_build_object('automatic', true, 'misfire', false, 'via', 'rearm')
+  FROM unsettled u;
+
 CREATE TEMP TABLE pairing ON COMMIT DROP AS
 SELECT tm.id,
        tm.match_id,
@@ -34,10 +67,14 @@ UPDATE lt_pairing_booking b
        accepted_at = NULL, accepted_by = NULL
   FROM pairing pr WHERE b.tournament_match_id = pr.id;
 
--- Section 9: the contest window is the only counterweight to a score that is
--- final on entry, and it is what Jean is asked to look for.
-UPDATE match_result mr SET confirmation_deadline = now() + interval '48 hours'
-  FROM pairing pr WHERE mr.match_id = pr.match_id AND pr.has_score;
+-- Pairing rooms open when the gate trigger fires or when the app first taps
+-- the pairing. The seed answers the gate in replica mode, so nothing opened
+-- them, and on 2026-09-14 the booked pairing had no room for its card to
+-- land in. Open Jean's three rooms here, and let the untouched pairing get
+-- the real funnel card, which is where the forfeit control lives.
+SELECT public.lt_get_or_create_tournament_round_chat_unchecked(pr.id) FROM pairing pr;
+SELECT public.lt_post_system_match_organizer_card(pr.id)
+  FROM pairing pr WHERE NOT pr.has_booking AND NOT pr.has_score;
 
 -- The seed builds these games directly instead of through the card, so the
 -- pairing room can end up with no card and nothing to render the tentative
@@ -78,12 +115,25 @@ SELECT c.id, 'a11a0000-0000-4000-8000-000000000001'::uuid,
                     WHERE x.conversation_id = c.id
                       AND x.message_type = 'match_organizer' AND x.deleted_at IS NULL);
 
+-- The contest window is 12 h on a pairing now; a fixture re-stamped to 48 h
+-- would tell Jean the wrong number.
+UPDATE match_result mr SET confirmation_deadline = now() + public.lt_contest_window(pr.match_id)
+  FROM pairing pr WHERE mr.match_id = pr.match_id AND pr.has_score;
+
+-- Every row must read "pending" or "completed": a cancelled or walkover pairing
+-- here means the re-arm did not take.
 SELECT pr.id,
+       tm.status,
+       (SELECT deadline_at FROM tournament_round_deadlines d
+         WHERE d.tournament_id = tm.tournament_id AND d.bracket_side = 'pool') AS phase_deadline,
        b.tentative_until,
        (SELECT confirmation_deadline FROM match_result WHERE match_id = pr.match_id) AS contest_until,
+       EXISTS (SELECT 1 FROM conversation c WHERE c.tournament_match_id = pr.id) AS room,
        (SELECT count(*) FROM message x
           JOIN conversation c ON c.id = x.conversation_id
          WHERE c.tournament_match_id = pr.id AND x.message_type = 'match_organizer') AS cards
-  FROM pairing pr LEFT JOIN lt_pairing_booking b ON b.tournament_match_id = pr.id;
+  FROM pairing pr
+  JOIN tournament_matches tm ON tm.id = pr.id
+  LEFT JOIN lt_pairing_booking b ON b.tournament_match_id = pr.id;
 
 COMMIT;

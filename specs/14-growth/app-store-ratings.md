@@ -271,55 +271,124 @@ both `en-US.json` and `fr-CA.json` under a new `reviewOutreach` namespace.
 
 Reaches the existing base, which in-app prompting alone cannot cover fast enough.
 
-**Audience:** behavior-qualified only. Completed 3+ games, active in the last 60 days.
-Segment defined by a SQL query on match history, not by any satisfaction signal, and the
-query is checked into the repo alongside this doc so the criteria are auditable.
+**Audience:** behavior-qualified only. Completed 5+ games, active in the last 60 days
+(raised from 3 on 2026-09-16 to keep the first wave to people with a real opinion).
+The query is [`app-store-ratings-segment.sql`](./app-store-ratings-segment.sql), checked
+in next to this doc so the criteria are auditable. No satisfaction signal anywhere in it.
+
+Prod funnel on 2026-09-16:
+
+| Step                                           | Players |
+| ---------------------------------------------- | ------- |
+| Onboarded, deliverable email, active account   | 894     |
+| ... played at least 1 game                     | 257     |
+| ... played 3+ games                            | 118     |
+| ... played 5+ games                            | 69      |
+| ... 3+ games, active 60 d, opted in, no delays | 88      |
+| ... 5+ games, same rules, minus Mathis         | **51**  |
+| of which fr-CA / en-US                         | 22 / 29 |
+
+Most of the pool was active in the last 14 days. Some already saw the in-app prompt in the
+last 30 days (20 prompts have fired in prod since 2026-08-26). They stay in: the outreach
+is a different channel and Apple's prompt cap does not apply to it.
+
+**Rule dropped on purpose:** the prompt engine's "cancelled game in the last 14 days"
+suppression removed 56 of the 99, because it matches any cancelled game in the window
+(future ones, and ones cancelled by the other side). Right for a dialog that interrupts,
+too blunt for one email. The no-show / mutual-cancel rule is kept.
 
 **Channel:** email first (higher intent, better formatting), push as a second wave to
 non-openers.
 
-**Delivery:** staggered. Per the broadcast self-DoS incident, a full-base push wave
-saturates the DB. Batch at ~50/hour.
+**Delivery:** through the admin broadcast tool, as two campaigns (fr, en) like the Série 2
+sends. The tool has no "games played" filter yet, so either add `p_min_games_played` to
+`get_broadcast_recipients` and a field in `SegmentFilters` (small, and keeps the audience
+auditable in the campaign row), or paste the query's list once. Volume is 51, so the
+self-DoS pacing concern does not apply.
 
-**Destination:** `https://apps.apple.com/app/id6760482014?action=write-review`, routed
-through the existing `/api/go` bouncer for UA-sniffing and attribution.
+**Destination:** one link that lands on the right store, built 2026-09-16:
+`https://www.rallia.app/api/go?to=storeReview&src=chat_outreach`. iOS goes to the App
+Store write-review page, Android to the Play listing, desktop to the website. The bouncer
+records nothing itself; `src` is there for the Vercel request logs and for a future
+capture.
 
-Draft copy, en-US:
+### Copy
 
-> **Subject:** Ton avis sur Rallia?
->
-> You have played 5 games through Rallia. That is the whole point of the thing, so
-> thank you.
->
-> If you have two minutes, an honest review on the App Store genuinely helps other
-> players in the area find us. Good or bad, we read all of them.
->
-> [Leave a review]
->
-> Something not working? Reply here or use Feedback in Settings, we would rather fix it
-> than read about it later.
+The broadcast template prepends "Bonjour {prénom}," / "Hi {first name}," on its own, so
+the body starts at the first paragraph. Honest-review framing, the negative path offered in
+the same breath, no incentive, no suggested wording, no request for a number of stars.
 
 fr-CA:
 
-> **Objet:** Ton avis sur Rallia?
+> **Objet:** Deux minutes pour aider Rallia?
 >
-> Ça fait 5 parties que tu joues sur Rallia. C'est exactement pour ça qu'on l'a bâtie,
-> so merci.
+> Tu as joué plusieurs parties grâce à Rallia. C'est exactement pour ça qu'on l'a bâtie,
+> alors merci.
 >
-> Si t'as deux minutes, un avis honnête sur l'App Store aide vraiment les autres joueurs
-> du coin à nous trouver. Bon ou mauvais, on les lit tous.
+> Si tu as deux minutes, un avis honnête sur l'App Store ou le Play Store aide vraiment
+> les autres joueurs du coin à nous trouver. Bon ou moins bon, on lit tout et ça oriente
+> ce qu'on construit.
 >
-> [Laisser un avis]
+> **[Laisser un avis]**
 >
-> Quelque chose qui marche pas? Réponds-moi ou passe par Commentaires dans les Réglages,
-> on aime mieux le régler que de le lire plus tard.
+> Quelque chose qui accroche? Réponds directement à ce courriel ou passe par
+> Commentaires dans les réglages de l'app. On préfère le régler que le lire dans un avis
+> plus tard.
+>
+> Mathis, Rallia 🙌
+
+en-US:
+
+> **Subject:** Got two minutes for Rallia?
+>
+> You have played several games through Rallia. That is the whole point of the thing, so
+> thank you.
+>
+> If you have two minutes, an honest review on the App Store or Play Store genuinely helps
+> other players nearby find us. Good or not so good, we read every one and it shapes what
+> we build next.
+>
+> **[Leave a review]**
+>
+> Something not working? Reply to this email or use Feedback in the app settings. We would
+> rather fix it than read about it in a review later.
+>
+> Mathis, Rallia 🙌
 
 Copy rules applied: "games" / "parties" not "matches", no em dashes, no tennis-ball emoji,
-no "Touche pour". Note the ask is for an **honest** review with the negative path offered
-in the same breath. That is the compliant construction, and it also converts better,
-because it does not read as a favor being extracted.
+no "Touche pour". Push wave (week 5, non-openers only): "Deux minutes pour aider Rallia?
+Un avis honnête sur le store aide les joueurs du coin à nous trouver." / "Got two minutes
+for Rallia? An honest store review helps players nearby find us."
 
----
+### Chat variant (preferred, 2026-09-16)
+
+Sent as DMs from Mathis's own account, three bubbles each. The push notification
+shows the first bubble, so it carries the thanks and no ask. `{N}` is `games_played`
+from the segment query. Needs a single store link that lands on the right store
+(the `storeReview` bouncer target above).
+
+fr-CA:
+
+> Salut {prénom}! Mathis de Rallia ici. J'ai vu que t'avais joué {N} parties avec
+> l'app, ça me fait vraiment plaisir 🙌
+>
+> Petite demande si t'as deux minutes: un avis honnête sur le store, ça aide beaucoup
+> les joueurs du coin à nous trouver. Bon ou moins bon, je lis tout.
+> {lien}
+>
+> Pis si quelque chose accroche dans l'app, dis-le moi ici, je préfère le régler direct.
+
+en-US:
+
+> Hey {first name}! Mathis from Rallia here. Saw you've played {N} games through the
+> app, that genuinely made my day 🙌
+>
+> Small ask if you have two minutes: an honest review on the store helps players
+> nearby find us a lot. Good or not so good, I read every one.
+> {link}
+>
+> And if anything in the app is bugging you, just tell me here, I'd rather fix it
+> directly.
 
 ## 7. Decision point: reset the rating?
 

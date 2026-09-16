@@ -1691,6 +1691,8 @@ export interface MatchRestoreState {
   rule?: string;
   windowOpen?: boolean;
   isOrganizer?: boolean;
+  /** The pairing's deadline has passed, so a restore comes with 72 h to play. */
+  deadlinePassed?: boolean;
 }
 
 export async function getMatchRestoreState(tournamentMatchId: string): Promise<MatchRestoreState> {
@@ -1705,6 +1707,7 @@ export async function getMatchRestoreState(tournamentMatchId: string): Promise<M
     rule: typeof row.rule === 'string' ? row.rule : undefined,
     windowOpen: row.window_open === true,
     isOrganizer: row.is_organizer === true,
+    deadlinePassed: row.deadline_passed === true,
   };
 }
 

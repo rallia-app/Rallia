@@ -5958,6 +5958,7 @@
       "cta": "Remettre la partie à jouer",
       "confirmTitle": "Défaire cette décision?",
       "confirmBody": "Le pairage redevient à jouer, la personne qui avait avancé ressort du tour suivant, et l'impact sur sa réputation est effacé. À utiliser quand l'app s'est trompée, pas pour inscrire un résultat.",
+      "confirmBodyPastDeadline": "Le pairage redevient à jouer, la personne qui avait avancé ressort du tour suivant, et l'impact sur sa réputation est effacé. Comme l'échéance est passée, ce pairage reçoit 72 heures pour être joué ou pour que tu inscrives le résultat. À utiliser quand l'app s'est trompée, pas pour inscrire un résultat.",
       "confirmCta": "Défaire",
       "windowClosed": "Trop tard pour défaire ici: le tableau a avancé au-delà de ce pairage. Inscris plutôt le résultat.",
       "organizerOnly": "Seul l'organisateur peut défaire une décision automatique.",
