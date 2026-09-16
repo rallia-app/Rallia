@@ -271,7 +271,8 @@ both `en-US.json` and `fr-CA.json` under a new `reviewOutreach` namespace.
 
 Reaches the existing base, which in-app prompting alone cannot cover fast enough.
 
-**Audience:** behavior-qualified only. Completed 3+ games, active in the last 60 days.
+**Audience:** behavior-qualified only. Completed 5+ games, active in the last 60 days
+(raised from 3 on 2026-09-16 to keep the first wave to people with a real opinion).
 The query is [`app-store-ratings-segment.sql`](./app-store-ratings-segment.sql), checked
 in next to this doc so the criteria are auditable. No satisfaction signal anywhere in it.
 
@@ -282,15 +283,14 @@ Prod funnel on 2026-09-16:
 | Onboarded, deliverable email, active account   | 894     |
 | ... played at least 1 game                     | 257     |
 | ... played 3+ games                            | 118     |
-| ... and active in the last 60 days             | 115     |
-| ... and not opted out of broadcasts            | 99      |
-| ... minus open bug ticket / no-show 14 d / ban | **88**  |
-| of which fr-CA / en-US                         | 37 / 51 |
+| ... played 5+ games                            | 69      |
+| ... 3+ games, active 60 d, opted in, no delays | 88      |
+| ... 5+ games, same rules, minus Mathis         | **51**  |
+| of which fr-CA / en-US                         | 22 / 29 |
 
-Median games played in the final pool is 5; 81 of the 88 were active in the last 14
-days. 17 of them already saw the in-app prompt in the last 30 days (20 prompts have fired
-in prod since 2026-08-26). They stay in: the email is a different channel and Apple's
-prompt cap does not apply to it.
+Most of the pool was active in the last 14 days. Some already saw the in-app prompt in the
+last 30 days (20 prompts have fired in prod since 2026-08-26). They stay in: the outreach
+is a different channel and Apple's prompt cap does not apply to it.
 
 **Rule dropped on purpose:** the prompt engine's "cancelled game in the last 14 days"
 suppression removed 56 of the 99, because it matches any cancelled game in the window
@@ -303,7 +303,7 @@ non-openers.
 **Delivery:** through the admin broadcast tool, as two campaigns (fr, en) like the Série 2
 sends. The tool has no "games played" filter yet, so either add `p_min_games_played` to
 `get_broadcast_recipients` and a field in `SegmentFilters` (small, and keeps the audience
-auditable in the campaign row), or paste the query's list once. Volume is 88, so the
+auditable in the campaign row), or paste the query's list once. Volume is 51, so the
 self-DoS pacing concern does not apply.
 
 **Destination:** one link that lands on the right store, built 2026-09-16:

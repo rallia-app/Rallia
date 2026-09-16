@@ -28,8 +28,8 @@ WHERE p.onboarding_completed = TRUE
   AND p.email IS NOT NULL
   AND p.email_status = 'ok'
   AND (p.account_status IS NULL OR p.account_status = 'active')
-  -- Behavioural bar: 3+ games that actually happened, active in the last 60 days.
-  AND played.n >= 3
+  -- Behavioural bar: 5+ games that actually happened, active in the last 60 days.
+  AND played.n >= 5
   AND p.last_active_at >= now() - interval '60 days'
   -- Consent: same opt-out the broadcast tool honours.
   AND NOT EXISTS (
