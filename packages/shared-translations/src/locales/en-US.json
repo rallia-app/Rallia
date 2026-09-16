@@ -13239,6 +13239,16 @@
       "cta": "Update Now"
     }
   },
+  "profileGate": {
+    "loading": "Loading your profile…",
+    "unavailable": {
+      "title": "Can't reach Rallia",
+      "description": "We couldn't load your profile. Check your connection and try again.",
+      "descriptionOffline": "You're offline. Reconnect to keep playing.",
+      "retry": "Try again",
+      "signOut": "Sign out"
+    }
+  },
   "policyConsent": {
     "gate": {
       "title": "Our policies have been updated",

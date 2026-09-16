@@ -6,6 +6,7 @@
 
 // Mock Supabase client
 jest.mock('@rallia/shared-services', () => ({
+  getUsableSession: jest.fn(() => Promise.resolve({ access_token: 'token' })),
   supabase: {
     auth: {
       getUser: jest.fn(),

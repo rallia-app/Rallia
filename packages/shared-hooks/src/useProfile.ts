@@ -20,4 +20,4 @@
 
 // Re-export from ProfileContext for backward compatibility
 export { useProfile, ProfileProvider } from './ProfileContext';
-export type { ProfileContextType } from './ProfileContext';
+export type { ProfileContextType, ProfileStatus } from './ProfileContext';
