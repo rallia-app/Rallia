@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { detectPlatform } from '@/lib/referral-tracking';
-import { APP_STORE_URL, buildPlayStoreUrl } from '@/lib/store-urls';
+import { APP_STORE_URL, PLAY_STORE_URL, buildPlayStoreUrl } from '@/lib/store-urls';
 
 // Maps an email CTA `?to=` value to an in-app screen path (React Navigation
 // linking config in apps/mobile/src/navigation/linking.ts) used to build the
@@ -31,6 +31,16 @@ const TARGETS: Record<string, TargetSpec> = {
   matchRequests: { path: 'match', id: true, suffix: 'requests' },
   chat: { path: 'chat', id: true },
   community: { path: 'community', id: true },
+};
+
+// Store-page targets: no deep link, the visitor is sent straight to the store
+// that matches their device. Both stores prohibit filtering who gets asked, so
+// this link carries no sentiment gate of any kind (specs/14-growth/app-store-ratings.md).
+const STORE_TARGETS: Record<string, { ios: string; android: string }> = {
+  storeReview: {
+    ios: `${APP_STORE_URL}?action=write-review`,
+    android: PLAY_STORE_URL,
+  },
 };
 
 const LOCALES = ['en-US', 'fr-CA'];
@@ -78,6 +88,12 @@ export function GET(request: NextRequest): NextResponse {
   const target = searchParams.get('to') ?? '';
   const spec = TARGETS[target];
   const platform = detectPlatform(request.headers.get('user-agent') ?? '');
+
+  const storeSpec = STORE_TARGETS[target];
+  if (storeSpec) {
+    const storeUrl = platform === null ? `/${locale}` : storeSpec[platform];
+    return NextResponse.redirect(new URL(storeUrl, request.url), 302);
+  }
 
   // Entity id is required for targets that route to a specific record, and is
   // uuid-checked so nothing arbitrary can be spliced into the deep link.
