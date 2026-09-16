@@ -130,8 +130,11 @@ BEGIN
         now() - interval '10 days', now() + interval '20 days');
     PERFORM pg_temp.staff_off(p_org, v_granted);
 
+    -- Public, like every real draw: on a private tournament a registrant sees
+    -- no other registration, so the pool board reads "?" for every opponent.
     UPDATE tournaments
-       SET scheduling_funnel_enabled = true, min_availability_hours = 6
+       SET scheduling_funnel_enabled = true, min_availability_hours = 6,
+           visibility = 'public'
      WHERE id = v_t.id;
 
     SELECT version INTO v_ver FROM tournaments WHERE id = v_t.id;
@@ -185,8 +188,11 @@ BEGIN
         p_pool_size => 4::smallint, p_qualifiers_per_pool => 2::smallint);
     PERFORM pg_temp.staff_off(p_org, v_granted);
 
+    -- Public, like every real draw: on a private tournament a registrant sees
+    -- no other registration, so the pool board reads "?" for every opponent.
     UPDATE tournaments
-       SET scheduling_funnel_enabled = true, min_availability_hours = 6
+       SET scheduling_funnel_enabled = true, min_availability_hours = 6,
+           visibility = 'public'
      WHERE id = v_t.id;
 
     SELECT version INTO v_ver FROM tournaments WHERE id = v_t.id;
