@@ -308,9 +308,10 @@ self-DoS pacing concern does not apply.
 
 **Destination:** one link that lands on the right store, built 2026-09-16:
 `https://www.rallia.app/api/go?to=storeReview&src=chat_outreach`. iOS goes to the App
-Store write-review page, Android to the Play listing, desktop to the website. The bouncer
-records nothing itself; `src` is there for the Vercel request logs and for a future
-capture.
+Store write-review page, Android to the Play listing, desktop to the website. Every click is reported to PostHog as `go_link_clicked` with `target`, `src`, `platform`,
+`outcome` and `locale` (anonymous, no person profile, link-preview bots skipped), so the
+outreach funnel is DMs sent, then `go_link_clicked` where `src = chat_outreach`, then the
+weekly ratings delta.
 
 ### Copy
 
