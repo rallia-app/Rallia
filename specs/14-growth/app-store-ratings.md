@@ -311,7 +311,8 @@ self-DoS pacing concern does not apply.
 Store write-review page, Android to the Play listing, desktop to the website. Every click is reported to PostHog as `go_link_clicked` with `target`, `src`, `platform`,
 `outcome` and `locale` (anonymous, no person profile, link-preview bots skipped), so the
 outreach funnel is DMs sent, then `go_link_clicked` where `src = chat_outreach`, then the
-weekly ratings delta.
+weekly ratings delta. Dashboard:
+[Bouncer link clicks](https://us.posthog.com/project/329229/dashboard/2108862).
 
 ### Copy
 
