@@ -9,9 +9,9 @@
  * - User ID parameter handling
  */
 
-import { renderHook, waitFor, render, screen } from '@testing-library/react';
+import { renderHook, waitFor, render, screen, act } from '@testing-library/react';
 import { useProfile, ProfileProvider } from './useProfile';
-import { supabase } from '@rallia/shared-services';
+import { supabase, getUsableSession } from '@rallia/shared-services';
 import React from 'react';
 
 // Mock Supabase
@@ -46,7 +46,18 @@ describe('useProfile', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (getUsableSession as jest.Mock).mockResolvedValue({ access_token: 'token' });
   });
+
+  const mockProfileQuery = (result: { data: unknown; error: unknown }) => {
+    (supabase.from as jest.Mock).mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          maybeSingle: jest.fn().mockResolvedValue(result),
+        }),
+      }),
+    });
+  };
 
   describe('Initial State', () => {
     it('should start with loading true and null profile', () => {
@@ -364,6 +375,101 @@ describe('useProfile', () => {
 
       // Should have fetched new profile
       expect(supabase.from).toHaveBeenCalledTimes(2);
+    });
+  });
+  describe('status', () => {
+    const wrapperFor = (userId: string | undefined) => {
+      function Wrapper({ children }: { children: React.ReactNode }) {
+        return <ProfileProvider userId={userId}>{children}</ProfileProvider>;
+      }
+      return Wrapper;
+    };
+
+    it('is guest without a user', async () => {
+      const { result } = renderHook(() => useProfile(), { wrapper: wrapperFor(undefined) });
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.status).toBe('guest');
+    });
+
+    it('goes loading then ready when the profile loads', async () => {
+      mockProfileQuery({ data: mockProfile, error: null });
+
+      const { result } = renderHook(() => useProfile(), { wrapper: wrapperFor(mockUser.id) });
+
+      expect(result.current.status).toBe('loading');
+
+      await waitFor(() => expect(result.current.status).toBe('ready'));
+    });
+
+    it('is unavailable, never missing, when the fetch fails without a known profile', async () => {
+      mockProfileQuery({ data: null, error: { message: 'network' } });
+
+      const { result } = renderHook(() => useProfile(), { wrapper: wrapperFor(mockUser.id) });
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.status).toBe('unavailable');
+      expect(result.current.profile).toBeNull();
+    });
+
+    it('is unavailable when no usable session exists (anon-key fallback)', async () => {
+      (getUsableSession as jest.Mock).mockResolvedValue(null);
+      // Under RLS an anon read answers "no row", which must not become "missing".
+      mockProfileQuery({ data: null, error: null });
+
+      const { result } = renderHook(() => useProfile(), { wrapper: wrapperFor(mockUser.id) });
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.status).toBe('unavailable');
+      expect(supabase.from).not.toHaveBeenCalled();
+    });
+
+    it('is missing only on a clean empty answer', async () => {
+      mockProfileQuery({ data: null, error: null });
+
+      const { result } = renderHook(() => useProfile(), { wrapper: wrapperFor(mockUser.id) });
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.status).toBe('missing');
+    });
+
+    it('stays ready on a refetch error, keeping the last-known profile', async () => {
+      mockProfileQuery({ data: mockProfile, error: null });
+
+      const { result } = renderHook(() => useProfile(), { wrapper: wrapperFor(mockUser.id) });
+
+      await waitFor(() => expect(result.current.status).toBe('ready'));
+
+      mockProfileQuery({ data: null, error: { message: 'network' } });
+      await result.current.refetch();
+
+      await waitFor(() => expect(result.current.error).not.toBeNull());
+      expect(result.current.status).toBe('ready');
+      expect(result.current.profile).toEqual(mockProfile);
+    });
+
+    it('stays loading for a newly signed-in user until their own fetch settles', async () => {
+      mockProfileQuery({ data: null, error: null });
+
+      let signIn: (userId: string | undefined) => void = () => {};
+      function Wrapper({ children }: { children: React.ReactNode }) {
+        const [userId, setUserId] = React.useState<string | undefined>(undefined);
+        signIn = setUserId;
+        return <ProfileProvider userId={userId}>{children}</ProfileProvider>;
+      }
+
+      const { result } = renderHook(() => useProfile(), { wrapper: Wrapper });
+
+      await waitFor(() => expect(result.current.status).toBe('guest'));
+
+      act(() => signIn(mockUser.id));
+
+      expect(result.current.status).toBe('loading');
+      await waitFor(() => expect(result.current.status).toBe('missing'));
     });
   });
 });

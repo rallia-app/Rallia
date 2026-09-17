@@ -177,6 +177,7 @@ import { usePolicyConsentGate } from './src/hooks/usePolicyConsentGate';
 import { useApplyUpdateOnResume } from './src/hooks/useApplyUpdateOnResume';
 import { UpdateRequiredScreen } from './src/components/UpdateRequiredScreen';
 import { PolicyReconsentScreen } from './src/components/PolicyReconsentScreen';
+import { ProfileGate } from './src/components/ProfileGate';
 import { serializeQueryCache, deserializeQueryCache } from './src/lib/queryPersister';
 import {
   AuthProvider,
@@ -1168,7 +1169,9 @@ function App() {
                                               >
                                                 <UpdateGate>
                                                   <ConsentGate>
-                                                    <AppContent />
+                                                    <ProfileGate>
+                                                      <AppContent />
+                                                    </ProfileGate>
                                                   </ConsentGate>
                                                 </UpdateGate>
                                               </StripeProvider>

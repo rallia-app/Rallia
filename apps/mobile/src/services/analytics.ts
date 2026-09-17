@@ -830,6 +830,25 @@ export function appOpened(props: { cold_start: boolean }): void {
   capture('app_opened', props);
 }
 
+// ---- Profile gate ----
+
+/** The blocking overlay became visible: the profile (onboarding status) is unresolved. */
+export function profileGateShown(props: {
+  status: 'loading' | 'unavailable';
+  offline: boolean;
+}): void {
+  capture('profile_gate_shown', props);
+}
+
+/** The overlay went away, either because the profile resolved or the user signed out. */
+export function profileGateResolved(props: {
+  outcome: 'resolved' | 'signed_out';
+  duration_ms: number;
+  attempts: number;
+}): void {
+  capture('profile_gate_resolved', props);
+}
+
 // ---- 1000-player milestone ----
 
 /** The takeover was presented (step 1). */

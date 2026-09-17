@@ -15,16 +15,32 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import { supabase } from '@rallia/shared-services';
+import { supabase, getUsableSession } from '@rallia/shared-services';
 import type { Profile } from '@rallia/shared-types';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
+/**
+ * Where the current user's profile stands, as ONE answer instead of three
+ * fields to cross-read:
+ * - guest: no signed-in user
+ * - loading: a fetch for this user has not settled yet
+ * - unavailable: the fetch failed (network, dead session) and there is no
+ *   last-known-good profile to fall back on. Onboarding status is UNKNOWN;
+ *   callers must not treat this as "new user".
+ * - missing: the fetch settled cleanly with no row, i.e. a brand-new user
+ * - ready: a profile is loaded (kept across later fetch errors)
+ */
+export type ProfileStatus = 'guest' | 'loading' | 'unavailable' | 'missing' | 'ready';
+
 export interface ProfileContextType {
   /** Current user's profile data */
   profile: Profile | null;
+
+  /** Resolution state of the current user's profile */
+  status: ProfileStatus;
 
   /** Loading state */
   loading: boolean;
@@ -59,6 +75,9 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  // The user whose fetch last settled, so a freshly signed-in user reads as
+  // 'loading' until their own fetch answers, never as 'missing'.
+  const [settledUserId, setSettledUserId] = useState<string | undefined>(undefined);
 
   const fetchProfile = useCallback(
     async (targetUserId?: string) => {
@@ -74,6 +93,14 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
       try {
         setLoading(true);
         setError(null);
+
+        // supabase-js silently sends the anon key when the session cannot be
+        // refreshed; under RLS that reads as "no row", which would classify
+        // a veteran as a brand-new user. Surface it as an error instead.
+        const session = await getUsableSession();
+        if (!session) {
+          throw new Error('No usable session for profile fetch');
+        }
 
         // Fetch profile from database using provided userId
         // Use maybeSingle() to gracefully handle case where profile doesn't exist yet
@@ -98,11 +125,20 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
         // `profile === null && error !== null` now means "unknown", while
         // `profile === null && error === null` means "genuinely no row".
       } finally {
+        if (finalUserId === userId) setSettledUserId(userId);
         setLoading(false);
       }
     },
     [userId]
   );
+
+  const status = useMemo<ProfileStatus>(() => {
+    if (!userId) return 'guest';
+    if (profile && profile.id === userId) return 'ready';
+    if (loading || settledUserId !== userId) return 'loading';
+    if (error) return 'unavailable';
+    return 'missing';
+  }, [userId, profile, loading, settledUserId, error]);
 
   // Refetch current user's profile
   const refetch = useCallback(async () => {
@@ -128,12 +164,13 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children, user
   const contextValue: ProfileContextType = useMemo(
     () => ({
       profile,
+      status,
       loading,
       error,
       refetch,
       refetchForUser,
     }),
-    [profile, loading, error, refetch, refetchForUser]
+    [profile, status, loading, error, refetch, refetchForUser]
   );
 
   return <ProfileContext.Provider value={contextValue}>{children}</ProfileContext.Provider>;
