@@ -13246,7 +13246,8 @@
       "description": "We couldn't load your profile. Check your connection and try again.",
       "descriptionOffline": "You're offline. Reconnect to keep playing.",
       "retry": "Try again",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "signOutFailed": "Couldn't sign out. Check your connection and try again."
     }
   },
   "policyConsent": {

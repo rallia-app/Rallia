@@ -64,6 +64,8 @@ function ProfileGateOverlay({ status }: { status: BlockedStatus }) {
 
   const [attempts, setAttempts] = useState(0);
   const [retrying, setRetrying] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutFailed, setSignOutFailed] = useState(false);
   const attemptsRef = useRef(0);
   const mountedAtRef = useRef(0);
   const reportedRef = useRef(false);
@@ -125,9 +127,18 @@ function ProfileGateOverlay({ status }: { status: BlockedStatus }) {
     void refetch().finally(() => setRetrying(false));
   }, [refetch]);
 
+  // supabase-js calls the server even for a local sign-out, so this fails
+  // while the endpoint is unreachable; say so instead of doing nothing.
   const handleSignOut = useCallback(() => {
     outcomeRef.current = 'signed_out';
-    void signOut();
+    setSigningOut(true);
+    setSignOutFailed(false);
+    void signOut().then(result => {
+      if (result.success) return;
+      outcomeRef.current = 'resolved';
+      setSigningOut(false);
+      setSignOutFailed(true);
+    });
   }, [signOut]);
 
   // Once a fetch has failed, keep the error layout through automatic retries
@@ -178,9 +189,20 @@ function ProfileGateOverlay({ status }: { status: BlockedStatus }) {
               {t('profileGate.unavailable.retry')}
             </Button>
             {showSignOut ? (
-              <Button variant="ghost" size="md" fullWidth onPress={handleSignOut}>
+              <Button
+                variant="ghost"
+                size="md"
+                fullWidth
+                loading={signingOut}
+                onPress={handleSignOut}
+              >
                 {t('profileGate.unavailable.signOut')}
               </Button>
+            ) : null}
+            {signOutFailed ? (
+              <Text variant="caption" color={colors.error} align="center">
+                {t('profileGate.unavailable.signOutFailed')}
+              </Text>
             ) : null}
           </View>
         ) : null}
