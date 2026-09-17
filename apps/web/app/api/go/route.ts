@@ -1,5 +1,6 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { after, NextResponse, type NextRequest } from 'next/server';
 
+import { captureServerEvent, isLikelyBot } from '@/lib/posthog-server';
 import { detectPlatform } from '@/lib/referral-tracking';
 import { APP_STORE_URL, PLAY_STORE_URL, buildPlayStoreUrl } from '@/lib/store-urls';
 
@@ -73,6 +74,19 @@ const DEFAULT_SRC = 'welcome_email';
 // silently fall back to DEFAULT_SRC and mis-attribute the click.
 const SRC_RE = /^[a-z0-9_]{1,64}$/;
 
+type ClickOutcome = 'deep_link' | 'store_redirect' | 'website_fallback';
+
+/** Reported after the response is sent, so tracking never delays the redirect. */
+function trackClick(
+  request: NextRequest,
+  props: { target: string; src: string; locale: string; outcome: ClickOutcome }
+): void {
+  const userAgent = request.headers.get('user-agent') ?? '';
+  if (isLikelyBot(userAgent)) return;
+  const platform = detectPlatform(userAgent) ?? 'desktop';
+  after(() => captureServerEvent('go_link_clicked', { ...props, platform }));
+}
+
 /**
  * Deep-link bouncer for transactional emails (e.g. the welcome email CTAs).
  * Mobile recipients have just onboarded in the app, so open it via the
@@ -89,9 +103,20 @@ export function GET(request: NextRequest): NextResponse {
   const spec = TARGETS[target];
   const platform = detectPlatform(request.headers.get('user-agent') ?? '');
 
+  const srcParam = searchParams.get('src') ?? '';
+  const src = SRC_RE.test(srcParam) ? srcParam : DEFAULT_SRC;
+  // Only allowlisted target names are reported, never the raw query value.
+  const trackedTarget = spec || STORE_TARGETS[target] ? target : 'unknown';
+
   const storeSpec = STORE_TARGETS[target];
   if (storeSpec) {
     const storeUrl = platform === null ? `/${locale}` : storeSpec[platform];
+    trackClick(request, {
+      target: trackedTarget,
+      src,
+      locale,
+      outcome: platform === null ? 'website_fallback' : 'store_redirect',
+    });
     return NextResponse.redirect(new URL(storeUrl, request.url), 302);
   }
 
@@ -103,11 +128,11 @@ export function GET(request: NextRequest): NextResponse {
 
   // Unknown target, missing/invalid id, or desktop visitor: website home page.
   if (!spec || (needsId && !hasValidId) || platform === null) {
+    trackClick(request, { target: trackedTarget, src, locale, outcome: 'website_fallback' });
     return NextResponse.redirect(new URL(`/${locale}`, request.url));
   }
 
-  const srcParam = searchParams.get('src') ?? '';
-  const src = SRC_RE.test(srcParam) ? srcParam : DEFAULT_SRC;
+  trackClick(request, { target: trackedTarget, src, locale, outcome: 'deep_link' });
   const path = [needsId ? `${spec.path}/${id}` : spec.path, spec.suffix].filter(Boolean).join('/');
   // A couple of paths carry their own query string, so pick the separator.
   const appUrl = `rallia://${path}${path.includes('?') ? '&' : '?'}src=${src}`;
