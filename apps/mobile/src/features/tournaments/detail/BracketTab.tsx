@@ -11,7 +11,7 @@ import { Text } from '@rallia/shared-components';
 import type { PlayerSearchResult, Tournament, TournamentMatch } from '@rallia/shared-services';
 
 import type { TranslationKey } from '../../../hooks';
-import UnderlineTabBar, { type UnderlineTabItem } from '../../../components/UnderlineTabBar';
+import { SegmentBar, type SegmentOption } from '../../../components/SegmentBar';
 import { PoolsSection } from '../components/PoolsSection';
 
 import { BracketSection } from './BracketSection';
@@ -73,10 +73,14 @@ export const BracketTab: React.FC<BracketTabProps> = ({
   // Until the user picks a side, land on whichever phase is live.
   const [pickedSegment, setPickedSegment] = useState<BracketSegment | null>(null);
   const segment: BracketSegment = pickedSegment ?? (hasKnockout ? 'knockout' : 'pools');
-  const segmentTabs = useMemo<UnderlineTabItem<BracketSegment>[]>(
+  const segmentTabs = useMemo<SegmentOption<BracketSegment>[]>(
     () => [
-      { key: 'pools', label: t('tournamentDetail.pools.poolsTitle') },
-      { key: 'knockout', label: t('tournamentDetail.pools.knockoutTitle') },
+      { key: 'pools', icon: 'grid-outline', label: t('tournamentDetail.pools.poolsTitle') },
+      {
+        key: 'knockout',
+        icon: 'git-branch-outline',
+        label: t('tournamentDetail.pools.knockoutTitle'),
+      },
     ],
     [t]
   );
@@ -116,12 +120,14 @@ export const BracketTab: React.FC<BracketTabProps> = ({
         </View>
       )}
       {isPoolTournament && (
-        <UnderlineTabBar
-          tabs={segmentTabs}
-          activeKey={segment}
-          onChange={setPickedSegment}
-          style={styles.segmentBar}
-        />
+        <View style={styles.segmentBar}>
+          <SegmentBar
+            segments={segmentTabs}
+            active={segment}
+            onChange={setPickedSegment}
+            testIDPrefix="bracket-segment"
+          />
+        </View>
       )}
       {showPools && (
         <PoolsSection
