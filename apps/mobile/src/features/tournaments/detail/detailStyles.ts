@@ -58,9 +58,6 @@ export const styles = StyleSheet.create({
   poolPhaseNoteText: {
     flex: 1,
   },
-  knockoutTitle: {
-    marginTop: spacingPixels[2],
-  },
   myMatchDeadlineRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -541,6 +538,11 @@ export const styles = StyleSheet.create({
     marginBottom: spacingPixels[4],
   },
   segmentBar: {
+    marginBottom: spacingPixels[4],
+  },
+  bracketSegmentBar: {
+    marginHorizontal: 0,
+    marginTop: 0,
     marginBottom: spacingPixels[4],
   },
   myMatchCard: {
