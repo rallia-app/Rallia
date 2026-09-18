@@ -411,7 +411,6 @@ const PlayerDirectory: React.FC<PlayerDirectoryProps> = ({
     ({ item }: { item: PlayerSearchResult }) => (
       <PlayerCard
         player={item}
-        colors={colors}
         onPress={onPlayerPress}
         isFavorite={favoritePlayerIds.includes(item.id)}
         onToggleFavorite={handleToggleFavorite}
