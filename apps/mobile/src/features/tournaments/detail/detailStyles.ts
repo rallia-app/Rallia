@@ -58,9 +58,6 @@ export const styles = StyleSheet.create({
   poolPhaseNoteText: {
     flex: 1,
   },
-  knockoutTitle: {
-    marginTop: spacingPixels[2],
-  },
   myMatchDeadlineRow: {
     flexDirection: 'row',
     alignItems: 'center',

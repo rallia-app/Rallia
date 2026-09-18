@@ -6079,6 +6079,7 @@
       "launchKnockoutWaiting": "Les éliminatoires ouvrent quand toutes les parties de poules sont réglées",
       "launchKnockoutReady": "Poules terminées. L'organisateur peut maintenant lancer les éliminatoires.",
       "poolGame": "Partie de poule",
+      "poolsTitle": "Poules",
       "knockoutTitle": "Éliminatoires",
       "headerRecord": "V-D",
       "headerSets": "Sets",
