@@ -120,14 +120,13 @@ export const BracketTab: React.FC<BracketTabProps> = ({
         </View>
       )}
       {isPoolTournament && (
-        <View style={styles.segmentBar}>
-          <SegmentBar
-            segments={segmentTabs}
-            active={segment}
-            onChange={setPickedSegment}
-            testIDPrefix="bracket-segment"
-          />
-        </View>
+        <SegmentBar
+          segments={segmentTabs}
+          active={segment}
+          onChange={setPickedSegment}
+          testIDPrefix="bracket-segment"
+          style={styles.bracketSegmentBar}
+        />
       )}
       {showPools && (
         <PoolsSection

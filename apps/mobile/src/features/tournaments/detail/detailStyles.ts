@@ -540,6 +540,11 @@ export const styles = StyleSheet.create({
   segmentBar: {
     marginBottom: spacingPixels[4],
   },
+  bracketSegmentBar: {
+    marginHorizontal: 0,
+    marginTop: 0,
+    marginBottom: spacingPixels[4],
+  },
   myMatchCard: {
     flexDirection: 'row',
     alignItems: 'center',
