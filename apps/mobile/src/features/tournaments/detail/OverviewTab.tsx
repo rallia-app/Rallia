@@ -7,7 +7,7 @@
 import React from 'react';
 import { View, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Button, Text } from '@rallia/shared-components';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import type { PlayerSearchResult, Tournament, TournamentMatch } from '@rallia/shared-services';
 
@@ -47,6 +47,8 @@ export interface MyPoolGame {
   isWalkover: boolean;
   /** A game is booked behind this pairing, so it needs a result, not a time. */
   isScheduled: boolean;
+  /** Scheduling funnel: whose availability is missing, or 'ready'. Null when off. */
+  gate: 'mine' | 'theirs' | 'ready' | null;
   /** Null when no winner is recorded yet. */
   didWin: boolean | null;
   /** Set scores written viewer-first, e.g. "8-1". Null when none recorded. */
@@ -98,6 +100,9 @@ interface OverviewTabProps {
   myPoolPhase: MyPoolPhase | null;
   /** Reopen the phase availability gate; null hides the link. */
   onEditAvailability?: (() => void) | null;
+  onPingOpponent?: ((tournamentMatchId: string) => void) | null;
+  pingedGameIds?: ReadonlySet<string>;
+  pingPending?: boolean;
   myOpponentLabel: string | null;
   myMatchP1: string | null;
   myMatchP2: string | null;
@@ -161,6 +166,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   myNextMatchDeadline,
   myPoolPhase,
   onEditAvailability = null,
+  onPingOpponent = null,
+  pingedGameIds,
+  pingPending = false,
   myOpponentLabel,
   myMatchP1,
   myMatchP2,
@@ -397,6 +405,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   // is still yours to arrange, so the whole row opens that
                   // pairing's chat: one action per row, no guessing.
                   const done = game.settled && !game.isDisputed;
+                  // Before both sides gave their hours the pairing room stays
+                  // shut, so the row names who is missing instead of opening it.
+                  const waitingOn =
+                    !done && !game.isDisputed && !game.isScheduled
+                      ? game.gate === 'mine' || game.gate === 'theirs'
+                        ? game.gate
+                        : null
+                      : null;
+                  const pinged = pingedGameIds?.has(game.id) ?? false;
                   const detail =
                     game.scoreLabel ??
                     (game.isWalkover
@@ -422,7 +439,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                               ? 'alert-circle-outline'
                               : game.isScheduled
                                 ? 'calendar-outline'
-                                : 'ellipse-outline'
+                                : waitingOn
+                                  ? 'hourglass-outline'
+                                  : 'ellipse-outline'
                         }
                         size={18}
                         color={
@@ -430,7 +449,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             ? colors.statusPositiveText
                             : game.isDisputed
                               ? colors.danger
-                              : colors.primary
+                              : waitingOn
+                                ? colors.textMuted
+                                : colors.primary
                         }
                       />
                       <View style={styles.poolSlateRowText}>
@@ -448,11 +469,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             ? resultText
                             : game.isDisputed
                               ? t('tournamentDetail.bracket.disputed')
-                              : t(
-                                  (game.isScheduled
-                                    ? 'tournamentDetail.pools.scheduled'
-                                    : 'tournamentDetail.pools.toSchedule') as TranslationKey
-                                )}
+                              : game.isScheduled
+                                ? t('tournamentDetail.pools.scheduled')
+                                : waitingOn === 'mine'
+                                  ? t('tournamentDetail.poolRoom.waitingForYou')
+                                  : waitingOn === 'theirs'
+                                    ? t('tournamentDetail.poolRoom.waitingFor').replace(
+                                        '{names}',
+                                        game.opponentLabel ?? '?'
+                                      )
+                                    : game.gate === 'ready'
+                                      ? t('tournamentDetail.poolRoom.ready')
+                                      : t('tournamentDetail.pools.toSchedule')}
                         </Text>
                         {/* Only when an organizer moved this one off the shared date. */}
                         {!done && game.deadlineAt && game.deadlineAt !== myPoolPhase.deadlineAt && (
@@ -469,18 +497,39 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     </>
                   );
 
-                  return done ? (
-                    <View
-                      key={game.id}
-                      style={[
-                        styles.poolSlateRow,
-                        styles.poolSlateRowMain,
-                        { borderTopColor: colors.border },
-                      ]}
-                    >
-                      {rowBody}
-                    </View>
-                  ) : (
+                  if (done || waitingOn) {
+                    return (
+                      <View
+                        key={game.id}
+                        style={[
+                          styles.poolSlateRow,
+                          styles.poolSlateRowMain,
+                          { borderTopColor: colors.border },
+                        ]}
+                        testID={`pool-game-${game.id}`}
+                      >
+                        {rowBody}
+                        {/* My own missing hours are the screen's main button, not a per-row one. */}
+                        {waitingOn === 'theirs' && onPingOpponent && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onPress={() => onPingOpponent(game.id)}
+                            disabled={pingPending || pinged}
+                            testID={`pool-game-ping-${game.id}`}
+                          >
+                            {t(
+                              pinged
+                                ? 'tournamentDetail.poolRoom.pingSentShort'
+                                : 'tournamentDetail.poolRoom.ping'
+                            )}
+                          </Button>
+                        )}
+                      </View>
+                    );
+                  }
+
+                  return (
                     <TouchableOpacity
                       key={game.id}
                       onPress={() => handleOpenRoundChat(game.id)}
