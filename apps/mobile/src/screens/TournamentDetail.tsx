@@ -87,6 +87,7 @@ import {
   useTournamentRoundDeadlines,
   useTournamentPhaseAvailability,
   useOpenTournamentRoundChat,
+  usePingPairingOpponent,
   useIsTournamentOrganizer,
   useIsCertifiedOrganizer,
   useCancelTournament,
@@ -158,6 +159,8 @@ import type {
 } from '../features/tournaments/detail/components';
 import { poolPreviewText } from '../features/tournaments/poolPreview';
 import { prizeAmountLabel } from '../features/tournaments/prizeLabel';
+import { lastPlayableDay } from '../features/tournaments/deadlineDay';
+import { rpcErrorMessage } from '../utils/rpcErrorMessage';
 import { ChampionCard } from '../features/tournaments/components/ChampionCard';
 import { PoolsSection, poolsComplete } from '../features/tournaments/components/PoolsSection';
 import { TournamentBanner } from '../features/tournaments/components/TournamentBanner';
@@ -1237,7 +1240,7 @@ export const TournamentDetail: React.FC = () => {
       }
       return t('tournamentDetail.deadlines.playBy' as TranslationKey).replace(
         '{date}',
-        new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'short' })
+        lastPlayableDay(iso).toLocaleDateString(locale, { day: 'numeric', month: 'short' })
       );
     },
     [t, locale]
@@ -1681,7 +1684,7 @@ export const TournamentDetail: React.FC = () => {
     );
     return row?.deadline_at ?? null;
   }, [gatePhase, roundDeadlines]);
-  const { data: gateAnswers = [] } = useTournamentPhaseAvailability(
+  const { data: gateAnswers = [], isSuccess: gateAnswersLoaded } = useTournamentPhaseAvailability(
     tournament?.id,
     gatePhase?.bracketSide ?? 'pool',
     gatePhase?.roundNumber ?? 0,
@@ -1764,6 +1767,14 @@ export const TournamentDetail: React.FC = () => {
   const myPoolPhase = useMemo(() => {
     if (!myRegId || myNextMatch?.bracket_side !== 'pool') return null;
     const deadlineAt = roundDeadlines.find(d => d.bracket_side === 'pool')?.deadline_at ?? null;
+    // Scheduling funnel: a pairing only opens once both sides gave their hours.
+    const answered = new Set(gateAnswers.map(a => a.player_id));
+    const sideAnswered = (regId: string) => {
+      const r = registrations.find(x => x.id === regId);
+      return (
+        !!r && answered.has(r.user_id) && (!r.partner_user_id || answered.has(r.partner_user_id))
+      );
+    };
     const games = poolMatches
       .filter(
         m =>
@@ -1806,6 +1817,15 @@ export const TournamentDetail: React.FC = () => {
           // "to play" whether or not anything had been arranged, so a slate of
           // three said nothing about which ones still needed a time.
           isScheduled: !!m.match_id,
+          // Whose hours are still missing; mine outrank theirs, as on the pool board.
+          gate:
+            !funnelEnabled || !gateAnswersLoaded || !oppId
+              ? null
+              : !sideAnswered(myRegId)
+                ? ('mine' as const)
+                : !sideAnswered(oppId)
+                  ? ('theirs' as const)
+                  : ('ready' as const),
           didWin: m.winner_registration_id ? m.winner_registration_id === myRegId : null,
           scoreLabel,
           // An organizer extension on one pairing wins over the phase row, so
@@ -1814,7 +1834,45 @@ export const TournamentDetail: React.FC = () => {
         };
       });
     return games.length > 0 ? { games, deadlineAt } : null;
-  }, [myRegId, myNextMatch, poolMatches, roundDeadlines, nameByRegId, seedByRegId, t]);
+  }, [
+    myRegId,
+    myNextMatch,
+    poolMatches,
+    roundDeadlines,
+    nameByRegId,
+    seedByRegId,
+    t,
+    funnelEnabled,
+    gateAnswers,
+    gateAnswersLoaded,
+    registrations,
+  ]);
+
+  // The pool slate's nudge for an opponent who has not given their hours yet.
+  const pingOpponent = usePingPairingOpponent();
+  const [pingedGameIds, setPingedGameIds] = useState<Set<string>>(new Set());
+  const handlePingOpponent = useCallback(
+    (tournamentMatchId: string) => {
+      if (pingOpponent.isPending) return;
+      pingOpponent.mutate(
+        { tournamentMatchId },
+        {
+          onSuccess: () => {
+            setPingedGameIds(prev => new Set(prev).add(tournamentMatchId));
+            toast.success(t('tournamentDetail.poolRoom.pingSent'));
+          },
+          onError: error =>
+            toast.error(
+              rpcErrorMessage(error, t, 'tournamentDetail.poolRoom.pingError', {
+                PING_TOO_SOON: 'tournamentDetail.poolRoom.pingTooSoon',
+                NOBODY_TO_PING: 'tournamentDetail.poolRoom.pingNobody',
+              })
+            ),
+        }
+      );
+    },
+    [pingOpponent, toast, t]
+  );
 
   // Flashscore-style content tabs (Overview / Bracket / Players / Details).
   // Keyed, not positional: tabs appear and disappear with tournament state, so
@@ -2941,6 +2999,9 @@ export const TournamentDetail: React.FC = () => {
             myNextMatchDeadline={myNextMatchDeadline}
             myPoolPhase={myPoolPhase}
             onEditAvailability={canEditGateAnswer ? handleOpenAvailabilityGate : null}
+            onPingOpponent={handlePingOpponent}
+            pingedGameIds={pingedGameIds}
+            pingPending={pingOpponent.isPending}
             myOpponentLabel={myOpponentLabel}
             myMatchP1={myMatchP1}
             myMatchP2={myMatchP2}
