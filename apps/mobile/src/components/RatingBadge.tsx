@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, Skeleton } from '@rallia/shared-components';
@@ -25,6 +25,11 @@ interface RatingBadgeProps {
   isDark: boolean;
   /** Optional size variant */
   size?: 'sm' | 'md';
+  /** 'pill' (default) is the compact chip; 'numeral' is a large right-aligned
+   *  number with the certification state spelled out underneath. */
+  variant?: 'pill' | 'numeral';
+  /** Caption under the numeral (e.g. "Certified"); ignored by the pill. */
+  statusLabel?: string;
   /** Whether the badge is loading */
   isLoading?: boolean;
   /** Callback when info icon is pressed — shows info icon when provided */
@@ -45,6 +50,8 @@ const RatingBadge: React.FC<RatingBadgeProps> = ({
   certificationStatus,
   isDark,
   size = 'md',
+  variant = 'pill',
+  statusLabel,
   isLoading = false,
   onInfoPress,
 }) => {
@@ -85,6 +92,35 @@ const RatingBadge: React.FC<RatingBadgeProps> = ({
     : 'analytics';
 
   const iconSize = size === 'sm' ? 10 : 12;
+
+  if (variant === 'numeral') {
+    // Self-declared stays neutral so only certified/disputed carry color.
+    const numeralColor = certBadgeColors
+      ? certBadgeColors.bg
+      : isDark
+        ? neutral[200]
+        : neutral[800];
+    const captionColor = certBadgeColors
+      ? certBadgeColors.bg
+      : isDark
+        ? neutral[400]
+        : neutral[500];
+    return (
+      <View style={styles.numeral} accessibilityLabel={`${ratingDisplay} ${statusLabel ?? ''}`}>
+        <Text size="2xl" weight="bold" color={numeralColor} style={styles.numeralText}>
+          {ratingDisplay}
+        </Text>
+        {!!statusLabel && (
+          <View style={styles.numeralCaption}>
+            {certBadgeColors && <Ionicons name={badgeIcon} size={11} color={captionColor} />}
+            <Text size="xs" weight="medium" color={captionColor} numberOfLines={1}>
+              {statusLabel}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  }
 
   const badge = (
     <LinearGradient
@@ -145,6 +181,18 @@ const styles = StyleSheet.create({
   },
   label: {
     letterSpacing: 0.2,
+  },
+  numeral: {
+    alignItems: 'flex-end',
+  },
+  numeralText: {
+    lineHeight: 28,
+    letterSpacing: -0.5,
+  },
+  numeralCaption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[0.5],
   },
 });
 
