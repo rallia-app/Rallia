@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
@@ -29,17 +29,20 @@ export function SegmentBar<K extends string>({
   active,
   onChange,
   testIDPrefix,
+  style,
 }: {
   segments: Array<SegmentOption<K>>;
   active: K;
   onChange: (key: K) => void;
   testIDPrefix?: string;
+  /** Overrides the track's default outer margins when the parent already pads. */
+  style?: StyleProp<ViewStyle>;
 }) {
   const { colors, isDark } = useThemeStyles();
   const activeColor = isDark ? primary[300] : primary[600];
 
   return (
-    <View style={[styles.tabBar, { backgroundColor: colors.segmentTrack }]}>
+    <View style={[styles.tabBar, { backgroundColor: colors.segmentTrack }, style]}>
       {segments.map(segment => {
         const isActive = active === segment.key;
         return (

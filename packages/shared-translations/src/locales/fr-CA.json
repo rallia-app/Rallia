@@ -6079,6 +6079,7 @@
       "launchKnockoutWaiting": "Les éliminatoires ouvrent quand toutes les parties de poules sont réglées",
       "launchKnockoutReady": "Poules terminées. L'organisateur peut maintenant lancer les éliminatoires.",
       "poolGame": "Partie de poule",
+      "poolsTitle": "Poules",
       "knockoutTitle": "Éliminatoires",
       "headerRecord": "V-D",
       "headerSets": "Sets",
@@ -6086,7 +6087,7 @@
       "enterScore": "Entrer le score"
     },
     "deadlines": {
-      "playBy": "à jouer avant le {date}",
+      "playBy": "à jouer au plus tard le {date}",
       "hoursLeft": "{hours} h pour jouer",
       "phaseDeadline": "Phase en cours : {when}"
     },
@@ -6130,7 +6131,7 @@
     "poolRoom": {
       "title": "Poule {n}",
       "settledCount": "{settled}/{total} parties réglées",
-      "deadline": "À jouer avant le {date}",
+      "deadline": "À jouer au plus tard le {date}",
       "ready": "Prêt à planifier",
       "waitingFor": "En attente de {names}",
       "walkover": "Forfait",

@@ -6079,6 +6079,7 @@
       "launchKnockoutWaiting": "Knockout opens when every pool game is settled",
       "launchKnockoutReady": "Pools are done. The organizer can now launch the knockout.",
       "poolGame": "Pool game",
+      "poolsTitle": "Pools",
       "knockoutTitle": "Knockout",
       "headerRecord": "W-L",
       "headerSets": "Sets",
