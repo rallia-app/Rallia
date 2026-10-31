@@ -12,7 +12,7 @@ import { BackButton } from '@/components/back-button';
 import { Building2, Calendar, Clock, Globe, MapPin, Users } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -41,9 +41,10 @@ export default async function FacilityDetailPage({ params }: PageProps) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect('/sign-in');
 
   // Get selected organization (respects user's selection from org switcher)
-  const organization = await getSelectedOrganization(user!.id);
+  const organization = await getSelectedOrganization(user.id);
 
   if (!organization) {
     notFound();
@@ -53,7 +54,7 @@ export default async function FacilityDetailPage({ params }: PageProps) {
   const { data: membership } = await supabase
     .from('organization_member')
     .select('role')
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .eq('organization_id', organization.id)
     .is('left_at', null)
     .single();

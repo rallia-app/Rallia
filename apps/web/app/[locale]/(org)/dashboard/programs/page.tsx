@@ -7,6 +7,7 @@ import { getSelectedOrganization } from '@/lib/supabase/get-selected-organizatio
 import { Calendar, Clock, DollarSign, GraduationCap, Plus, Users } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { redirect } from 'next/navigation';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -55,8 +56,9 @@ export default async function ProgramsPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect('/sign-in');
 
-  const organization = await getSelectedOrganization(user!.id);
+  const organization = await getSelectedOrganization(user.id);
 
   // Fetch programs
   let programs: Array<{

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
+import { redirect } from 'next/navigation';
 
 // Helper to get today's date in YYYY-MM-DD format
 function getTodayDateString(): string {
@@ -61,13 +62,14 @@ export default async function DashboardPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect('/sign-in');
 
   // Fetch user profile (currently unused but may be needed for future features)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data: profile } = await supabase.from('profile').select('*').eq('id', user!.id).single();
+  const { data: profile } = await supabase.from('profile').select('*').eq('id', user.id).single();
 
   // Get the selected organization (respects user's selection from org switcher)
-  const organization = await getSelectedOrganization(user!.id);
+  const organization = await getSelectedOrganization(user.id);
 
   // Fetch KPI data if organization exists
   let todaysBookingsCount = 0;

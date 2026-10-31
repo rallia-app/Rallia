@@ -22,9 +22,10 @@ export default async function OnboardingPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect('/sign-in');
 
   // If user already has an organization, redirect to dashboard
-  const hasOrg = await hasOrganizationMembership(user!.id);
+  const hasOrg = await hasOrganizationMembership(user.id);
   if (hasOrg) {
     redirect('/dashboard');
   }

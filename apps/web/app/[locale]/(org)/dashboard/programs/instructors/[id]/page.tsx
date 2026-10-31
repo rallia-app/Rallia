@@ -7,7 +7,7 @@ import { getSelectedOrganization } from '@/lib/supabase/get-selected-organizatio
 import { BackButton } from '@/components/back-button';
 import { Calendar, Edit, GraduationCap, Mail, Phone } from 'lucide-react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { getStorageImageUrl } from '@rallia/shared-utils';
 
@@ -39,8 +39,9 @@ export default async function InstructorDetailPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect('/sign-in');
 
-  const organization = await getSelectedOrganization(user!.id);
+  const organization = await getSelectedOrganization(user.id);
 
   // Fetch instructor
   const { data: instructor, error } = await supabase

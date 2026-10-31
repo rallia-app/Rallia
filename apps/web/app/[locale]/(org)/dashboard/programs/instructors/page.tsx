@@ -9,6 +9,7 @@ import { GraduationCap, Mail, Phone, Plus, UserPlus } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { getStorageImageUrl } from '@rallia/shared-utils';
+import { redirect } from 'next/navigation';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -24,8 +25,9 @@ export default async function InstructorsPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect('/sign-in');
 
-  const organization = await getSelectedOrganization(user!.id);
+  const organization = await getSelectedOrganization(user.id);
 
   // Fetch instructors
   let instructors: Array<{
