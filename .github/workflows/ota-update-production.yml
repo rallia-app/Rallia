@@ -61,6 +61,15 @@ jobs:
             eas update --branch production --environment production --message "$COMMIT_MSG" --rollout-percentage "$ROLLOUT"
           fi
 
+      - name: Upload source maps to Sentry
+        # Without this, JS stack traces from OTA launches symbolicate against the wrong bundle.
+        if: steps.update.outcome == 'success'
+        continue-on-error: true
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        working-directory: apps/mobile
+        run: npx sentry-expo-upload-sourcemaps dist
+
       - name: Notify Discord
         if: always()
         env:

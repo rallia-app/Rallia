@@ -26,6 +26,7 @@ import { useThemeStyles, useTranslation } from '#/hooks';
 import { useLocale } from '#/context';
 import { rpcErrorMessage, type RpcErrorOverrides } from '#/utils/rpcErrorMessage';
 import { useAvailabilityKeys } from '#/features/weekly-checkin/api';
+import { lastPlayableDay } from '#/features/tournaments/deadlineDay';
 import {
   HourlyAvailabilityGrid,
   emptyGrid,
@@ -119,7 +120,7 @@ export function TournamentAvailabilityGateSheet({
     if (!deadlineAt) return null;
     return t('tournamentDetail.availabilityGate.window').replace(
       '{date}',
-      new Date(deadlineAt).toLocaleDateString(locale, { day: 'numeric', month: 'long' })
+      lastPlayableDay(deadlineAt).toLocaleDateString(locale, { day: 'numeric', month: 'long' })
     );
   }, [deadlineAt, locale, t]);
 

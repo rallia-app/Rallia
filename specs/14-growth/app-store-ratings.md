@@ -311,7 +311,8 @@ self-DoS pacing concern does not apply.
 Store write-review page, Android to the Play listing, desktop to the website. Every click is reported to PostHog as `go_link_clicked` with `target`, `src`, `platform`,
 `outcome` and `locale` (anonymous, no person profile, link-preview bots skipped), so the
 outreach funnel is DMs sent, then `go_link_clicked` where `src = chat_outreach`, then the
-weekly ratings delta.
+weekly ratings delta. Dashboard:
+[Bouncer link clicks](https://us.posthog.com/project/329229/dashboard/2108862).
 
 ### Copy
 
@@ -363,33 +364,40 @@ for Rallia? An honest store review helps players nearby find us."
 
 ### Chat variant (preferred, 2026-09-16)
 
-Sent as DMs from Mathis's own account, three bubbles each. The push notification
-shows the first bubble, so it carries the thanks and no ask. `{N}` is `games_played`
-from the segment query. Needs a single store link that lands on the right store
-(the `storeReview` bouncer target above).
+**Wave 1 sent 2026-09-17:** 51 DMs (29 en, 22 fr) to the 5+ games segment. Wave 2 is the
+3 to 4 games group and waits on the §8 checkpoint.
+
+Sent as DMs from Mathis's own account, one bubble each (a three-bubble version was tested
+on 2026-09-17 and fired three pushes in a row, too much). The push notification shows the
+start of the message, so it opens with the thanks and the ask comes second. `{N}` is
+`games_played` from the segment query.
 
 fr-CA:
 
-> Salut {prénom}! Mathis de Rallia ici. J'ai vu que t'avais joué {N} parties avec
-> l'app, ça me fait vraiment plaisir 🙌
+> Salut {prénom}! C'est Mathis, de Rallia. J'ai vu que tu as déjà {N} parties au compteur
+> sur l'app, ça fait vraiment plaisir à voir.
 >
-> Petite demande si t'as deux minutes: un avis honnête sur le store, ça aide beaucoup
-> les joueurs du coin à nous trouver. Bon ou moins bon, je lis tout.
-> {lien}
+> J'aurais un petit service à te demander : si tu as deux minutes, laisse-nous un avis
+> honnête sur l'App Store ou Google Play. Ça aide énormément les joueurs de la région à
+> découvrir Rallia. Positif ou pas, je les lis tous.
+> https://www.rallia.app/api/go?to=storeReview&src=chat_outreach
 >
-> Pis si quelque chose accroche dans l'app, dis-le moi ici, je préfère le régler direct.
+> Et si quelque chose t'agace dans l'app, écris-moi directement ici, je m'en occupe.
 
 en-US:
 
-> Hey {first name}! Mathis from Rallia here. Saw you've played {N} games through the
-> app, that genuinely made my day 🙌
+> Hey {first name}! It's Mathis from Rallia. I saw you've played {N} games through the app,
+> which is great to see.
 >
-> Small ask if you have two minutes: an honest review on the store helps players
-> nearby find us a lot. Good or not so good, I read every one.
-> {link}
+> Quick favour if you have two minutes: could you leave an honest review on the App Store or
+> Google Play? It really helps other players in the area find Rallia. Good or bad, I read
+> every one.
+> https://www.rallia.app/api/go?to=storeReview&src=chat_outreach
 >
-> And if anything in the app is bugging you, just tell me here, I'd rather fix it
-> directly.
+> And if something in the app is bugging you, just tell me here and I'll look into it.
+
+In both languages, drop the "It's Mathis from Rallia" / "C'est Mathis, de Rallia" sentence
+for anyone Mathis has already exchanged messages with. No emoji, per the 1:1 outreach rule.
 
 ## 7. Decision point: reset the rating?
 

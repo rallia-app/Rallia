@@ -2,6 +2,7 @@ import { FacilitiesList } from '@/components/facilities-list';
 import { createClient } from '@/lib/supabase/server';
 import { getSelectedOrganization } from '@/lib/supabase/get-selected-organization';
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -17,9 +18,10 @@ export default async function FacilitiesPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect('/sign-in');
 
   // Get selected organization (respects user's selection from org switcher)
-  const organization = await getSelectedOrganization(user!.id);
+  const organization = await getSelectedOrganization(user.id);
 
   if (!organization) {
     return (

@@ -37,6 +37,7 @@ import { useAuth, useThemeStyles, useTranslation } from '#/hooks';
 import type { RootStackParamList } from '#/navigation/types';
 import { rpcErrorMessage } from '#/utils/rpcErrorMessage';
 import { useLocale } from '#/context';
+import { lastPlayableDay } from '#/features/tournaments/deadlineDay';
 
 interface PoolRoomBoardProps {
   tournamentId: string;
@@ -265,7 +266,7 @@ export function PoolRoomBoard({ tournamentId, poolNumber }: PoolRoomBoardProps) 
                 ? t('tournamentDetail.deadlines.hoursLeft').replace('{hours}', String(hoursLeft))
                 : t('tournamentDetail.poolRoom.deadline').replace(
                     '{date}',
-                    new Date(deadlineAt).toLocaleDateString(locale, {
+                    lastPlayableDay(deadlineAt).toLocaleDateString(locale, {
                       day: 'numeric',
                       month: 'long',
                     })
